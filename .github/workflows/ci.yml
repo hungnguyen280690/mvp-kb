@@ -1,0 +1,337 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+  security-events: write
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: '21'
+  NODE_VERSION: '20'
+  REGISTRY: registry.kbnn.local
+  COSIGN_EXPERIMENTAL: '1'
+
+jobs:
+  # ─────────────────────────────────────────────────
+  # 1. STATIC CHECKS (lint, secret scan, license)
+  # ─────────────────────────────────────────────────
+  static:
+    name: Static checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend: 'services/**'
+            frontend: 'frontend/**'
+            contracts: 'contracts/**'
+            iac: 'deploy/**'
+            db: 'db/migrations/**'
+            ci: '.github/**'
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: License check
+        run: npx license-checker --production --failOn 'GPL;AGPL;LGPL'
+        if: steps.filter.outputs.frontend == 'true'
+
+      - name: Spotless lint (Java)
+        if: steps.filter.outputs.backend == 'true'
+        run: ./mvnw -B spotless:check
+
+      - name: ESLint + Prettier (TS)
+        if: steps.filter.outputs.frontend == 'true'
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm lint
+          pnpm format:check
+
+      - name: Spectral OpenAPI lint
+        if: steps.filter.outputs.contracts == 'true'
+        run: npx @stoplight/spectral-cli lint contracts/openapi/*.yaml
+
+      - name: OpenAPI breaking change check
+        if: steps.filter.outputs.contracts == 'true' && github.event_name == 'pull_request'
+        run: |
+          npx oasdiff breaking \
+            origin/main:contracts/openapi/api-internal-v1.yaml \
+            HEAD:contracts/openapi/api-internal-v1.yaml \
+            --fail-on ERR
+
+      - name: DB migration check
+        if: steps.filter.outputs.db == 'true'
+        run: |
+          # Forbid editing existing migration files
+          git diff origin/main...HEAD --name-status -- db/migrations/ | \
+            awk '$1=="M" {print "ERROR: Modified existing migration: "$2; exit 1}'
+
+      - name: Helm lint
+        if: steps.filter.outputs.iac == 'true'
+        run: |
+          for chart in deploy/helm/*/; do
+            helm lint "$chart"
+          done
+
+      - name: Kubeconform
+        if: steps.filter.outputs.iac == 'true'
+        run: |
+          helm template deploy/helm/_shared | \
+            docker run --rm -i ghcr.io/yannh/kubeconform:latest -summary -strict
+
+  # ─────────────────────────────────────────────────
+  # 2. BUILD + UNIT TEST
+  # ─────────────────────────────────────────────────
+  unit-backend:
+    name: Unit test (Java)
+    runs-on: ubuntu-latest
+    needs: static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+      - name: Maven build + test
+        run: ./mvnw -B verify -Pcoverage
+      - name: Coverage gate (≥80%)
+        run: |
+          ./mvnw -B jacoco:check
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: '**/target/site/jacoco/'
+
+  unit-frontend:
+    name: Unit test (React)
+    runs-on: ubuntu-latest
+    needs: static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm test:coverage
+      - name: Coverage gate
+        working-directory: frontend
+        run: pnpm coverage:check  # fail if < 75%
+
+  # ─────────────────────────────────────────────────
+  # 3. INTEGRATION + CONTRACT
+  # ─────────────────────────────────────────────────
+  integration:
+    name: Integration test (Oracle + IBM MQ)
+    runs-on: ubuntu-latest
+    needs: unit-backend
+    services:
+      oracle:
+        image: gvenzl/oracle-free:23-slim-faststart
+        env:
+          ORACLE_PASSWORD: testpass
+        ports: ['1521:1521']
+        options: --health-cmd="healthcheck.sh" --health-interval=10s
+      ibmmq:
+        image: ibmcom/mq:latest
+        env:
+          LICENSE: accept
+          MQ_QMGR_NAME: QM1
+          MQ_APP_PASSWORD: testpass
+        ports: ['1414:1414']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { java-version: '21', distribution: 'temurin', cache: 'maven' }
+      - run: ./mvnw -B verify -Pintegration-test
+
+  contract:
+    name: Contract test (Pact)
+    runs-on: ubuntu-latest
+    needs: unit-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { java-version: '21', distribution: 'temurin', cache: 'maven' }
+      - name: Pact consumer test + publish
+        run: ./mvnw -B test -Ppact-consumer
+      - name: Pact verify provider
+        run: ./mvnw -B test -Ppact-provider
+
+  # ─────────────────────────────────────────────────
+  # 4. SECURITY
+  # ─────────────────────────────────────────────────
+  sast:
+    name: SAST (Semgrep)
+    runs-on: ubuntu-latest
+    needs: static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/owasp-top-ten p/java p/typescript p/secrets
+          generateSarif: true
+      - uses: github/codeql-action/upload-sarif@v3
+        with: { sarif_file: semgrep.sarif }
+
+  deps-scan:
+    name: Dependency scan (Trivy)
+    runs-on: ubuntu-latest
+    needs: static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          format: sarif
+          output: trivy-fs.sarif
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+      - uses: github/codeql-action/upload-sarif@v3
+        with: { sarif_file: trivy-fs.sarif }
+
+  iac-scan:
+    name: IaC scan (Checkov)
+    runs-on: ubuntu-latest
+    needs: static
+    if: contains(github.event.pull_request.changed_files, 'deploy/')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bridgecrewio/checkov-action@master
+        with:
+          directory: deploy/
+          framework: helm,kubernetes
+          soft_fail: false
+
+  # ─────────────────────────────────────────────────
+  # 5. E2E (Playwright)
+  # ─────────────────────────────────────────────────
+  e2e:
+    name: E2E test (Playwright)
+    runs-on: ubuntu-latest
+    needs: [integration, unit-frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'pnpm', cache-dependency-path: frontend/pnpm-lock.yaml }
+      - run: docker compose -f tests/docker-compose.yml up -d --wait
+      - working-directory: tests/e2e
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm playwright install --with-deps chromium
+          pnpm playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: tests/e2e/playwright-report/
+
+  # ─────────────────────────────────────────────────
+  # 6. IMAGE BUILD + SCAN + SIGN
+  # ─────────────────────────────────────────────────
+  image:
+    name: Build, scan, sign image
+    runs-on: ubuntu-latest
+    needs: [unit-backend, sast, deps-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        service: [bff-service, ltt-core, integration-gateway, gl-pusher]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASS }}
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: services/${{ matrix.service }}
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
+          provenance: true
+          sbom: true
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+      - uses: sigstore/cosign-installer@v3
+      - name: Cosign sign (keyless OIDC)
+        run: cosign sign --yes ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
+      - name: Generate SBOM
+        run: cosign attest --predicate sbom.spdx.json --type spdx ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
+
+  # ─────────────────────────────────────────────────
+  # 7. CLAUDE AI REVIEW (gate cuối tự động)
+  # ─────────────────────────────────────────────────
+  claude-review:
+    name: Claude AI reviewer
+    runs-on: ubuntu-latest
+    needs: [static, unit-backend, unit-frontend, integration, contract, sast, deps-scan]
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          agent: ci-reviewer
+          mode: review
+          # Agent định nghĩa ở .claude/agents/ci-reviewer.md
+          # Trả về LGTM=true|false → block/unblock auto-merge
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+  # ─────────────────────────────────────────────────
+  # 8. AUTO-MERGE (chỉ khi tất cả check + Claude LGTM + human approval)
+  # ─────────────────────────────────────────────────
+  auto-merge:
+    name: Auto merge
+    runs-on: ubuntu-latest
+    needs: [static, unit-backend, unit-frontend, integration, contract, e2e, sast, deps-scan, claude-review]
+    if: |
+      github.event_name == 'pull_request' &&
+      contains(github.event.pull_request.labels.*.name, 'auto-merge')
+    steps:
+      - name: Enable auto-merge
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ github.event.pull_request.number }}
+          merge-method: squash

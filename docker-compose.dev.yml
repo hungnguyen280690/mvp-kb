@@ -1,0 +1,129 @@
+# Local dev infra — Oracle + IBM MQ + Pact + Mailhog + OTel + Jaeger + Legacy mock
+# Khởi động: make infra-up
+# Dừng:     make infra-down
+
+services:
+  # ─────────────────────────────────────────────────
+  # Oracle 19c free
+  # ─────────────────────────────────────────────────
+  oracle:
+    image: gvenzl/oracle-free:23-slim-faststart
+    container_name: kbnn-oracle
+    environment:
+      ORACLE_PASSWORD: testpass
+      ORACLE_DATABASE: KBNN
+      APP_USER: vdbas
+      APP_USER_PASSWORD: vdbaspass
+    ports:
+      - "1521:1521"
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks: [kbnn-dev]
+
+  # ─────────────────────────────────────────────────
+  # IBM MQ developer edition (queue manager QM1)
+  # ─────────────────────────────────────────────────
+  ibmmq:
+    image: ibmcom/mq:9.4.0.0-r2
+    container_name: kbnn-ibmmq
+    environment:
+      LICENSE: accept
+      MQ_QMGR_NAME: QM1
+      MQ_APP_PASSWORD: testpass
+      MQ_ADMIN_PASSWORD: adminpass
+    ports:
+      - "1414:1414"   # MQ listener
+      - "9443:9443"   # Web console
+    volumes:
+      - ibmmq-data:/mnt/mqm
+    healthcheck:
+      test: ["CMD", "chkmqready"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks: [kbnn-dev]
+
+  # ─────────────────────────────────────────────────
+  # Pact Broker — contract test publish
+  # ─────────────────────────────────────────────────
+  pact-broker:
+    image: pactfoundation/pact-broker:latest
+    container_name: kbnn-pact
+    depends_on:
+      pact-db:
+        condition: service_healthy
+    environment:
+      PACT_BROKER_DATABASE_USERNAME: pact
+      PACT_BROKER_DATABASE_PASSWORD: pactpass
+      PACT_BROKER_DATABASE_HOST: pact-db
+      PACT_BROKER_DATABASE_NAME: pact_broker
+      PACT_BROKER_PUBLIC_HEARTBEAT: "true"
+    ports:
+      - "9292:9292"
+    networks: [kbnn-dev]
+
+  pact-db:
+    image: postgres:16-alpine
+    container_name: kbnn-pact-db
+    environment:
+      POSTGRES_USER: pact
+      POSTGRES_PASSWORD: pactpass
+      POSTGRES_DB: pact_broker
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pact"]
+      interval: 5s
+    volumes:
+      - pact-data:/var/lib/postgresql/data
+    networks: [kbnn-dev]
+
+  # ─────────────────────────────────────────────────
+  # Mailhog — bắt email notify trong dev
+  # ─────────────────────────────────────────────────
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: kbnn-mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    networks: [kbnn-dev]
+
+  # ─────────────────────────────────────────────────
+  # Mock NHNN/CITAD — giả lập legacy ledger qua HTTP
+  # (Stage 3 sẽ thêm config WireMock cho LNH/SP/LKB)
+  # ─────────────────────────────────────────────────
+  legacy-mock:
+    image: wiremock/wiremock:latest
+    container_name: kbnn-legacy-mock
+    ports:
+      - "8089:8080"
+    networks: [kbnn-dev]
+
+  # ─────────────────────────────────────────────────
+  # OpenTelemetry collector + Jaeger (xem trace local)
+  # ─────────────────────────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.62
+    container_name: kbnn-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686" # Web UI
+      - "4317:4317"   # OTLP gRPC (Jaeger nhận trực tiếp)
+      - "4318:4318"   # OTLP HTTP
+    networks: [kbnn-dev]
+
+networks:
+  kbnn-dev:
+    driver: bridge
+
+volumes:
+  oracle-data:
+  ibmmq-data:
+  pact-data:

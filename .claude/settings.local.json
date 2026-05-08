@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init *)",
+      "Bash(gh auth *)",
+      "Bash(git --version)",
+      "Bash(git -C /home/hung/mvp-kho-bac status -s)",
+      "Bash(git -C /home/hung/mvp-kho-bac log --oneline -5)"
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+# EditorConfig — đồng nhất whitespace giữa IDE/OS/team
+# https://editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Java + Maven XML
+[*.{java,xml}]
+indent_size = 4
+max_line_length = 120
+
+# Properties / yml / yaml
+[*.{properties,yml,yaml}]
+indent_size = 2
+
+# SQL — readable
+[*.sql]
+indent_size = 2
+max_line_length = 120
+
+# Shell scripts
+[*.{sh,bash}]
+indent_size = 4
+
+# Markdown — không trim trailing (2 space = line break)
+[*.md]
+trim_trailing_whitespace = false
+
+# Makefile bắt buộc tab
+[Makefile]
+indent_style = tab
+
+# OpenAPI / AsyncAPI / contracts
+[contracts/**/*.{yaml,yml,json}]
+indent_size = 2
+
+# TypeScript / TSX
+[*.{ts,tsx,js,jsx,json}]
+indent_size = 2
+max_line_length = 100

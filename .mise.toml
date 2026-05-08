@@ -1,0 +1,39 @@
+# mise — quản lý version language/tool đồng nhất cho team
+# https://mise.jdx.dev/
+#
+# Cài 1 lần: curl https://mise.run | sh
+# Activate shell: eval "$(mise activate bash)"  (hoặc zsh/fish)
+# Sync versions: mise install
+#
+# Mọi thành viên team phải dùng đúng version trong file này → tránh "works on my machine".
+
+[tools]
+java       = "temurin-21.0.5+11"
+maven      = "3.9.9"
+node       = "20.18.0"
+pnpm       = "9.12.3"
+python     = "3.12"            # cho openpyxl (đọc SRS xlsx) + pre-commit
+pre-commit = "latest"
+shellcheck = "latest"
+hadolint   = "latest"          # Dockerfile lint
+yamllint   = "latest"
+yq         = "latest"
+jq         = "latest"
+
+# Tools chỉ cần khi build/deploy (Stage 5) — bỏ comment khi DevOps cần
+# helm    = "3.16.2"
+# kubectl = "1.31.2"
+# argocd  = "2.13.0"
+# cosign  = "latest"
+# trivy   = "latest"
+
+[env]
+MAVEN_OPTS  = "-Xmx2g -XX:MaxMetaspaceSize=512m"
+LANG        = "en_US.UTF-8"
+LC_ALL      = "en_US.UTF-8"
+PROJECT_NAME = "mvp-kho-bac"
+
+[settings]
+experimental = true
+verbose      = false
+yes          = true            # auto-confirm khi mise install

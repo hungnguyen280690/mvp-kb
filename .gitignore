@@ -1,0 +1,105 @@
+# ─────────── OS ───────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ─────────── IDE ───────────
+.idea/
+.vscode/
+!.vscode/settings.json.example
+!.vscode/extensions.json
+*.iml
+.project
+.classpath
+.settings/
+.factorypath
+
+# ─────────── Java / Maven ───────────
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+hs_err_pid*
+replay_pid*
+.mvn/wrapper/maven-wrapper.properties
+
+# ─────────── Node / pnpm ───────────
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-cache
+
+# ─────────── Frontend build ───────────
+dist/
+build/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+out/
+.turbo/
+
+# ─────────── Test / coverage ───────────
+coverage/
+*.lcov
+.nyc_output/
+junit.xml
+test-results/
+playwright-report/
+playwright/.cache/
+
+# ─────────── Logs ───────────
+logs/
+*.log
+
+# ─────────── Env / secrets ───────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.pfx
+*.p12
+*.jks
+!truststore.jks.example
+secrets/
+!secrets/.gitkeep
+
+# ─────────── Docker ───────────
+.docker/
+
+# ─────────── Tools ───────────
+.mise.local.toml
+.tool-versions.local
+
+# ─────────── SRS xlsx local copy (giữ tại shared/specs/ commit, không cho vô bừa) ───────────
+specs/*.xlsx
+shared/specs/*.xlsx.local
+
+# ─────────── Generated artifacts ───────────
+**/generated-sources/
+**/generated/
+src/main/generated/
+
+# ─────────── Local cache ───────────
+.gradle/
+.kotlin/
+.local/
+
+# ─────────── Misc ───────────
+*.bak
+*.tmp
+.tmp/
+
+# ─────────── KHÔNG ignore (giữ trong git làm nguồn sự thật) ───────────
+# domain/ (Stage 1 output)
+# contracts/ (Stage 2 output)
+# db/migrations/ (Stage 2 output)
+# gates/ (signoff)
+# docs/

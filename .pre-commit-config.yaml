@@ -1,0 +1,128 @@
+# Pre-commit hooks — chạy local trước khi git commit
+# Cài: make git-hooks  (hoặc: pre-commit install)
+# Skip 1 lần: SKIP=hook-id git commit
+# CHỐNG VI PHẠM SAFETY.md tại nguồn — đừng disable nếu không qua G2
+
+default_install_hook_types: [pre-commit, commit-msg]
+fail_fast: false
+default_stages: [pre-commit]
+
+repos:
+  # ─────────────────────────────────────────────────
+  # Basics — whitespace, conflict marker, large file
+  # ─────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$'
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1024']
+      - id: detect-private-key       # SAFETY cấp 1
+      - id: check-yaml
+        exclude: '^(deploy/helm/.*templates/.*\.yaml)$'   # Helm templates có Go template
+      - id: check-json
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # ─────────────────────────────────────────────────
+  # Secret scanning — SAFETY cấp 1
+  # ─────────────────────────────────────────────────
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  # ─────────────────────────────────────────────────
+  # Format YAML/JSON/MD/TS bằng Prettier
+  # ─────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        types_or: [yaml, json, markdown, ts, tsx, javascript, jsx]
+        exclude: '^(.*\.lock|pnpm-lock\.yaml|package-lock\.json|.*\/generated\/.*|.*\/node_modules\/.*|.*\/target\/.*)'
+
+  # ─────────────────────────────────────────────────
+  # YAML lint
+  # ─────────────────────────────────────────────────
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: ['-d', 'relaxed', '--no-warnings']
+        exclude: '^(deploy/helm/.*templates/|\.github/workflows/)'
+
+  # ─────────────────────────────────────────────────
+  # Shell script lint
+  # ─────────────────────────────────────────────────
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.10.0
+    hooks:
+      - id: shellcheck
+        args: ['-x', '-e', 'SC1091']
+
+  # ─────────────────────────────────────────────────
+  # Dockerfile lint
+  # ─────────────────────────────────────────────────
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.13.0-beta
+    hooks:
+      - id: hadolint-docker
+        args: ['--ignore=DL3008', '--ignore=DL3018']
+
+  # ─────────────────────────────────────────────────
+  # Conventional Commits — message format
+  # ─────────────────────────────────────────────────
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.6.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args:
+          - feat
+          - fix
+          - chore
+          - docs
+          - style
+          - refactor
+          - test
+          - perf
+          - ci
+          - build
+          - revert
+
+  # ─────────────────────────────────────────────────
+  # Custom: Spotless (Java) qua Maven — chỉ khi có pom.xml
+  # ─────────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: spotless-java
+        name: spotless-check (Java)
+        language: system
+        entry: bash -c 'find services -name pom.xml 2>/dev/null | head -1 | grep -q . && ./mvnw -B spotless:check || exit 0'
+        files: \.java$
+        pass_filenames: false
+
+      - id: forbid-secrets-pattern
+        name: 'SAFETY cấp 1: hard-code credential'
+        language: pygrep
+        entry: '(password|secret|token|api[_-]?key)\s*[=:]\s*["\047][^"\047]{8,}'
+        types: [text]
+        exclude: '^(\.pre-commit-config\.yaml|docs/SAFETY\.md|.*\.lock)$'
+
+      - id: forbid-migration-edit
+        name: 'SAFETY cấp 1: edit migration đã merge'
+        language: system
+        entry: 'bash -c ''git diff --cached --name-status | awk "/^M/ && \$2 ~ /db\/migrations\/V[0-9]+__/ {print \"❌ Migration đã merge KHÔNG được sửa: \" \$2; exit 1}"'''
+        pass_filenames: false
+
+      - id: forbid-gates-edit
+        name: 'SAFETY cấp 1: edit gate signoff'
+        language: system
+        entry: 'bash -c ''git diff --cached --name-status | awk "/^M/ && \$2 ~ /gates\/G[0-9].*-signoff\.md/ {print \"❌ Gate signoff KHÔNG được sửa: \" \$2; exit 1}"'''
+        pass_filenames: false
