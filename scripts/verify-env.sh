@@ -51,6 +51,8 @@ check "Node 20" "node --version" "v20"
 check "pnpm 9" "pnpm --version" "9"
 check "Maven 3.9" "mvn --version" "3.9"
 check "Docker" "docker --version"
+check "gh CLI" "gh --version"
+check "Claude Code CLI" "claude --version"
 check "pre-commit" "pre-commit --version"
 check "shellcheck" "shellcheck --version"
 echo

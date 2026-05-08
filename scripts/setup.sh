@@ -19,9 +19,64 @@ echo "Project root: $PROJECT_ROOT"
 echo
 
 # ─────────────────────────────────────────────────
+# 0. Prerequisites check
+# ─────────────────────────────────────────────────
+cyan "[0/8] Prerequisites check"
+
+PREREQ_FAIL=0
+
+if ! command -v mise >/dev/null 2>&1; then
+    red "❌ mise chưa cài. Install: curl https://mise.run | sh"
+    echo "   Sau đó: echo 'eval \"\$(mise activate bash)\"' >> ~/.bashrc && restart shell"
+    PREREQ_FAIL=1
+else
+    green "✅ mise: $(mise --version)"
+fi
+
+if ! command -v docker >/dev/null 2>&1; then
+    yellow "⚠️  Docker chưa cài (cần cho infra local). Install: https://docs.docker.com/get-docker/"
+else
+    green "✅ Docker: $(docker --version)"
+fi
+
+if ! command -v gh >/dev/null 2>&1; then
+    yellow "⚠️  gh CLI chưa cài. Ubuntu: sudo apt install gh -y · Mac: brew install gh"
+    yellow "   Sau đó: gh auth login"
+else
+    if gh auth status >/dev/null 2>&1; then
+        green "✅ gh CLI: $(gh --version | head -1) (authenticated)"
+    else
+        yellow "⚠️  gh CLI đã cài nhưng chưa auth. Chạy: gh auth login"
+    fi
+fi
+
+if ! command -v claude >/dev/null 2>&1; then
+    yellow "⚠️  Claude Code CLI chưa cài. Tải: https://claude.com/claude-code hoặc npm install -g @anthropic-ai/claude-code"
+else
+    green "✅ Claude Code: $(claude --version 2>/dev/null || echo 'installed')"
+fi
+
+if [[ $PREREQ_FAIL -eq 1 ]]; then
+    red "❌ Thiếu prerequisites bắt buộc. Cài xong chạy lại setup.sh."
+    exit 1
+fi
+
+# SSH host key cho GitHub
+if ! grep -q "github.com" ~/.ssh/known_hosts 2>/dev/null; then
+    cyan "→ Thêm GitHub SSH host key..."
+    mkdir -p ~/.ssh
+    ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
+    green "✅ GitHub SSH host key added"
+else
+    green "✅ GitHub SSH host key đã có"
+fi
+
+echo
+
+# ─────────────────────────────────────────────────
 # 1. mise — language/tool version manager
 # ─────────────────────────────────────────────────
-cyan "[1/7] Check mise"
+cyan "[1/8] Check mise"
 if ! command -v mise >/dev/null 2>&1; then
     yellow "→ mise chưa cài. Install:"
     echo "       curl https://mise.run | sh"
@@ -36,7 +91,7 @@ echo
 # ─────────────────────────────────────────────────
 # 2. Cài tools theo .mise.toml
 # ─────────────────────────────────────────────────
-cyan "[2/7] Install tools từ .mise.toml"
+cyan "[2/8] Install tools từ .mise.toml"
 mise install
 green "✅ Tools installed"
 echo
@@ -44,7 +99,7 @@ echo
 # ─────────────────────────────────────────────────
 # 3. Frontend deps (nếu có)
 # ─────────────────────────────────────────────────
-cyan "[3/7] Frontend dependencies"
+cyan "[3/8] Frontend dependencies"
 if [[ -d frontend ]] && [[ -f frontend/pnpm-lock.yaml ]]; then
     (cd frontend && pnpm install --frozen-lockfile)
     green "✅ pnpm install done"
@@ -58,7 +113,7 @@ echo
 # ─────────────────────────────────────────────────
 # 4. Maven warmup (nếu có)
 # ─────────────────────────────────────────────────
-cyan "[4/7] Maven dependencies"
+cyan "[4/8] Maven dependencies"
 if find services -name pom.xml 2>/dev/null | head -1 | grep -q .; then
     ./mvnw -B dependency:resolve -DskipTests -q || yellow "→ Maven warmup gặp warning (bỏ qua được)"
     green "✅ Maven deps ready"
@@ -70,7 +125,7 @@ echo
 # ─────────────────────────────────────────────────
 # 5. Pre-commit hooks
 # ─────────────────────────────────────────────────
-cyan "[5/7] Pre-commit hooks"
+cyan "[5/8] Pre-commit hooks"
 if command -v pre-commit >/dev/null 2>&1; then
     if [[ -d .git ]]; then
         pre-commit install
@@ -87,7 +142,7 @@ echo
 # ─────────────────────────────────────────────────
 # 6. Git config recommendations
 # ─────────────────────────────────────────────────
-cyan "[6/7] Git config check"
+cyan "[6/8] Git config check"
 if ! git config user.email >/dev/null 2>&1; then
     yellow "→ git user.email chưa set:"
     echo "       git config --global user.email 'you@example.com'"
@@ -102,7 +157,7 @@ echo
 # ─────────────────────────────────────────────────
 # 7. Verify
 # ─────────────────────────────────────────────────
-cyan "[7/7] Verify"
+cyan "[7/8] Verify"
 "$SCRIPT_DIR/verify-env.sh" || true
 echo
 
