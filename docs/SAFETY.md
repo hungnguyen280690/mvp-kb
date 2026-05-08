@@ -8,46 +8,46 @@ File này định nghĩa **hành vi cấm tuyệt đối** với cả người v
 
 ## 🔴 Cấp độ 1 — TUYỆT ĐỐI KHÔNG (block ngay)
 
-| Hành vi | Vì sao cấm | Thay bằng |
-|---|---|---|
-| `rm -rf /`, `rm -rf ~`, `rm -rf $HOME` | Xoá toàn bộ hệ thống / home | Xoá đúng path tương đối, có confirm |
-| `sudo *` mọi loại | Quyền root → mất kiểm soát | Yêu cầu admin chạy thủ công nếu cần |
-| `git push --force` lên `main`/`master` | Mất commit của người khác | `git push --force-with-lease` lên branch riêng |
-| `git reset --hard origin/main` (khi có local commit) | Mất commit chưa push | `git stash` rồi `git pull --rebase` |
-| `curl X | sh`, `wget Y | bash` | Chạy code không kiểm tra → supply chain attack | Tải về, kiểm tra hash, rồi mới chạy |
-| `chmod 777` | Mở quyền cho mọi user | `chmod 644/755` đúng vai trò |
-| Commit `.env`, `.pem`, `.key`, `id_rsa` | Lộ secret → revoke khẩn cấp | Vault/External Secrets, `.gitignore` |
-| Edit `db/migrations/V*__*.sql` đã merge | Migration là **forward-only**, sửa lại = lệch DB prod | Tạo migration mới `V{N+1}__fix.sql` |
-| Sửa `gates/G*-signoff.md` đã ký | Phá audit trail, gian lận quy trình | Tạo gate mới `G{N}-v2-signoff.md` |
-| Disable test / `@Ignore` để CI xanh | Bypass quality gate | Fix test hoặc xoá test với approval G4 |
-| Hard-code credential trong code | Lộ + không revoke được | Inject qua env / Vault |
+| Hành vi                                              | Vì sao cấm                                            | Thay bằng                                      |
+| ---------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------- | ---------------------------------------------- | ----------------------------------- |
+| `rm -rf /`, `rm -rf ~`, `rm -rf $HOME`               | Xoá toàn bộ hệ thống / home                           | Xoá đúng path tương đối, có confirm            |
+| `sudo *` mọi loại                                    | Quyền root → mất kiểm soát                            | Yêu cầu admin chạy thủ công nếu cần            |
+| `git push --force` lên `main`/`master`               | Mất commit của người khác                             | `git push --force-with-lease` lên branch riêng |
+| `git reset --hard origin/main` (khi có local commit) | Mất commit chưa push                                  | `git stash` rồi `git pull --rebase`            |
+| `curl X                                              | sh`, `wget Y                                          | bash`                                          | Chạy code không kiểm tra → supply chain attack | Tải về, kiểm tra hash, rồi mới chạy |
+| `chmod 777`                                          | Mở quyền cho mọi user                                 | `chmod 644/755` đúng vai trò                   |
+| Commit `.env`, `.pem`, `.key`, `id_rsa`              | Lộ secret → revoke khẩn cấp                           | Vault/External Secrets, `.gitignore`           |
+| Edit `db/migrations/V*__*.sql` đã merge              | Migration là **forward-only**, sửa lại = lệch DB prod | Tạo migration mới `V{N+1}__fix.sql`            |
+| Sửa `gates/G*-signoff.md` đã ký                      | Phá audit trail, gian lận quy trình                   | Tạo gate mới `G{N}-v2-signoff.md`              |
+| Disable test / `@Ignore` để CI xanh                  | Bypass quality gate                                   | Fix test hoặc xoá test với approval G4         |
+| Hard-code credential trong code                      | Lộ + không revoke được                                | Inject qua env / Vault                         |
 
 ## 🟠 Cấp độ 2 — KHÔNG ĐƯỢC PHÉP (cần approval đặc biệt)
 
-| Hành vi | Vì sao | Approval cần |
-|---|---|---|
-| Drop/truncate bảng | Mất dữ liệu | G2 (SA) + DBA |
-| Sửa cấu hình `oc/kubectl` namespace `openshift-*`, `kube-*`, `default` | Hệ thống lõi cluster | G5 (SRE) |
-| `oc patch --force`, `--grace-period=0` | Bypass safe deletion | G5 (SRE) |
-| Push image lên prod registry | Có thể chạy ngay prod | G5 + cosign signed |
-| Disable security scanner / SAST rule | Có thể che lỗ hổng | G2 + lý do file `docs/security-exception.md` |
-| Sửa branch protection rule | Phá quy trình review | Repo admin + log change |
-| `npm install -g` global | Ô nhiễm máy người khác | Dùng project-local hoặc `npx` |
-| Modify CI workflow `*-prod.yml` | Có thể bypass gate prod | G5 (SRE) + 2 reviewer |
-| Tắt feature flag prod không qua quy trình | Mất kiểm soát rollout | Thông qua dashboard FF, không edit code |
+| Hành vi                                                                | Vì sao                  | Approval cần                                 |
+| ---------------------------------------------------------------------- | ----------------------- | -------------------------------------------- |
+| Drop/truncate bảng                                                     | Mất dữ liệu             | G2 (SA) + DBA                                |
+| Sửa cấu hình `oc/kubectl` namespace `openshift-*`, `kube-*`, `default` | Hệ thống lõi cluster    | G5 (SRE)                                     |
+| `oc patch --force`, `--grace-period=0`                                 | Bypass safe deletion    | G5 (SRE)                                     |
+| Push image lên prod registry                                           | Có thể chạy ngay prod   | G5 + cosign signed                           |
+| Disable security scanner / SAST rule                                   | Có thể che lỗ hổng      | G2 + lý do file `docs/security-exception.md` |
+| Sửa branch protection rule                                             | Phá quy trình review    | Repo admin + log change                      |
+| `npm install -g` global                                                | Ô nhiễm máy người khác  | Dùng project-local hoặc `npx`                |
+| Modify CI workflow `*-prod.yml`                                        | Có thể bypass gate prod | G5 (SRE) + 2 reviewer                        |
+| Tắt feature flag prod không qua quy trình                              | Mất kiểm soát rollout   | Thông qua dashboard FF, không edit code      |
 
 ## 🟡 Cấp độ 3 — CẢNH BÁO (nên tránh, log lại)
 
-| Hành vi | Vì sao tránh |
-|---|---|
-| `git commit --no-verify` | Bỏ pre-commit hook → có thể commit junk |
-| `git rebase -i` trên branch shared | Người khác đang base trên đó |
-| Edit code trực tiếp trên prod (kubectl edit) | Drift khỏi GitOps |
-| Sửa file generated (OpenAPI codegen output) | Sẽ bị overwrite lần sau, sửa nguồn |
-| Comment-out code thay vì xoá | Tích luỹ rác |
-| `TODO` không có ticket / owner | Trở thành nợ vĩnh viễn |
-| Catch `Exception` rồi swallow | Che lỗi runtime |
-| `printStackTrace()` trong code prod | Log không structured, lộ thông tin |
+| Hành vi                                      | Vì sao tránh                            |
+| -------------------------------------------- | --------------------------------------- |
+| `git commit --no-verify`                     | Bỏ pre-commit hook → có thể commit junk |
+| `git rebase -i` trên branch shared           | Người khác đang base trên đó            |
+| Edit code trực tiếp trên prod (kubectl edit) | Drift khỏi GitOps                       |
+| Sửa file generated (OpenAPI codegen output)  | Sẽ bị overwrite lần sau, sửa nguồn      |
+| Comment-out code thay vì xoá                 | Tích luỹ rác                            |
+| `TODO` không có ticket / owner               | Trở thành nợ vĩnh viễn                  |
+| Catch `Exception` rồi swallow                | Che lỗi runtime                         |
+| `printStackTrace()` trong code prod          | Log không structured, lộ thông tin      |
 
 ---
 
@@ -71,6 +71,10 @@ File này định nghĩa **hành vi cấm tuyệt đối** với cả người v
 6. **Không đọc file ngoài working directory** trừ khi user chỉ định.
 7. **Không gọi API ngoài** ngoài whitelist `WebFetch(domain:*)`.
 8. **Không tạo file `.md` rác** (planning, decisions, summary) trừ khi user yêu cầu — làm việc từ context conversation.
+9. **Không dùng hedge phrases** — cấm "as needed", "depending on requirements", "TBD" (không có context). Nếu thiếu info, dùng `<<MISSING-INFO>>` marker.
+10. **Không chạy quá max iterations** — mỗi artifact max 3 iterations. Nếu vượt → escalate qua [escalation template](escalations/runaway-prevented.md).
+11. **Attribution bắt buộc** — mọi AI-generated artifact phải có front-matter `generated_by` và commit trailer.
+12. **Không tự giải quyết khi escalation triggered** — chờ human response.
 
 ## ⚠️ Quy trình khi vi phạm
 
@@ -79,6 +83,80 @@ File này định nghĩa **hành vi cấm tuyệt đối** với cả người v
 3. **Notify gatekeeper liên quan** trong < 5 phút
 4. **Post-mortem** trong 24h nếu cấp 1 lọt vào main
 5. **Update SAFETY.md** nếu phát hiện loại vi phạm mới
+
+## 🔒 Two-Tier Confidentiality
+
+Adapt từ ADR-0004. Mọi tài liệu chia 2 tầng:
+
+| Tầng             | Location                                | Access                     | Nội dung                                                                     |
+| ---------------- | --------------------------------------- | -------------------------- | ---------------------------------------------------------------------------- |
+| **Public**       | Repo chính (`mvp-kho-bac/`)             | Toàn team + AI agents      | ADRs, workflows, templates, role cards, non-sensitive specs                  |
+| **Confidential** | `docs-confidential/` (không trong repo) | Human-only, signed commits | Threat models chi tiết, PII handling, security policies, compliance evidence |
+
+**Quy tắc**:
+
+- AI agents KHÔNG được access `docs-confidential/`. Agent Security chỉ sinh stub threat model (Public) + full version (Confidential, human-only).
+- Public artifact KHÔNG chứa PII pattern (R0207).
+- Confidential artifact phải có `classification: Confidential` hoặc `Restricted` trong front-matter.
+
+## 🛡️ Output Completeness Discipline
+
+Adapt từ ADR-0017. Ngăn AI sinh tài liệu "nhẹ" thiếu substance.
+
+### Forbidden hedge phrases
+
+Các phrase sau **CẤM** trong mọi artifact:
+
+- "as needed", "depending on requirements", "as appropriate"
+- "TBD" mà không có context lý do missing
+- "etc.", "and so on" — phải liệt kê đầy đủ
+- "similar to", "follow standard practice" — phải chỉ định cụ thể
+
+### Mandatory markers
+
+Khi thiếu thông tin, dùng marker chuẩn:
+
+- `<<MISSING-INFO: lý do cụ thể, cần hỏi ai>>` — AI KHÔNG tự điền
+- `<<PENDING-DECISION: câu hỏi, cần role nào quyết định>>` — cần human decide
+- `<<FUTURE-SCOPE: mô tả, vì sao không làm ở MVP>>` — acknowledged deferred
+
+### Anti-hallucination rules
+
+- AI KHÔNG được fabricate rule, API endpoint, hay data type không có trong upstream artifact
+- Mọi claim phải có reference: `(ref: domain/business-rules.yaml#BIZ-012)`
+- Nếu không chắc → `<<MISSING-INFO>>` thay vì guess
+
+## 🧱 Defense-in-Depth for AI Failure Modes
+
+Adapt từ ADR-0009. Phòng chống 5 loại AI failure:
+
+### Layer 1: Prevention
+
+| Failure mode     | Prevention                                                                |
+| ---------------- | ------------------------------------------------------------------------- |
+| Hallucination    | Forbidden hedge phrases, mandatory references, `<<MISSING-INFO>>` markers |
+| Prompt injection | Untrusted content boundary blocks in agent prompts                        |
+| Cost runaway     | Per-feature budget (see [FINOPS.md](FINOPS.md)), hard stop at 150%        |
+| Non-determinism  | Pin model version, temperature=0 for code gen, seed when possible         |
+| Tool misuse      | Permission allowlist in `.claude/settings.json`, deny dangerous tools     |
+
+### Layer 2: Detection
+
+| Detection method      | What it catches                                        |
+| --------------------- | ------------------------------------------------------ |
+| Quality rules (R-IDs) | Missing front-matter, broken references, PII in public |
+| Anti-loop guards      | Jaccard similarity < 0.85, max iteration exceeded      |
+| CI doc-lint           | Structure/format/coverage rules enforcement            |
+| Human gate review     | Substance, correctness, domain accuracy                |
+
+### Layer 3: Recovery
+
+| Recovery              | Trigger                            |
+| --------------------- | ---------------------------------- |
+| Escalation template   | Agent hits blocker                 |
+| Revert last iteration | Divergence detected                |
+| Human takeover        | Runaway prevented (max iterations) |
+| Post-mortem           | Any failure reaching main          |
 
 ## 📋 Checklist trước commit (auto qua pre-commit hook)
 
@@ -89,3 +167,6 @@ File này định nghĩa **hành vi cấm tuyệt đối** với cả người v
 - [ ] Test xanh local
 - [ ] Lint pass
 - [ ] OpenAPI khớp với code (nếu có)
+- [ ] Artifact front-matter đầy đủ (status, classification, applies_adrs)
+- [ ] Không có forbidden hedge phrases (pre-commit hook check)
+- [ ] AI attribution present (`generated_by` in front-matter)

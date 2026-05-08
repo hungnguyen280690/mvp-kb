@@ -96,6 +96,7 @@ check ".editorconfig" "test -f .editorconfig"
 check "Makefile" "test -f Makefile"
 check "docker-compose.dev.yml" "test -f docker-compose.dev.yml"
 check ".pre-commit-config.yaml" "test -f .pre-commit-config.yaml"
+check "scripts/git-auto-push.sh" "test -x scripts/git-auto-push.sh"
 echo
 
 # ─────────────────────────────────────────────────

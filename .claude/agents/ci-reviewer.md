@@ -28,6 +28,7 @@ Nếu file thiếu → output **LGTM=false**, comment "Foundation chưa đủ, k
 ## Quy trình review (theo thứ tự, dừng sớm khi gặp blocker)
 
 ### Bước 1 — Lấy diff
+
 ```bash
 git diff $BASE_SHA..$HEAD_SHA --name-status
 git diff $BASE_SHA..$HEAD_SHA --stat
@@ -47,16 +48,16 @@ Ghi nhận risk level → quyết quy mô review.
 
 Quét diff bằng `grep` cho các pattern cấm:
 
-| Pattern | Cấp | Action |
-|---|---|---|
-| `rm -rf` ngoài /tmp, sudo, force push | 1 | LGTM=false, BLOCK |
-| Hard-code credential (regex `(password|secret|token|api[_-]?key)\s*[=:]\s*["'][^"']{8,}`) | 1 | LGTM=false, BLOCK |
-| File `.env`, `.pem`, `.key`, `id_rsa*` thêm vào diff | 1 | LGTM=false, BLOCK |
-| Sửa `db/migrations/V*__*.sql` đã tồn tại trên main | 1 | LGTM=false, BLOCK |
-| Sửa `gates/G*-signoff.md` | 1 | LGTM=false, BLOCK |
-| `@Disabled`, `it.skip`, `xit`, `xdescribe`, `// FIXME: ignored` thêm mới | 1 | LGTM=false, BLOCK |
-| `printStackTrace()`, `console.log` trong code prod (không phải test) | 3 | Warn, không block |
-| `--no-verify` trong commit message | 3 | Warn |
+| Pattern                                                                  | Cấp    | Action            |
+| ------------------------------------------------------------------------ | ------ | ----------------- | ------------------------------------- | --- | ----------------- |
+| `rm -rf` ngoài /tmp, sudo, force push                                    | 1      | LGTM=false, BLOCK |
+| Hard-code credential (regex `(password                                   | secret | token             | api[_-]?key)\s*[=:]\s*["'][^"']{8,}`) | 1   | LGTM=false, BLOCK |
+| File `.env`, `.pem`, `.key`, `id_rsa*` thêm vào diff                     | 1      | LGTM=false, BLOCK |
+| Sửa `db/migrations/V*__*.sql` đã tồn tại trên main                       | 1      | LGTM=false, BLOCK |
+| Sửa `gates/G*-signoff.md`                                                | 1      | LGTM=false, BLOCK |
+| `@Disabled`, `it.skip`, `xit`, `xdescribe`, `// FIXME: ignored` thêm mới | 1      | LGTM=false, BLOCK |
+| `printStackTrace()`, `console.log` trong code prod (không phải test)     | 3      | Warn, không block |
+| `--no-verify` trong commit message                                       | 3      | Warn              |
 
 Cấp 1 → **dừng review, output ngay**.
 
@@ -64,19 +65,35 @@ Cấp 1 → **dừng review, output ngay**.
 
 Đối chiếu `docs/CONTEXT.md` + `domain/business-rules.yaml` (nếu có):
 
-| Check | Cách kiểm |
-|---|---|
-| Có endpoint mới nhưng chưa có OpenAPI? | grep `@RequestMapping`, `@GetMapping`, `@PostMapping` mới + check `contracts/openapi/*.yaml` có path tương ứng |
-| State transition mới nhưng `domain/states.yaml` chưa cập nhật? | grep `LTTStatus.X` mới |
-| Sửa logic `audit` mà không thêm test hash chain? | grep `audit_log`, `AuditLog`, `prevHash` + check test file tương ứng |
-| Sửa `saga` mà không thêm compensation test? | grep `@SagaOrchestrator`, `CompensatingAction` |
-| API POST mới mà không check idempotency key? | grep `@PostMapping` mới + check có đọc header `X-Idempotency-Key` không |
-| Constraint maker_id ≠ checker_id ≠ approver_id còn không? | grep `assign_maker`, `assign_checker`, `assign_approver` |
-| Sửa logic số tiền mà không có integration test với fixture VND/USD? | grep `BigDecimal`, `Money`, `amount` |
-| Log có chứa số TK đầy đủ không? | grep `logger.*account|tài khoản` + check có mask không |
-| Migration mới có rollback path không? | check file `V*__*.sql` mới + có file `V*__*_undo.sql` (Liquibase) hoặc note rollback |
+| Check                                                               | Cách kiểm                                                                                                      |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| Có endpoint mới nhưng chưa có OpenAPI?                              | grep `@RequestMapping`, `@GetMapping`, `@PostMapping` mới + check `contracts/openapi/*.yaml` có path tương ứng |
+| State transition mới nhưng `domain/states.yaml` chưa cập nhật?      | grep `LTTStatus.X` mới                                                                                         |
+| Sửa logic `audit` mà không thêm test hash chain?                    | grep `audit_log`, `AuditLog`, `prevHash` + check test file tương ứng                                           |
+| Sửa `saga` mà không thêm compensation test?                         | grep `@SagaOrchestrator`, `CompensatingAction`                                                                 |
+| API POST mới mà không check idempotency key?                        | grep `@PostMapping` mới + check có đọc header `X-Idempotency-Key` không                                        |
+| Constraint maker_id ≠ checker_id ≠ approver_id còn không?           | grep `assign_maker`, `assign_checker`, `assign_approver`                                                       |
+| Sửa logic số tiền mà không có integration test với fixture VND/USD? | grep `BigDecimal`, `Money`, `amount`                                                                           |
+| Log có chứa số TK đầy đủ không?                                     | grep `logger.\*account                                                                                         | tài khoản` + check có mask không |
+| Migration mới có rollback path không?                               | check file `V*__*.sql` mới + có file `V*__*_undo.sql` (Liquibase) hoặc note rollback                           |
 
 Mỗi item fail → comment cụ thể `file:line` + cách sửa.
+
+### Bước 4.5 — Kiểm tra Diagram + Traceability (cho PR Stage 1-2)
+
+Nếu PR claim [Stage-1] hoặc [Stage-2] (qua title prefix hoặc label):
+
+**Stage 1 PR**:
+
+- Phải có file `domain/diagrams/states.pml` + valid PlantUML syntax (chứa `@startuml`/`@enduml`)
+- Phải có file `domain/diagrams/rules-matrix.pml`
+- Phải có file `domain/traceability-matrix.yaml` với `statistics.coverage_percent >= 95`
+- Thiếu bất kỳ → LGTM=false, "Thiếu diagram/traceability cho visual verification"
+
+**Stage 2 PR**:
+
+- Phải có file `docs/c4/context.mmd`, `docs/c4/container.mmd` + valid Mermaid syntax
+- Thiếu → LGTM=false, "Thiếu C4 diagram cho G2 visual verify"
 
 ### Bước 5 — Kiểm tra COVERAGE / TEST
 
@@ -91,19 +108,21 @@ git diff $BASE_SHA..$HEAD_SHA --numstat -- '**/test/**' '**/*.test.*' '**/*.spec
 ```
 
 Quy tắc:
+
 - Code prod thêm > 50 dòng nhưng test thêm = 0 → LGTM=false, request test
 - Coverage report (artifact `backend-coverage`) < 80% → LGTM=false
 - Sửa file critical (`saga/`, `audit/`, `outbox/`) mà test cho file đó không tăng → LGTM=false
+- Nếu `domain/traceability-matrix.yaml` tồn tại, check `uncovered_rules` list length > 0 → warn "Còn N rule chưa có test cover"
 
 ### Bước 6 — Kiểm tra CONVENTION
 
-| Vi phạm | Action |
-|---|---|
-| Tên class Java không PascalCase | Comment, không block |
-| Tên endpoint không kebab-case | Comment, không block |
-| State name không SCREAMING_SNAKE | Comment, không block |
-| File generated bị sửa tay (header có `// generated`, `# DO NOT EDIT`) | LGTM=false |
-| Comment tiếng Việt trong code không phải UI text | Comment, suggest move to glossary |
+| Vi phạm                                                               | Action                            |
+| --------------------------------------------------------------------- | --------------------------------- |
+| Tên class Java không PascalCase                                       | Comment, không block              |
+| Tên endpoint không kebab-case                                         | Comment, không block              |
+| State name không SCREAMING_SNAKE                                      | Comment, không block              |
+| File generated bị sửa tay (header có `// generated`, `# DO NOT EDIT`) | LGTM=false                        |
+| Comment tiếng Việt trong code không phải UI text                      | Comment, suggest move to glossary |
 
 ### Bước 7 — Kiểm tra OpenAPI (nếu PR đụng `contracts/openapi/`)
 
@@ -159,13 +178,16 @@ Comment trên PR (cũng bắt buộc):
 ### Findings (1)
 
 #### ⚠️ Warning — `services/ltt-core/.../SagaOrchestrator.java:42`
+
 Compensating action thiếu cho transition APPROVED → CANCELLED.
 **Suggest**: Thêm method `releaseFundOnCancel()` và gọi từ rollback handler.
 
 ### Summary
+
 PR medium-risk, đụng saga và outbox. 1 warning về compensation, không blocking. Test coverage 84%, hash chain audit có test. LGTM với suggest fix warning trong PR sau.
 
 ---
+
 Reviewed by `ci-reviewer` agent | [Policy](../docs/SAFETY.md) | [Quality gates](../docs/QUALITY_GATES.md)
 ```
 
@@ -181,6 +203,7 @@ Reviewed by `ci-reviewer` agent | [Policy](../docs/SAFETY.md) | [Quality gates](
 ## Khi không kết luận được
 
 Nếu sau review vẫn lưỡng lự (vd: logic nghiệp vụ phức tạp ngoài training):
+
 - Output `lgtm: false`, severity=`needs-human`
 - Comment: "Cần human review từ @{owner-theo-CODEOWNERS}, AI không đủ context để chốt"
 - Nêu rõ phần nào AI không hiểu, tránh người duyệt phải đọc lại từ đầu

@@ -19,15 +19,15 @@ repos:
       - id: end-of-file-fixer
       - id: check-merge-conflict
       - id: check-added-large-files
-        args: ['--maxkb=1024']
-      - id: detect-private-key       # SAFETY cấp 1
+        args: ["--maxkb=1024"]
+      - id: detect-private-key # SAFETY cấp 1
       - id: check-yaml
-        exclude: '^(deploy/helm/.*templates/.*\.yaml)$'   # Helm templates có Go template
+        exclude: '^(deploy/helm/.*templates/.*\.yaml)$' # Helm templates có Go template
       - id: check-json
       - id: check-executables-have-shebangs
       - id: check-shebang-scripts-are-executable
       - id: mixed-line-ending
-        args: ['--fix=lf']
+        args: ["--fix=lf"]
 
   # ─────────────────────────────────────────────────
   # Secret scanning — SAFETY cấp 1
@@ -54,7 +54,7 @@ repos:
     rev: v1.35.1
     hooks:
       - id: yamllint
-        args: ['-d', 'relaxed', '--no-warnings']
+        args: ["-d", "relaxed", "--no-warnings"]
         exclude: '^(deploy/helm/.*templates/|\.github/workflows/)'
 
   # ─────────────────────────────────────────────────
@@ -64,7 +64,7 @@ repos:
     rev: v0.10.0
     hooks:
       - id: shellcheck
-        args: ['-x', '-e', 'SC1091']
+        args: ["-x", "-e", "SC1091"]
 
   # ─────────────────────────────────────────────────
   # Dockerfile lint
@@ -73,7 +73,7 @@ repos:
     rev: v2.13.0-beta
     hooks:
       - id: hadolint-docker
-        args: ['--ignore=DL3008', '--ignore=DL3018']
+        args: ["--ignore=DL3008", "--ignore=DL3018"]
 
   # ─────────────────────────────────────────────────
   # Conventional Commits — message format
@@ -109,20 +109,34 @@ repos:
         pass_filenames: false
 
       - id: forbid-secrets-pattern
-        name: 'SAFETY cấp 1: hard-code credential'
+        name: "SAFETY cấp 1: hard-code credential"
         language: pygrep
         entry: '(password|secret|token|api[_-]?key)\s*[=:]\s*["\047][^"\047]{8,}'
         types: [text]
         exclude: '^(\.pre-commit-config\.yaml|docs/SAFETY\.md|.*\.lock)$'
 
       - id: forbid-migration-edit
-        name: 'SAFETY cấp 1: edit migration đã merge'
+        name: "SAFETY cấp 1: edit migration đã merge"
         language: system
         entry: 'bash -c ''git diff --cached --name-status | awk "/^M/ && \$2 ~ /db\/migrations\/V[0-9]+__/ {print \"❌ Migration đã merge KHÔNG được sửa: \" \$2; exit 1}"'''
         pass_filenames: false
 
       - id: forbid-gates-edit
-        name: 'SAFETY cấp 1: edit gate signoff'
+        name: "SAFETY cấp 1: edit gate signoff"
         language: system
         entry: 'bash -c ''git diff --cached --name-status | awk "/^M/ && \$2 ~ /gates\/G[0-9].*-signoff\.md/ {print \"❌ Gate signoff KHÔNG được sửa: \" \$2; exit 1}"'''
         pass_filenames: false
+
+      - id: doc-front-matter
+        name: "Quality rule R0010: front-matter required"
+        language: pygrep
+        entry: '^---\n(?:(?!status:).)*\n---'
+        files: '^features/.*\.md$'
+        exclude: '^(features/\.gitkeep|features/.*/\.gitkeep)$'
+
+      - id: hedge-phrase-scan
+        name: "ADR-0017: forbidden hedge phrases"
+        language: pygrep
+        entry: "(as needed|depending on requirements|as appropriate|and so on)"
+        types: [markdown]
+        exclude: '^(docs/adr/|docs/SAFETY\.md|docs/quality-rules/)'

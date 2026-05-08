@@ -3,7 +3,7 @@
         infra-up infra-down infra-logs infra-status \
         plugin-install plugin-verify \
         stage1 stage2 stage3-be stage3-fe stage4 stage5 \
-        gate-status \
+        gate-status diagrams \
         git-init git-hooks ci-local save push commit
 
 # ─────────────────────────────────────────────────
@@ -175,3 +175,22 @@ save: ## Quick add + commit + push. Usage: make save msg="mô tả"
 	@git commit -m "$(msg)" -m "Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 	@git push
 	@echo "✅ Saved + pushed: $(msg)"
+
+# ─────────────────────────────────────────────────
+# Diagrams
+# ─────────────────────────────────────────────────
+diagrams: ## Render PlantUML diagrams to SVG + list Mermaid files
+	@echo "📐 Rendering PlantUML diagrams..."
+	@puml_files=$$(find workspaces/ba/domain/diagrams -name '*.pml' 2>/dev/null); \
+	if [ -n "$$puml_files" ]; then \
+		command -v plantuml >/dev/null 2>&1 || { echo "⚠️  Install plantuml: mise use plantuml@latest"; exit 1; }; \
+		echo "$$puml_files" | while read f; do \
+			echo "  Rendering $$f → $${f%.pml}.svg"; \
+			plantuml -tsvg "$$f"; \
+		done; \
+	else \
+		echo "  (chưa có file .pml — sẽ sinh ở Stage 1)"; \
+	fi
+	@echo "📋 Mermaid diagrams (dùng VS Code preview hoặc mermaid-cli):"
+	@find docs/c4 -name '*.mmd' 2>/dev/null | while read f; do echo "  $$f"; done || echo "  (chưa có — sẽ sinh ở Stage 2)"
+	@echo "✅ Done"

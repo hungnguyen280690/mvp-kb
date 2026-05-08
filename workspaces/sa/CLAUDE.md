@@ -64,10 +64,12 @@ docs/
 ## Gate G2 — Critical review
 
 G2 reviewer (SA Lead) tập trung:
+
 - `payment-order-v1.json` — sai cái này = sửa cả pipeline
 - DDL Oracle, đặc biệt audit hash chain
 - threat model — đủ chống replay/tampering chưa
 - 6 ADR
+- **`docs/c4/*.mmd` — visually verify kiến trúc 4 service + data flow** (BẮT BUỘC, không optional)
 
 Sign-off: `gates/G2-sa-signoff.md`.
 
@@ -81,7 +83,35 @@ Xem [WORKFLOW.md § Incremental Change Flow](../../docs/WORKFLOW.md). SA chỉ c
 - Sinh code service / frontend (Stage 3)
 - Đổi schema sau khi sign-off (cần tạo PR sửa, re-sign)
 
-## Agent có sẵn
+## Agent & Plugin hỗ trợ
 
-- `sa-designer` *(sẽ tạo)* — sinh contracts từ domain/
-- `threat-modeler` *(sẽ tạo)* — sinh threat model STRIDE
+Tận dụng AI để hiện thực hoá kiến trúc:
+
+- **Agent `sa-designer`**:
+  - **Cách gọi**: `> sa-designer`
+  - **Kỹ năng**: Đọc `domain/*.yaml` của BA để sinh OpenAPI, AsyncAPI, và DDL Oracle.
+- **Agent `threat-modeler`**:
+  - **Cách gọi**: `> threat-modeler`
+  - **Kỹ năng**: Phân tích STRIDE dựa trên luồng dữ liệu của LTT.
+- **Plugin `superpowers`**:
+  - **Ứng dụng**: Kiểm tra tính nhất quán giữa Schema JSON và DDL SQL.
+
+## Output Paths
+
+Tất cả artifacts viết vào: `features/{{FEATURE_NAME}}/` và workspace-local directories
+
+- [02-design.md]: `features/{{FEATURE_NAME}}/02-design.md`
+- contracts/: `contracts/` (workspace-local, là nguồn cho Dev đọc)
+- db/migrations/: `db/migrations/` (coordinate với DBA workspace)
+- docs/adr/: `docs/adr/` (feature-specific ADRs)
+
+## Nhiệm vụ trọng tâm (Day 1)
+
+1. Kiểm tra G1 đã sign-off tại `gates/G1-ba-signoff.md`.
+2. Chạy `sa-designer` để sinh bộ Contract.
+3. Review kỹ `payment-order-v1.json` - đây là "trái tim" của hệ thống.
+
+## Khi gặp vướng
+
+- Contract conflict với BA requirements: dùng `docs/escalations/conflict.md` template
+- Cần clarification từ BA: dùng `docs/escalations/ambiguity.md` template

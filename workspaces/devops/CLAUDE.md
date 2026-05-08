@@ -60,14 +60,31 @@ observability/
 - **Prod sync manual** — không bao giờ auto
 - **Namespace boundary** — cấm thao tác `openshift-*`, `kube-*`, `default`
 
-## Agent có sẵn
+## Agent & Plugin hỗ trợ
 
-- `devops-builder` *(sẽ tạo)*
-- Plugin `kubernetes-operations` (từ wshobson/agents)
+- **Plugin `kubernetes-operations`**:
+  - **Kỹ năng**: Thao tác `oc` (OpenShift), `kubectl`, `helm`, kiểm tra log và status của pod.
+  - **Cách dùng**: Yêu cầu Claude `"Check status của pod bff-service trên namespace dev"`.
+- **Agent `devops-builder`**:
+  - **Cách gọi**: `> devops-builder`
+  - **Kỹ năng**: Sinh Helm charts, Tekton YAML và Grafana dashboards.
+- **Plugin `superpowers`**:
+  - **Ứng dụng**: Quản lý ArgoCD App YAML và kiểm tra tính nhất quán của Helm values.
 
-## Khi nào DevOps vào (incremental)
+## Output Paths
 
-Xem [WORKFLOW.md § Incremental Change Flow](../../docs/WORKFLOW.md). DevOps cần vào khi: service thay đổi, sửa infra/Helm/pipeline. **Không cần BA/SA/Dev nếu chỉ sửa config deploy.**
+Tất cả artifacts viết vào: `features/{{FEATURE_NAME}}/` và `deploy/`/`.tekton/`/`observability/`
+
+- [05-runbook.md]: `features/{{FEATURE_NAME}}/05-runbook.md`
+- deploy/: `deploy/` (workspace-local)
+- .tekton/: `.tekton/` (workspace-local)
+- observability/: `observability/` (workspace-local)
+
+## Nhiệm vụ trọng tâm (Day 1)
+
+1. Verify G4 sign-off.
+2. Chạy `devops-builder` để khởi tạo pipeline Tekton.
+3. Kiểm tra kết nối tới Oracle và IBM MQ trên môi trường Dev.
 
 ## KHÔNG được làm
 

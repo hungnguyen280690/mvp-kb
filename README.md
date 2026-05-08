@@ -2,6 +2,11 @@
 
 Vibe-code MVP cho module **Lệnh thanh toán đi NHNN thủ công** (KBNN). Giả lập đầy đủ pipeline **BA → SA → Dev → Test → DevOps** với AI làm bulk, người chỉ đứng ở gate.
 
+## Onboarding cho thành viên mới
+
+> [!IMPORTANT]
+> Nếu bạn là người mới, hãy đọc **[Hướng dẫn Onboarding 24h (docs/ONBOARDING.md)](docs/ONBOARDING.md)** trước để hiểu tư duy và cách làm việc "vibe-code".
+
 ## TL;DR
 
 ```bash
@@ -21,6 +26,9 @@ cd mvp-kho-bac
 cd workspaces/ba          # BA / Stage 1
 # hoặc:
 cd workspaces/sa          # SA / Stage 2
+cd workspaces/dba         # DBA / Stage 2
+cd workspaces/security    # Security / Stage 2
+cd workspaces/ui          # UI/UX / Stage 2-3
 cd workspaces/dev-be      # Backend Dev / Stage 3
 cd workspaces/dev-fe      # Frontend Dev / Stage 3'
 cd workspaces/qa          # QA / Stage 4
@@ -32,35 +40,50 @@ claude code .
 
 ## Stack
 
-| Tầng | Công nghệ |
-|---|---|
-| Container | OpenShift on-prem (OCP 4.x) |
-| Backend | Java 21 + Spring Boot 3.3 + Maven |
-| Frontend | React 18 + Vite + TypeScript |
-| DB | Oracle 19c |
-| Message | IBM MQ (LNH/SP/LKB) |
-| GitOps | Tekton + ArgoCD + Helm |
-| Observability | OpenTelemetry + Grafana + Loki |
-| Source | git (GitHub primary, sau dual với GitLab) |
+| Tầng          | Công nghệ                                 |
+| ------------- | ----------------------------------------- |
+| Container     | OpenShift on-prem (OCP 4.x)               |
+| Backend       | Java 21 + Spring Boot 3.3 + Maven         |
+| Frontend      | React 18 + Vite + TypeScript              |
+| DB            | Oracle 19c                                |
+| Message       | IBM MQ (LNH/SP/LKB)                       |
+| GitOps        | Tekton + ArgoCD + Helm                    |
+| Observability | OpenTelemetry + Grafana + Loki            |
+| Source        | git (GitHub primary, sau dual với GitLab) |
 
 ## Cấu trúc
 
 ```
 mvp-kho-bac/
 ├── CLAUDE.md, README.md
-├── docs/                   ← shared docs (CONTEXT, GATEKEEPERS, WORKFLOW, SAFETY, QUALITY_GATES)
+├── docs/                   ← shared docs
+│   ├── CONTEXT.md          ← domain glossary (ubiquitous language)
+│   ├── WORKFLOW.md         ← 5-stage pipeline + 9 roles
+│   ├── SAFETY.md           ← safety policy + agent rules
+│   ├── QUALITY_GATES.md    ← 21+ quality gates
+│   ├── GATEKEEPERS.md      ← 9 gatekeepers
+│   ├── ONBOARDING.md       ← 24h onboarding guide
+│   ├── ROLE_PLAYBOOK.md    ← role guide index
+│   ├── FINOPS.md           ← AI agent cost control
+│   ├── lessons-learned.md  ← failure pattern log
+│   ├── adr/                ← 18 architectural decision records
+│   ├── quality-rules/      ← quality rules (R0010–R0246) + lifecycle
+│   ├── escalations/        ← 7 escalation templates
+│   ├── roles/              ← 9 role-specific guides
+│   └── templates/          ← handoffs, prompts, session-logs
 ├── shared/specs/           ← SRS xlsx (read-only)
+├── features/               ← per-feature artifact folders (traceability)
 ├── .claude/
 │   ├── settings.json       ← shared permissions
 │   ├── plugins.lock        ← lock version Claude plugin
-│   └── agents/             ← shared agent (ci-reviewer)
-├── workspaces/             ← thư mục riêng từng role (6 cái)
+│   └── agents/             ← shared agents (ci-reviewer, orchestrator)
+├── workspaces/             ← thư mục riêng từng role (9 cái)
 │   └── <role>/
 │       ├── CLAUDE.md       ← role guide
 │       └── .claude/agents/ ← role-specific agent
-├── scripts/                ← setup, verify, install-claude-plugins
+├── scripts/                ← setup, verify, init-feature
 ├── gates/                  ← signoff per stage
-└── .github/                ← CI/CD (sau dual với .gitlab/)
+└── .github/                ← CI/CD
 ```
 
 ## 5 Stage Pipeline
@@ -93,14 +116,14 @@ Chi tiết: [docs/WORKFLOW.md](docs/WORKFLOW.md)
 
 ## Người gác cổng (Gatekeepers)
 
-| Gate | Stage | Vai trò |
-|---|---|---|
-| G1 | 1 — BA | BA / Nghiệp vụ KBNN |
-| G2 | 2 — SA | Solution Architect |
-| G3 | 3 — Dev BE | Senior Java Lead |
-| G3' | 3 — Dev FE | Senior Frontend Lead |
-| G4 | 4 — Test | QA Lead / Test Architect |
-| G5 | 5 — DevOps | DevOps / SRE Lead |
+| Gate | Stage      | Vai trò                  |
+| ---- | ---------- | ------------------------ |
+| G1   | 1 — BA     | BA / Nghiệp vụ KBNN      |
+| G2   | 2 — SA     | Solution Architect       |
+| G3   | 3 — Dev BE | Senior Java Lead         |
+| G3'  | 3 — Dev FE | Senior Frontend Lead     |
+| G4   | 4 — Test   | QA Lead / Test Architect |
+| G5   | 5 — DevOps | DevOps / SRE Lead        |
 
 Chi tiết: [docs/GATEKEEPERS.md](docs/GATEKEEPERS.md)
 
@@ -121,6 +144,7 @@ Chi tiết: [docs/SAFETY.md](docs/SAFETY.md), [docs/QUALITY_GATES.md](docs/QUALI
 ## Auto-merge & CI
 
 PR tự merge khi **TẤT CẢ** đều xanh:
+
 - 18 gate kỹ thuật (lint, test, security, OpenAPI, Helm, ...)
 - Claude AI reviewer (`ci-reviewer` agent) LGTM
 - ≥ 1 human approval từ CODEOWNERS
@@ -144,17 +168,15 @@ make git-hooks               # cài pre-commit hook
 make ci-local                # chạy GitHub Actions local (cần `act`)
 ```
 
-## Onboarding cho thành viên mới
-
 ### Prerequisites (cài trước khi clone)
 
-| Tool | Cài | Kiểm tra |
-|---|---|---|
-| **mise** | `curl https://mise.run \| sh` rồi thêm `eval "$(mise activate bash)"` vào `~/.bashrc` | `mise --version` |
-| **Docker** | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/) (cần cho Oracle + IBM MQ local) | `docker --version` |
-| **gh CLI** | Ubuntu: `sudo apt install gh -y` · Mac: `brew install gh` | `gh --version` |
-| **SSH key** | `ssh-keygen -t ed25519 -C "you@email.com"` rồi add public key vào GitHub Settings → SSH keys | `ssh -T git@github.com` |
-| **Claude Code CLI** | Tải tại [claude.com/claude-code](https://claude.com/claude-code) hoặc `npm install -g @anthropic-ai/claude-code` | `claude --version` |
+| Tool                | Cài                                                                                                              | Kiểm tra                |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| **mise**            | `curl https://mise.run \| sh` rồi thêm `eval "$(mise activate bash)"` vào `~/.bashrc`                            | `mise --version`        |
+| **Docker**          | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/) (cần cho Oracle + IBM MQ local)                | `docker --version`      |
+| **gh CLI**          | Ubuntu: `sudo apt install gh -y` · Mac: `brew install gh`                                                        | `gh --version`          |
+| **SSH key**         | `ssh-keygen -t ed25519 -C "you@email.com"` rồi add public key vào GitHub Settings → SSH keys                     | `ssh -T git@github.com` |
+| **Claude Code CLI** | Tải tại [claude.com/claude-code](https://claude.com/claude-code) hoặc `npm install -g @anthropic-ai/claude-code` | `claude --version`      |
 
 ### Các bước onboard
 
@@ -197,6 +219,7 @@ claude code .
 ### Khi đổi máy mới
 
 Lặp lại đúng các bước trên. Mọi config nằm trong git — clone về là đủ. Chú ý:
+
 - SSH key phải tạo mới + add vào GitHub
 - `gh auth login` phải chạy lại
 - `mise install` sẽ cài đúng version theo `.mise.toml`

@@ -19,6 +19,7 @@ hadolint   = "latest"          # Dockerfile lint
 yamllint   = "latest"
 yq         = "latest"
 jq         = "latest"
+plantuml   = "latest"          # render .pml state machine diagrams (make diagrams)
 
 # Tools chỉ cần khi build/deploy (Stage 5) — bỏ comment khi DevOps cần
 # helm    = "3.16.2"

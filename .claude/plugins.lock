@@ -75,6 +75,7 @@ verification:
 internal_agents:
   shared:
     - ci-reviewer        # .claude/agents/ci-reviewer.md
+    - orchestrator       # .claude/agents/orchestrator.md
   per_workspace:
     ba: [ba-parser]
     sa: [sa-designer, threat-modeler]

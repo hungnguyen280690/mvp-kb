@@ -1,0 +1,28 @@
+{
+  "name": "mvp-kho-bac-dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "postCreateCommand": "mise install && ./scripts/setup.sh",
+  "postStartCommand": "./scripts/verify-env.sh || true",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-docker",
+        "redhat.vscode-yaml",
+        "anthropic.claude-code"
+      ]
+    }
+  },
+  "remoteEnv": {
+    "MAVEN_OPTS": "-Xmx2g -XX:MaxMetaspaceSize=512m"
+  },
+  "mounts": [
+    "source=maven-cache,target=/home/vscode/.m2,type=volume",
+    "source=pnpm-store,target=/home/vscode/.local/share/pnpm,type=volume"
+  ]
+}

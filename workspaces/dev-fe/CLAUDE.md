@@ -57,13 +57,26 @@ frontend/
 - **Mask** số TK trên UI: `1234****5678`
 - **KHÔNG fetch direct** — qua BFF (`/api/internal/*`)
 
-## Agent có sẵn
+## Agent & Plugin hỗ trợ
 
-- `react-builder` *(sẽ tạo)* — sinh page + component từ screens.yaml + OpenAPI
+- **Agent `react-builder`**:
+  - **Cách gọi**: `> react-builder`
+  - **Kỹ năng**: Sinh React components, Hooks và tích hợp API Client từ OpenAPI.
+- **Plugin `superpowers`**:
+  - **Ứng dụng**: Kiểm tra `screens.yaml` để đảm bảo UI không thiếu field nào so với đặc tả của BA.
 
-## Khi nào Dev FE vào (incremental)
+## Output Paths
 
-Xem [WORKFLOW.md § Incremental Change Flow](../../docs/WORKFLOW.md). Dev FE cần vào khi: contracts thay đổi, sửa UI/UX. **Không cần BA/SA/DevOps nếu chỉ sửa frontend.**
+Tất cả artifacts viết vào: `features/{{FEATURE_NAME}}/` và `frontend/`
+
+- UI implementation: `frontend/` (workspace-local)
+- Tham khảo `workspaces/ui/ui/` cho UI spec
+
+## Nhiệm vụ trọng tâm (Day 1)
+
+1. Verify G2 sign-off.
+2. Chạy `react-builder` sinh khung cho 7 màn hình.
+3. Review UX: Workflow Maker→Checker→Approver trên màn hình S02/S04.
 
 ## KHÔNG được làm
 

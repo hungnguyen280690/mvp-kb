@@ -4,16 +4,35 @@ Mỗi stage trong pipeline có **1 người gác cổng riêng**, chuyên môn c
 
 ## Bảng gatekeeper
 
-| Gate | Stage | Vai trò | Chuyên môn cần | Output ký xác nhận | Time/lần |
-|---|---|---|---|---|---|
-| **G1** | 1 — BA | BA / Nghiệp vụ KBNN | Thông tư BTC, COA, NDKT, quy trình thanh toán | Sign-off `domain/scope.yaml` + `domain/glossary.md` | 2h |
-| **G2** | 2 — SA | Solution Architect | Microservice, threat modeling, Oracle, message bus | Sign-off `contracts/*` + `db/migrations/*` + `docs/threat-model.md` | 4h |
-| **G3** | 3 — Dev BE | Senior Java Lead | Spring Boot 3, DDD, saga, Oracle, IBM MQ | Approve PR per service (focus BIZ critical) | 1h × 4 PR = 4h |
-| **G3'** | 3 — Dev FE | Senior Frontend Lead | React 18, TS, banking UX, accessibility | Approve PR frontend | 1h |
-| **G4** | 4 — Test | QA Lead / Test Architect | Test pyramid, Pact, Playwright, k6, security test | Sign-off CI test xanh + triage flaky | 30min |
-| **G5** | 5 — DevOps | DevOps / SRE Lead | OpenShift, Tekton, ArgoCD, Helm, OTel | Approve prod sync + đọc 3 runbook | 1h |
+| Gate      | Stage        | Vai trò                  | Chuyên môn cần                                      | Output ký xác nhận                                                                                                                       | Time/lần       |
+| --------- | ------------ | ------------------------ | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| **G1**    | 1 — BA       | BA / Nghiệp vụ KBNN      | Thông tư BTC, COA, NDKT, quy trình thanh toán       | Sign-off `domain/scope.yaml` + `domain/glossary.md` + visually verify `domain/diagrams/*.pml` + review `domain/traceability-matrix.yaml` | 2h             |
+| **G2**    | 2 — SA       | Solution Architect       | Microservice, threat modeling, Oracle, message bus  | Sign-off `contracts/*` + visually verify `docs/c4/*.mmd`                                                                                 | 4h             |
+| **G-DBA** | 2 — DBA      | Database Administrator   | Oracle DDL, migration safety, audit hash chain, PII | Sign-off `db/migrations/*` + rollback scripts + hash chain logic                                                                         | 1h             |
+| **G-SEC** | 2 — Security | Security Engineer        | STRIDE, OWASP, SoD, MQ security, PII handling       | Sign-off threat model + security policies + compliance checklist                                                                         | 1h             |
+| **G-UI**  | 2-3 — UI/UX  | UI/UX Designer           | React + shadcn/ui, WCAG 2.1 AA, Vietnamese UX       | Sign-off UI spec + a11y baseline + design system                                                                                         | 45min          |
+| **G3**    | 3 — Dev BE   | Senior Java Lead         | Spring Boot 3, DDD, saga, Oracle, IBM MQ            | Approve PR per service (focus BIZ critical)                                                                                              | 1h × 4 PR = 4h |
+| **G3'**   | 3 — Dev FE   | Senior Frontend Lead     | React 18, TS, banking UX, accessibility             | Approve PR frontend                                                                                                                      | 1h             |
+| **G4**    | 4 — Test     | QA Lead / Test Architect | Test pyramid, Pact, Playwright, k6, security test   | Sign-off CI test xanh + triage flaky + verify traceability matrix coverage >95%                                                          | 30min          |
+| **G5**    | 5 — DevOps   | DevOps / SRE Lead        | OpenShift, Tekton, ArgoCD, Helm, OTel               | Approve prod sync + đọc 3 runbook                                                                                                        | 1h             |
 
-**Tổng**: ~12-13 giờ trên toàn bộ MVP, chia 6 người, mỗi người không quá vài giờ.
+**Tổng**: ~15-16 giờ trên toàn bộ MVP, chia 9 người, mỗi người không quá vài giờ.
+
+## Human-to-AI Ratio per Role
+
+Adapt từ ADR-0010. Tỷ lệ human/ai-work cho mỗi role:
+
+| Role             | Ratio | Lý do                                                |
+| ---------------- | ----- | ---------------------------------------------------- |
+| BA (G1)          | 70/30 | Domain judgment quan trọng, AI chỉ parse + draft     |
+| SA (G2)          | 60/40 | Architecture decisions human-heavy                   |
+| DBA (G-DBA)      | 40/60 | CRUD/schema patterns agent-good, safety checks human |
+| Security (G-SEC) | 70/30 | Threat models, policy decisions human-heavy          |
+| UI/UX (G-UI)     | 60/40 | Design judgment human, component scaffolding agent   |
+| Dev BE (G3)      | 30/70 | Code gen agent-heavy, critical path review human     |
+| Dev FE (G3')     | 30/70 | UI code gen agent-heavy, UX review human             |
+| QA (G4)          | 40/60 | Test gen agent-heavy, traceability review human      |
+| DevOps (G5)      | 40/60 | Pipeline/Helm gen agent-good, prod gate human        |
 
 ## Quy tắc cho gatekeeper
 

@@ -46,17 +46,50 @@ Mỗi service: OpenAPI codegen, DDD layer, Flyway migration, unit test ≥80%, D
 - **KHÔNG sửa** db migration đã merge — tạo migration mới
 - **Optimistic lock** mọi update LTT (`If-Match` header)
 
-## Agent có sẵn
+## Agent & Plugin hỗ trợ
 
-- `service-builder` *(sẽ tạo)* — sinh 1 service từ contracts
-- `dispatching-parallel-agents` (từ obra/superpowers) — spawn nhiều worktree
+Dành riêng cho Java Senior Lead:
 
-## Khi nào Dev BE vào (incremental)
+- **Plugin `java-development`**:
+  - **Kỹ năng**: Maven compile, run test, fix compile error tự động, quản lý dependency.
+  - **Cách dùng**: Yêu cầu Claude `"Dùng plugin java-dev để check lỗi compile sau khi sinh code"`.
+- **Plugin `superpowers`**:
+  - **Ứng dụng**: Quản lý nhiều worktree song song cho 4 service (`git worktree`).
+- **Agent `service-builder`**:
+  - **Cách gọi**: `> service-builder`
+  - **Kỹ năng**: Đọc OpenAPI contract và sinh code theo cấu trúc DDD mẫu.
 
-Xem [WORKFLOW.md § Incremental Change Flow](../../docs/WORKFLOW.md). Dev BE cần vào khi: contracts thay đổi, sửa logic, hotfix. **Không cần BA/SA nếu chỉ sửa code.**
+## Nhiệm vụ trọng tâm (Day 1)
+
+1. Verify Gate G2 đã sign-off.
+2. Dùng `dispatching-parallel-agents` để spawn 4 luồng xây dựng service.
+3. Tập trung review logic: Saga, Outbox và Audit Hash Chain.
 
 ## KHÔNG được làm
 
 - Sửa `contracts/` (đã đóng băng từ Stage 2)
 - Sinh frontend (đó là dev-fe)
 - Sinh test E2E (đó là Stage 4)
+
+## Merge orchestration
+
+Khi 4 service hoàn thành và CI xanh, **KHÔNG tự merge**. Thay vào đó:
+
+1. Gọi orchestrator agent: `> orchestrator`
+2. Orchestrator sẽ merge theo thứ tự: core → gateway → gl → bff
+3. Nếu có conflict trên pom.xml, orchestrator giải quyết. Nếu có conflict logic, flag cho G3.
+
+## Output Paths
+
+Tất cả artifacts viết vào: `features/{{FEATURE_NAME}}/` và `services/`
+
+- [05-implementation.md]: `features/{{FEATURE_NAME}}/05-implementation.md`
+- services/: `services/` (4 Spring Boot services)
+
+## Shared dependency lock
+
+Nếu service cần thêm dependency vào root `pom.xml`:
+
+1. Tạo file `services/<name>/DEPENDENCY_REQUEST.md` với groupId:artifactId:version
+2. Orchestrator approve và thêm vào root pom trong lúc merge
+3. **KHÔNG tự sửa root pom.xml** trong worktree

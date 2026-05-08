@@ -34,7 +34,8 @@ else
 fi
 
 if ! command -v docker >/dev/null 2>&1; then
-    yellow "⚠️  Docker chưa cài (cần cho infra local). Install: https://docs.docker.com/get-docker/"
+    yellow "⚠️  Docker chưa cài. Chỉ bắt buộc cho Dev BE, QA, DevOps để chạy Infra local/Test."
+    yellow "   BA và Dev FE có thể bỏ qua nếu không cần chạy Oracle/MQ máy local."
 else
     green "✅ Docker: $(docker --version)"
 fi

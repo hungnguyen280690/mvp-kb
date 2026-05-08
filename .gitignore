@@ -78,6 +78,9 @@ secrets/
 .mise.local.toml
 .tool-versions.local
 
+# ─────────── Dev Container ───────────
+.devcontainer/*.log
+
 # ─────────── SRS xlsx local copy (giữ tại shared/specs/ commit, không cho vô bừa) ───────────
 specs/*.xlsx
 shared/specs/*.xlsx.local

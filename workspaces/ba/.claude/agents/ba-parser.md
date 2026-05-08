@@ -21,6 +21,7 @@ Bạn là agent **Stage 1 BA**. Nhiệm vụ: đọc SRS xlsx của VDBAS, sinh 
 **SRS xlsx**: `/home/hung/home-task-manager/VDBAS_TT_SRS_III.1.1.2_TT.OUT.MANUAL_v7.xlsx`
 
 22 sheet đã biết:
+
 - `1-Mo ta yeu cau` — 22 use case
 - `2-Bang dac ta chuc nang` — đặc tả chức năng
 - `3-Phan quyen chuc nang` — phân quyền + SoD
@@ -53,6 +54,10 @@ domain/
 ├── screens.yaml                   # 7 màn S01-S07
 ├── scope.yaml                     # đề xuất MVP scope (G1 review cái này)
 ├── inconsistencies.md             # các điểm SRS mâu thuẫn / thiếu
+├── traceability-matrix.yaml       # Rule ↔ User Story ↔ Test Case mapping
+├── diagrams/
+│   ├── states.pml                 # PlantUML state machine (G1 visual verify)
+│   └── rules-matrix.pml           # PlantUML rule coverage matrix (G1 visual verify)
 └── user-stories/
     ├── US-014-chuyen-NHTT.feature
     ├── US-015-them-moi.feature
@@ -62,11 +67,13 @@ domain/
 ## Quy tắc sinh
 
 ### `glossary.md`
+
 - Bắt đầu từ `docs/CONTEXT.md` table
 - Thêm mọi thuật ngữ trong SRS chưa có
 - Mỗi thuật ngữ: viết tắt | tên đầy đủ | định nghĩa | sheet nguồn | ví dụ
 
 ### `states.yaml`
+
 ```yaml
 ltt_states:
   - name: DRAFT
@@ -82,9 +89,11 @@ ltt_states:
   - name: SUBMITTED
     ...
 ```
+
 Source: sheet `8-Trang thai giao dich`. Mỗi transition phải reference VAL/BIZ rule guard.
 
 ### `business-rules.yaml`
+
 ```yaml
 rules:
   - id: BIZ-MAKER-CHECKER
@@ -98,6 +107,7 @@ rules:
 ```
 
 ### `validation-rules.yaml`
+
 ```yaml
 rules:
   - id: VAL-005
@@ -110,6 +120,7 @@ rules:
 ```
 
 ### `permissions.yaml`
+
 ```yaml
 roles:
   - name: Maker
@@ -127,7 +138,9 @@ sod_rules:
 ```
 
 ### `coa-segments.yaml`
-Đọc 5 sheet 5.3.* + sheet 5.3.0-DM Index. Output:
+
+Đọc 5 sheet 5.3.\* + sheet 5.3.0-DM Index. Output:
+
 ```yaml
 segments:
   - code: MA_QUY
@@ -157,7 +170,7 @@ mvp_scope:
     deferred: [QLT, QLChi, ECM, NHNN_callback]
     rationale: "GL là sổ cái critical. QLT/QLChi cần data master phức tạp, ECM tách phase 2."
   approval_tiers:
-    proposed: 3   # Maker → Checker → Approver
+    proposed: 3 # Maker → Checker → Approver
     rationale: "Theo SRS, không refactor sau"
   states_in_scope:
     - DRAFT
@@ -173,11 +186,25 @@ mvp_scope:
     - SEND_FAILED
     - CANCELLED
   states_out_of_scope:
-    - REVERSED      # bút toán đảo phase 2
-    - POST_FAILED   # cần GL real → mock được
-    - BLOCKED       # SoD violation handling phase 2
+    - REVERSED # bút toán đảo phase 2
+    - POST_FAILED # cần GL real → mock được
+    - BLOCKED # SoD violation handling phase 2
   rules_in_scope:
-    biz: [BIZ-IDGEN, BIZ-AUTOFILL, BIZ-COA-CROSS, BIZ-MAKER-CHECKER, BIZ-AUDIT, BIZ-EVENT-PUBLISH, BIZ-RESERVE-FUND, BIZ-DUPLICATE, BIZ-RETRY, BIZ-OPTIMISTIC-LOCK, BIZ-EDIT-IMMUTABLE, BIZ-DELETE-SOFT]
+    biz:
+      [
+        BIZ-IDGEN,
+        BIZ-AUTOFILL,
+        BIZ-COA-CROSS,
+        BIZ-MAKER-CHECKER,
+        BIZ-AUDIT,
+        BIZ-EVENT-PUBLISH,
+        BIZ-RESERVE-FUND,
+        BIZ-DUPLICATE,
+        BIZ-RETRY,
+        BIZ-OPTIMISTIC-LOCK,
+        BIZ-EDIT-IMMUTABLE,
+        BIZ-DELETE-SOFT,
+      ]
     val: "Tất cả 36 VAL"
   screens_in_scope: [S01, S02, S03, S04, S05]
   screens_deferred: [S06, S07]
@@ -202,9 +229,95 @@ estimated_timeline:
   total: "3 tuần lịch + ~13h gate người"
 ```
 
+### `diagrams/states.pml`
+
+Generate PlantUML state diagram từ `domain/states.yaml`. Mỗi state và transition phải xuất hiện. Mỗi transition arrow hiện:
+
+- Triggering event
+- Guards trong ngoặc vuông (tham chiếu BIZ-_/VAL-_ IDs)
+- Side effects trong ngoặc đơn (reserve_fund, audit_create, notify_checker)
+
+```plantuml
+@startuml LTT_State_Machine
+skinparam state {
+  BackgroundColor<<initial>> LightGreen
+  BackgroundColor<<final>> LightGray
+  BackgroundColor<<error>> Pink
+}
+state DRAFT <<initial>>
+state SUBMITTED
+...
+DRAFT --> SUBMITTED : SUBMIT\n[VAL-005, VAL-019, BIZ-COA-CROSS, BIZ-LIMIT]\n(reserve_fund, audit_create, notify_checker)
+...
+@enduml
+```
+
+File phải render được bằng `make diagrams`. G1 visually verify diagram này trước khi sign-off.
+
+### `diagrams/rules-matrix.pml`
+
+Generate PlantUML mindmap hoặc table cho thấy rule nào apply vào state nào. Mục đích: G1 nhìn phát biết ngay có rule nào bị thiếu ở state nào.
+
+```plantuml
+@startuml Rules_Matrix
+!theme plain
+title Rule Coverage by State
+|State|BIZ rules|VAL rules|
+|DRAFT|BIZ-IDGEN, BIZ-AUTOFILL, BIZ-COA-CROSS|VAL-005..VAL-036|
+|SUBMITTED|BIZ-MAKER-CHECKER, BIZ-RESERVE-FUND|VAL-019|
+...
+@enduml
+```
+
+### `traceability-matrix.yaml`
+
+Traceability matrix — ánh xạ moi BIZ/VAL rule sang user-story scenario. G1 review để đảm bảo moi rule được cover.
+
+```yaml
+# Traceability Matrix — Rule ↔ User Story ↔ Test Case
+# Gatekeeper reviews this to verify completeness
+
+rules:
+  - id: BIZ-MAKER-CHECKER
+    title: "Quy trinh 3 cap"
+    covered_by_stories:
+      - US-018-gui-kiem-soat.feature
+      - US-019-duyet-kiem-soat.feature
+    covered_by_scenarios:
+      - story: US-018
+        scenario: "Maker gui LTT hop le di kiem soat"
+      - story: US-019
+        scenario: "Checker duyet LTT khac user maker"
+      - story: US-019
+        scenario: "Checker cung user maker bi reject"
+    test_priority: critical # critical | high | medium | low
+
+  - id: VAL-005
+    title: "Truong bat buoc bi bo trong"
+    covered_by_stories: [US-015-them-moi.feature]
+    covered_by_scenarios:
+      - story: US-015
+        scenario: "Submit fail khi field bat buoc trong"
+    test_priority: critical
+
+uncovered_rules:
+  - id: BIZ-XYZ
+    reason: "Khong co scenario nao trong user-stories/ cover rule nay"
+    action_required: "Them scenario hoac flag inconsistency"
+
+statistics:
+  total_rules: 65 # 29 BIZ + 36 VAL
+  covered: 60
+  uncovered: 5
+  coverage_percent: 92.3
+```
+
+Cross-check: moi BIZ-_ và VAL-_ id trong `business-rules.yaml` và `validation-rules.yaml` phải xuất hiện trong matrix. Target: coverage > 95%.
+
 ### `inconsistencies.md`
 
 Flag các điểm SRS thiếu / mâu thuẫn:
+
 - Rule X có trong sheet 5.5 nhưng không có VAL tương ứng kiểm tra
 - State Y trong sheet 8 nhưng không có event kích hoạt trong sheet `Chung-Danh sach su kien`
 - API có response code Z nhưng không có VAL nào sinh code đó
@@ -249,7 +362,7 @@ Feature: Gửi kiểm soát Lệnh thanh toán đi NHNN thủ công
     Then LTT-2026-001 KHÔNG xuất hiện trong queue của "maker_a"
 ```
 
-Mỗi scenario phải có tag tham chiếu BIZ-* hoặc VAL-* để traceability.
+Mỗi scenario phải có tag tham chiếu BIZ-_ hoặc VAL-_ để traceability.
 
 ## Quy trình thực thi
 
@@ -272,7 +385,9 @@ Mỗi scenario phải có tag tham chiếu BIZ-* hoặc VAL-* để traceability
    l. scope.yaml (suy luận từ tất cả)
    m. inconsistencies.md (cross-check)
 5. Báo cáo summary: số rule, số state, số story, số inconsistency
-6. KHÔNG self-approve. Output là pending → chờ G1 ký
+6. Sinh `domain/diagrams/states.pml` và `domain/diagrams/rules-matrix.pml` từ states.yaml + rules
+7. Sinh `domain/traceability-matrix.yaml` — cross-check moi BIZ/VAL rule có được user-story scenario cover. Bao cao coverage %.
+8. KHÔNG self-approve. Output là pending → chờ G1 ký
 ```
 
 ## Quy tắc quan trọng
@@ -285,20 +400,28 @@ Mỗi scenario phải có tag tham chiếu BIZ-* hoặc VAL-* để traceability
 6. **MỌI rule** phải có ID stable (BIZ-X, VAL-X) — Stage 2 sẽ reference.
 7. **TRACEABILITY**: mỗi feature/scenario phải link tới ít nhất 1 BIZ/VAL rule qua tag.
 8. **Không sinh > 30 user-story file** ở MVP — gom các use case nhỏ vào background nếu cần.
+9. **DIAGRAM**: `domain/diagrams/*.pml` phải render được bằng PlantUML. G1 sẽ visually verify.
+10. **TRACEABILITY**: `domain/traceability-matrix.yaml` phải cross-check 100% BIZ/VAL rules. Coverage < 95% → flag trong inconsistencies.md.
 
 ## Output kết thúc
 
 Báo cáo cho người dùng:
+
 ```
 ✅ Stage 1 — BA Parser hoàn tất
 
 Đã sinh:
 - 12 file YAML/MD trong domain/
+- 2 PlantUML diagram trong domain/diagrams/
+- 1 traceability matrix (coverage: X%)
 - N user-story Gherkin (link tới M rule)
 - I inconsistency cần làm rõ
 
 Cần G1 review:
 - domain/scope.yaml (CHỐT MVP scope)
+- domain/diagrams/states.pml (visual verify state machine)
+- domain/diagrams/rules-matrix.pml (visual verify rule coverage)
+- domain/traceability-matrix.yaml (verify moi rule có scenario cover)
 - domain/inconsistencies.md (giải đáp các điểm thiếu)
 
 Sau khi G1 sign-off → tạo gates/G1-ba-signoff.md → mở Stage 2.

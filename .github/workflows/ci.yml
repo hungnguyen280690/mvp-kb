@@ -25,6 +25,48 @@ env:
 
 jobs:
   # ─────────────────────────────────────────────────
+  # 0. RISK CLASSIFICATION
+  # ─────────────────────────────────────────────────
+  risk-classify:
+    name: Classify PR risk
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    outputs:
+      risk: ${{ steps.classify.outputs.risk }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend: 'services/**'
+            frontend: 'frontend/**'
+            contracts: 'contracts/**'
+            db: 'db/migrations/**'
+            critical: |
+              services/**/saga/**
+              services/**/audit/**
+              services/**/outbox/**
+              services/**/payment/**
+              services/**/auth/**
+              db/migrations/**
+            docs: 'docs/**/*.md'
+      - name: Classify risk
+        id: classify
+        run: |
+          if [[ "${{ steps.filter.outputs.docs }}" == "true" && "${{ steps.filter.outputs.backend }}" != "true" && "${{ steps.filter.outputs.contracts }}" != "true" ]]; then
+            echo "risk=low" >> $GITHUB_OUTPUT
+          elif [[ "${{ steps.filter.outputs.critical }}" == "true" || "${{ steps.filter.outputs.db }}" == "true" ]]; then
+            echo "risk=high" >> $GITHUB_OUTPUT
+          else
+            echo "risk=medium" >> $GITHUB_OUTPUT
+          fi
+      - name: Report
+        run: echo "PR risk level: ${{ steps.classify.outputs.risk }}"
+
+  # ─────────────────────────────────────────────────
   # 1. STATIC CHECKS (lint, secret scan, license)
   # ─────────────────────────────────────────────────
   static:
@@ -152,7 +194,10 @@ jobs:
   integration:
     name: Integration test (Oracle + IBM MQ)
     runs-on: ubuntu-latest
-    needs: unit-backend
+    needs: [unit-backend, risk-classify]
+    if: |
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' && needs.risk-classify.outputs.risk != 'low')
     services:
       oracle:
         image: gvenzl/oracle-free:23-slim-faststart
@@ -237,7 +282,10 @@ jobs:
   e2e:
     name: E2E test (Playwright)
     runs-on: ubuntu-latest
-    needs: [integration, unit-frontend]
+    needs: [integration, unit-frontend, risk-classify]
+    if: |
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' && needs.risk-classify.outputs.risk != 'low')
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v3
@@ -296,7 +344,81 @@ jobs:
         run: cosign attest --predicate sbom.spdx.json --type spdx ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
 
   # ─────────────────────────────────────────────────
-  # 7. CLAUDE AI REVIEW (gate cuối tự động)
+  # 7. DOC-LINT (quality rules enforcement)
+  # ─────────────────────────────────────────────────
+  doc-lint:
+    name: Doc lint (quality rules)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Check changed docs
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            docs: |
+              docs/**/*.md
+              features/**/*.md
+      - name: Front-matter validation (R0010-R0013)
+        if: steps.filter.outputs.docs == 'true'
+        run: |
+          # Check every .md in features/ and docs/ has valid front-matter
+          for f in $(git diff --name-only origin/main...HEAD -- 'features/*.md' 'docs/**/*.md'); do
+            if [[ "$f" == *.md ]]; then
+              # Check front-matter exists
+              if ! head -1 "$f" | grep -q '^---'; then
+                echo "FAIL R0010: $f missing front-matter"
+                exit 1
+              fi
+              # Check required fields
+              for field in status classification; do
+                if ! grep -q "^${field}:" "$f"; then
+                  echo "FAIL R0010: $f missing '${field}' in front-matter"
+                  exit 1
+                fi
+              done
+            fi
+          done
+          echo "Front-matter validation passed"
+      - name: PII check (R0207)
+        if: steps.filter.outputs.docs == 'true'
+        run: |
+          # Check no PII patterns in public docs
+          for f in $(git diff --name-only origin/main...HEAD -- 'docs/**/*.md' 'features/**/*.md'); do
+            if [[ "$f" == *.md ]]; then
+              classification=$(grep '^classification:' "$f" 2>/dev/null | head -1 | awk '{print $2}' || echo "Public")
+              if [[ "$classification" != "Confidential" && "$classification" != "Restricted" ]]; then
+                # Check for account numbers (8+ digits)
+                if grep -qP '\d{8,}' "$f" 2>/dev/null; then
+                  echo "WARN R0207: $f may contain account numbers (Public classification)"
+                fi
+              fi
+            fi
+          done
+          echo "PII check passed"
+      - name: Hedge phrase scan
+        if: steps.filter.outputs.docs == 'true'
+        run: |
+          # Check for forbidden hedge phrases (ADR-0017)
+          forbidden=("as needed" "depending on requirements" "as appropriate" "etc." "and so on")
+          found=0
+          for f in $(git diff --name-only origin/main...HEAD -- 'docs/**/*.md' 'features/**/*.md'); do
+            for phrase in "${forbidden[@]}"; do
+              if grep -qi "$phrase" "$f" 2>/dev/null; then
+                echo "WARN: Found forbidden phrase '$phrase' in $f"
+                found=$((found + 1))
+              fi
+            done
+          done
+          if [ $found -gt 0 ]; then
+            echo "Found $forbidden forbidden phrases (warning, not blocking)"
+          fi
+          echo "Hedge phrase scan complete"
+
+  # ─────────────────────────────────────────────────
+  # 8. CLAUDE AI REVIEW (gate cuối tự động)
   # ─────────────────────────────────────────────────
   claude-review:
     name: Claude AI reviewer
@@ -324,7 +446,7 @@ jobs:
   auto-merge:
     name: Auto merge
     runs-on: ubuntu-latest
-    needs: [static, unit-backend, unit-frontend, integration, contract, e2e, sast, deps-scan, claude-review]
+    needs: [static, unit-backend, unit-frontend, integration, contract, e2e, sast, deps-scan, doc-lint, claude-review]
     if: |
       github.event_name == 'pull_request' &&
       contains(github.event.pull_request.labels.*.name, 'auto-merge')

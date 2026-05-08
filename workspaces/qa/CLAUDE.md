@@ -18,8 +18,8 @@ claude code .
 ## Đọc trước
 
 - [Root CLAUDE.md](../../CLAUDE.md)
-- [docs/QUALITY_GATES.md](../../docs/QUALITY_GATES.md) — 20 gate auto-merge
-- **BA**: `../ba/domain/user-stories/*.feature`
+- [docs/QUALITY_GATES.md](../../docs/QUALITY_GATES.md) — 21 gate auto-merge
+- **BA**: `../ba/domain/user-stories/*.feature`, `../ba/domain/traceability-matrix.yaml`
 - **SA**: `../sa/contracts/`
 - **Dev**: `../dev-be/services/`, `../dev-fe/frontend/`
 
@@ -41,17 +41,35 @@ Unit test sống cùng code (mỗi service tự sinh).
 ## Quy tắc
 
 - E2E từ `.feature` → mỗi scenario có tag `@VAL-X` / `@BIZ-X` để traceability
+- **Traceability matrix**: mỗi test case phải tag với BIZ/VAL rule ID từ `domain/traceability-matrix.yaml`. Uncovered rules = test gap → phải viết test.
+- **Pact là tầng test CHÍNH** — phủ >80% integration concern. Integration test (Testcontainers) chỉ cho high-risk flow: saga, audit hash chain, outbox.
 - Perf: p95 < 500ms, p99 < 1s, 50 RPS sustained
 - Security: 0 HIGH/CRITICAL trong Trivy + ZAP
 - Chaos test cho saga: random fail MQ, GL down, DB down
 
-## Agent có sẵn
+## Agent & Plugin hỗ trợ
 
-- `test-writer` *(sẽ tạo)* — sinh test từ Gherkin + contracts
+- **Agent `test-writer`**:
+  - **Cách gọi**: `> test-writer`
+  - **Kỹ năng**: Chuyển đổi Gherkin (`.feature`) thành Playwright test và Pact contract test.
+- **Plugin `security-scanning`**:
+  - **Kỹ năng**: Chạy Trivy, ZAP scan và phân tích kết quả bảo mật.
+  - **Cách dùng**: Yêu cầu Claude `"Sử dụng plugin security-scan để audit image backend"`.
+- **Plugin `superpowers`**:
+  - **Ứng dụng**: Traceability giữa test case và Business Rule ID.
 
-## Khi nào QA vào (incremental)
+## Output Paths
 
-Xem [WORKFLOW.md § Incremental Change Flow](../../docs/WORKFLOW.md). QA cần vào khi: code thay đổi, thêm test. **Không cần BA/SA nếu chỉ thêm/chạy test.**
+Tất cả artifacts viết vào: `features/{{FEATURE_NAME}}/` và `tests/`
+
+- [08-test-data.md]: `features/{{FEATURE_NAME}}/08-test-data.md`
+- tests/: `tests/` (workspace-local)
+
+## Nhiệm vụ trọng tâm (Day 1)
+
+1. Verify G3/G3' sign-off.
+2. Chạy `test-writer` để phủ kín các Scenario High-risk.
+3. Triage các lỗi bảo mật từ `security-scanning`.
 
 ## KHÔNG được làm
 
