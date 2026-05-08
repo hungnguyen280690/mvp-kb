@@ -65,6 +65,10 @@ observability/
 - `devops-builder` *(sẽ tạo)*
 - Plugin `kubernetes-operations` (từ wshobson/agents)
 
+## Khi nào DevOps vào (incremental)
+
+Xem [WORKFLOW.md § Incremental Change Flow](../../docs/WORKFLOW.md). DevOps cần vào khi: service thay đổi, sửa infra/Helm/pipeline. **Không cần BA/SA/Dev nếu chỉ sửa config deploy.**
+
 ## KHÔNG được làm
 
 - Sửa CI workflow sau merge mà không qua review

@@ -51,6 +51,10 @@ Mỗi service: OpenAPI codegen, DDD layer, Flyway migration, unit test ≥80%, D
 - `service-builder` *(sẽ tạo)* — sinh 1 service từ contracts
 - `dispatching-parallel-agents` (từ obra/superpowers) — spawn nhiều worktree
 
+## Khi nào Dev BE vào (incremental)
+
+Xem [WORKFLOW.md § Incremental Change Flow](../../docs/WORKFLOW.md). Dev BE cần vào khi: contracts thay đổi, sửa logic, hotfix. **Không cần BA/SA nếu chỉ sửa code.**
+
 ## KHÔNG được làm
 
 - Sửa `contracts/` (đã đóng băng từ Stage 2)

@@ -49,6 +49,10 @@ Unit test sống cùng code (mỗi service tự sinh).
 
 - `test-writer` *(sẽ tạo)* — sinh test từ Gherkin + contracts
 
+## Khi nào QA vào (incremental)
+
+Xem [WORKFLOW.md § Incremental Change Flow](../../docs/WORKFLOW.md). QA cần vào khi: code thay đổi, thêm test. **Không cần BA/SA nếu chỉ thêm/chạy test.**
+
 ## KHÔNG được làm
 
 - Sửa code prod để pass test

@@ -71,6 +71,10 @@ G2 reviewer (SA Lead) tập trung:
 
 Sign-off: `gates/G2-sa-signoff.md`.
 
+## Khi nào SA vào (incremental)
+
+Xem [WORKFLOW.md § Incremental Change Flow](../../docs/WORKFLOW.md). SA chỉ cần vào khi: `domain/*` thay đổi, thêm/sửa API contract, thêm DB migration.
+
 ## KHÔNG được làm
 
 - Sửa `domain/` của BA (read-only)

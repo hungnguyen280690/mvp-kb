@@ -61,6 +61,10 @@ frontend/
 
 - `react-builder` *(sẽ tạo)* — sinh page + component từ screens.yaml + OpenAPI
 
+## Khi nào Dev FE vào (incremental)
+
+Xem [WORKFLOW.md § Incremental Change Flow](../../docs/WORKFLOW.md). Dev FE cần vào khi: contracts thay đổi, sửa UI/UX. **Không cần BA/SA/DevOps nếu chỉ sửa frontend.**
+
 ## KHÔNG được làm
 
 - Gọi MQ trực tiếp (qua BFF)

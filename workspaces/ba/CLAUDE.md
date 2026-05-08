@@ -63,6 +63,10 @@ Khi xong:
 
 - `ba-parser` — tự động đọc 22 sheet SRS, sinh đầy đủ 12 file domain/
 
+## Khi nào BA vào (incremental)
+
+Không phải lúc nào cũng chạy full pipeline. Xem [WORKFLOW.md § Incremental Change Flow](../../docs/WORKFLOW.md) để biết khi nào bỏ qua stage. BA chỉ cần vào khi: SRS thay đổi, thêm rule nghiệp vụ, thêm use case.
+
 ## Khi gặp vướng
 
 - Rule mâu thuẫn: ghi `domain/inconsistencies.md` rồi notify G1

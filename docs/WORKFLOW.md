@@ -183,3 +183,51 @@ SRS xlsx (input gốc, đã có)
 - Thay đổi NHỎ (rule, validation): sửa ở `domain/*`, re-run từ Stage 2 partial.
 - Thay đổi LỚN (scope, kiến trúc): sửa ở `domain/scope.yaml` + `contracts/*`, re-run từ Stage 2 full.
 - KHÔNG bao giờ sửa thẳng code Stage 3 mà bỏ qua việc cập nhật contract.
+
+---
+
+## Incremental Change Flow — Bỏ qua các giai đoạn không liên quan
+
+Sau khi MVP pipeline đầu tiên hoàn tất và tất cả đã được ký kết, các thay đổi tiếp theo **không cần chạy hết 5 giai đoạn**. Xác định giai đoạn bị ảnh hưởng và chỉ chạy từ đó trở đi.
+
+### Ma trận thay đổi → Giai đoạn
+
+| Thay đổi | Giai đoạn cần chạy | Bỏ qua | Gate cần |
+|---|---|---|---|
+| Thêm/sửa SRS (sheet mới, rule mới) | 1 → 2 → 3 → 4 → 5 | — | G1 |
+| Thêm domain rule (không đổi SRS) | 1 → 2 → 3 → 4 | 5 | G1 |
+| Thêm/sửa API contract | 2 → 3 → 4 → 5 | 1 | G2 |
+| Thêm/sửa DB migration | 2 → 3 → 4 | 1 | G2 |
+| Sửa code business logic (không đổi contract) | 3 → 4 | 1, 2 | G3 |
+| Sửa UI/UX (không đổi API) | 3' → 4 | 1, 2, 5 | G3' |
+| Thêm/sửa test | 4 | 1, 2, 3 | G4 |
+| Sửa infra, Helm, pipeline | 5 | 1, 2, 3, 4 | G5 |
+| Sửa docs (không đổi artifact) | — | tất cả | — |
+| Hotfix prod (gấp) | 3 → 4 → 5 | 1, 2 | G3 + G5 |
+
+### Quy tắc bỏ qua giai đoạn
+
+1. **Chỉ bỏ qua khi tất cả các giai đoạn trước đã được ký kết** (có `gates/G*-signoff.md`).
+2. **Thay đổi chạm `domain/*`** → phải chạy lại từ Giai đoạn 1.
+3. **Thay đổi chạm `contracts/*` hoặc `db/migrations/*`** → phải chạy lại từ Giai đoạn 2.
+4. **Thay đổi chỉ chạm `services/*`** → chạy từ Giai đoạn 3.
+5. **Gatekeeper chỉ review khi giai đoạn của họ bị ảnh hưởng** — không review oan.
+
+### Quick-reference cho từng role
+
+| Role | Khi nào vào? | Làm gì? |
+|---|---|---|
+| **BA** | SRS thay đổi / thêm use case / sửa rule nghiệp vụ | Parse sheet mới → update `domain/*` → G1 sign-off |
+| **SA** | `domain/*` thay đổi / thêm API / sửa DB schema | Update `contracts/*` + `db/migrations/*` → G2 sign-off |
+| **Dev BE** | `contracts/*` thay đổi / sửa logic / hotfix | Implement theo contract → mở PR → G3 review |
+| **Dev FE** | `contracts/*` thay đổi / sửa UI | Implement UI → mở PR → G3' review |
+| **QA** | Code thay đổi / thêm test | Sinh + chạy test → G4 sign-off |
+| **DevOps** | Service thay đổi / sửa infra | Update Helm + pipeline → G5 sign-off |
+
+### Ví dụ cụ thể
+
+**"Thêm SRS mới"**: BA parse sheet mới → update domain/ → nếu có rule mới ảnh hưởng contract → SA update → Dev implement → QA test → DevOps deploy.
+
+**"Sửa bug code nhỏ"**: Dev sửa trực tiếp → mở PR → CI chạy → QA verify → merge. Không cần BA hay SA.
+
+**"Thêm field mới trên form"**: BA thêm vào domain/ → SA thêm vào contract → Dev FE update UI → QA test. DevOps không cần vào nếu không đổi infra.
