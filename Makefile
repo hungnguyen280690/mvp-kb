@@ -4,7 +4,7 @@
         plugin-install plugin-verify \
         stage1 stage2 stage3-be stage3-fe stage4 stage5 \
         gate-status \
-        git-init git-hooks ci-local
+        git-init git-hooks ci-local save push commit
 
 # ─────────────────────────────────────────────────
 # Help
@@ -154,3 +154,23 @@ git-hooks: ## Cài pre-commit hook (gitleaks, prettier, yamllint, ...)
 ci-local: ## Chạy CI pipeline cục bộ (cần `act`)
 	@command -v act >/dev/null || (echo "Install: brew install act / scoop install act" && exit 1)
 	@act -W .github/workflows/ci.yml --container-architecture linux/amd64
+
+# ─────────────────────────────────────────────────
+# Quick git workflow
+# ─────────────────────────────────────────────────
+commit: ## Commit staged changes. Usage: make commit msg="mô tả"
+	@test -n "$(msg)" || (echo "❌ Cần message: make commit msg=\"mô tả\"" && exit 1)
+	@git commit -m "$(msg)" -m "Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
+	@echo "✅ Committed: $(msg)"
+
+push: ## Push current branch to remote
+	@git push
+	@echo "✅ Pushed to origin/$(shell git branch --show-current)"
+
+save: ## Quick add + commit + push. Usage: make save msg="mô tả"
+	@test -n "$(msg)" || (echo "❌ Cần message: make save msg=\"mô tả\"" && exit 1)
+	@git add -A
+	@git status -s | grep -q . || (echo "ℹ️  Không có thay đổi để commit" && exit 0)
+	@git commit -m "$(msg)" -m "Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
+	@git push
+	@echo "✅ Saved + pushed: $(msg)"
