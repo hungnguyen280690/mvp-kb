@@ -5,7 +5,13 @@
       "Bash(gh auth *)",
       "Bash(git --version)",
       "Bash(git -C /home/hung/mvp-kho-bac status -s)",
-      "Bash(git -C /home/hung/mvp-kho-bac log --oneline -5)"
+      "Bash(git -C /home/hung/mvp-kho-bac log --oneline -5)",
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(./scripts/verify-env.sh *)",
+      "Skill(update-config)",
+      "Bash(python3 *)",
+      "Bash(chmod +x *)"
     ]
   }
 }
