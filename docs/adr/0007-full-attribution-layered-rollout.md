@@ -1,40 +1,39 @@
-# ADR-0007: Full attribution layered rollout (agent roster + handle convention + front-matter authors + last_human_read + commit trailers + session logs)
+# ADR-0007: Ghi nhận đầy đủ nguồn gốc (Danh sách Agent + Quy ước định danh + Tác giả ở phần đầu file + Xác nhận của con người + Session log)
 
-- **Status:** Accepted
-- **Date:** 2026-05-07
-- **Deciders:** DevOps (lead), Security, SA, all roles consulted
-- **Tags:** agents, attribution, provenance, foundation
-- **Supersedes:** —
-- **Superseded by:** —
+- **Trạng thái:** Đã phê duyệt
+- **Ngày:** 07-05-2026
+- **Người quyết định:** DevOps (dẫn dắt), Bảo mật, SA, tham vấn tất cả các vai trò
+- **Thẻ:** agent, ghi-nhận-nguồn-gốc, nền-tảng
+- **Thay thế cho:** —
+- **Được thay thế bởi:** —
 
-## Context
+## Ngữ cảnh
 
-ADR-0006 mandates that artifact A fields resolve only to humans. **The linter cannot enforce that without a structured way to distinguish humans from agents** — and our specific stack adds complexity:
+ADR-0006 quy định rằng trường A của sản phẩm bàn giao chỉ được là con người. **Công cụ kiểm tra không thể thực thi điều đó nếu không có cách cấu trúc để phân biệt con người với Agent** — và hệ thống của chúng ta còn có thêm sự phức tạp sau:
 
-| Surface               | Anthropic Claude Code                 | zAI GLM                             |
-| --------------------- | ------------------------------------- | ----------------------------------- |
-| GitHub identity       | OAuth bot account possible            | None (API-only)                     |
-| Commit attribution    | Native `Co-Authored-By` works         | Must be synthesized by tooling      |
-| Token/cost visibility | API exposes usage                     | API exposes usage, different format |
-| Multi-model           | Sonnet vs Opus vs Haiku (4.5/4.6/4.7) | GLM-4, GLM-4-Air, GLM-4-Plus        |
+| Bề mặt           | Anthropic Claude Code           | zAI GLM                                   |
+| :--------------- | :------------------------------ | :---------------------------------------- |
+| Định danh GitHub | Có thể dùng tài khoản OAuth bot | Không có (chỉ dùng API)                   |
+| Ghi nhận commit  | Có hỗ trợ `Co-Authored-By`      | Phải được tổng hợp bởi công cụ            |
+| Chi phí          | API hiển thị mức sử dụng        | API hiển thị mức sử dụng (định dạng khác) |
+| Đa mô hình       | Sonnet vs Opus (4.5/4.6/4.7)    | GLM-4, GLM-4-Air, GLM-4-Plus              |
 
-Without standardization:
+Nếu không có sự tiêu chuẩn hóa:
 
-- Cannot enforce A-is-human (linter has no way to tell `@alice` from `@glm-4-air`)
-- Cannot trace hallucinations (no model/version/prompt linkage)
-- Cannot attribute costs (cost dashboard cannot exist)
-- Cannot reason about deprecation (don't know which artifacts an obsolete model authored)
-- Cannot honor compliance audits (cannot answer "who actually decided X")
+- Không thể thực thi quy tắc "A là con người" (công cụ không biết phân biệt `@alice` với `@glm-4-air`).
+- Không thể truy vết hiện tượng "ảo giác" của AI (không có liên kết với mô hình/phiên bản/prompt).
+- Không thể thống kê chi phí.
+- Không thể thực hiện các cuộc kiểm toán tuân thủ (không thể trả lời "ai thực sự đã quyết định X").
 
-A specific 70/30 failure mode: **rubber-stamping**. At 70% agent throughput humans get review fatigue, approve without reading. The system needs an explicit signal of human engagement that goes beyond merge approval.
+Một lỗi phổ biến khi áp dụng tỷ lệ 70/30: **"Phê duyệt tự động" (rubber-stamping)**. Khi khối lượng công việc của Agent quá lớn, con người bị mệt mỏi và phê duyệt mà không thực sự đọc. Hệ thống cần một tín hiệu rõ ràng về sự tham gia của con người vượt lên trên việc chỉ nhấn nút trộn mã nguồn.
 
-## Decision
+## Quyết định
 
-Adopt **four-layer attribution**, rolled out by phase matching ADR-0005's severity tiers:
+Áp dụng **hệ thống ghi nhận 4 lớp**, được triển khai theo từng giai đoạn tương ứng với các mức độ nghiêm trọng của ADR-0005:
 
-### Layer 1 — Agent roster (mirrors team-roster)
+### Lớp 1 — Danh sách Agent (Agent roster)
 
-`docs-platform/standards/agent-roster.md`:
+File `docs-platform/standards/agent-roster.md`:
 
 ```yaml
 agents:
@@ -51,15 +50,14 @@ agents:
     deprecated: null
 ```
 
-The linter parses this. Every handle in OWNERS.md, front-matter, or commit trailers must resolve to an entry in `team-roster.md` (kind: employee|contractor|vendor) or `agent-roster.md`. Unknown handle = PR rejected.
+Công cụ kiểm tra sẽ phân tích file này. Mọi định danh trong `OWNERS.md`, phần khai báo đầu file hoặc nhật ký commit đều phải khớp với một mục trong `team-roster.md` (con người) hoặc `agent-roster.md` (agent). Định danh lạ sẽ bị từ chối.
 
-### Layer 2 — Stable handle convention
+### Lớp 2 — Quy ước định danh ổn định
 
-`@<provider>-<model-family>-<role-spec>` — e.g. `@claude-opus-reviewer`, `@claude-sonnet-test-automator`, `@glm-4-air-doc-drafter`.
+`@<nhà_cung_cấp>-<dòng_mô_hình>-<chuyên_môn>` — ví dụ: `@claude-opus-reviewer`, `@claude-sonnet-test-automator`, `@glm-4-air-doc-drafter`.
+Phiên bản cụ thể **không nằm trong định danh** (vì sẽ thay đổi hàng tuần) mà nằm trong trường `model:` của danh sách Agent.
 
-Version is **not in the handle** (would churn weekly). Version lives in the roster's `model:` field. Historical artifacts pin it via front-matter at authorship time (Layer 3).
-
-### Layer 3 — Front-matter authorship
+### Lớp 3 — Tác giả trong phần khai báo đầu file
 
 ```yaml
 authors:
@@ -69,109 +67,61 @@ authors:
       model_at_authorship: claude-opus-4-7
       session_started: 2026-05-07T14:23:00Z
       contribution: drafted-sections [4, 5], reviewed-all
-last_human_read: <sha>
+last_human_read: <mã_sha>
 last_human_read_by: @alice
 ```
 
-**`last_human_read` is the most important field** for the 30/70 mix — it pins when a human actually engaged with the content, distinct from when they merged it. The linter flags artifacts where `last_human_read` is older than the latest substantive change (the rubber-stamp detector).
+**`last_human_read` (lần cuối con người đọc) là trường quan trọng nhất** — nó ghi nhận thời điểm một con người thực sự tương tác với nội dung, phân biệt với việc họ chỉ nhấn nút merge. Công cụ kiểm tra sẽ đánh dấu các sản phẩm có `last_human_read` cũ hơn các thay đổi nội dung mới nhất.
 
-### Layer 4 — Commit trailers + PR description
+### Lớp 4 — Nhật ký Commit + Mô tả PR
 
-Git commit trailer:
+Ghi nhận trong commit:
 
 ```
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
 Agent-Provider: anthropic
 Agent-Handle: claude-opus-reviewer
-Agent-Session: <session-id>
+Agent-Session: <mã_phiên>
 Triggered-By: @alice
 ```
 
-For zAI/GLM (no native GitHub identity), the CLI/wrapper synthesizes the same trailer set with `Agent-Provider: zai`. **`Triggered-By` is always present and always a human handle.**
+**`Triggered-By` (được kích hoạt bởi) luôn luôn hiện diện và luôn là một định danh con người.**
 
-PR description auto-injection:
+Tự động thêm vào mô hình PR:
 
 ```markdown
-## Agent Attribution
+## Ghi nhận Agent
 
-- Authors: @claude-opus-reviewer, @glm-4-air-doc-drafter
-- Triggered by: @alice (human)
-- Token cost: ~$0.45 (Opus 50K/15K + GLM-4 30K/8K)
+- Tác giả: @claude-opus-reviewer, @glm-4-air-doc-drafter
+- Kích hoạt bởi: @alice (con người)
+- Chi phí token: ~$0.45
 - Session log: docs-confidential/agent-sessions/2026-05-07/<hash>.json
 ```
 
-### Session logs (two-tier per ADR-0004)
+### Nhật ký phiên (Session logs - theo ADR-0004)
 
-- **Public meta** (`docs-platform/agent-sessions/<date>/<hash>.meta.json`) — provider, model, tokens, duration, role; no prompt content
-- **Confidential body** (`docs-confidential/agent-sessions/<date>/<hash>.full.json`) — actual prompt + output; PII/secret risk; retention-policy gated
+- **Thông tin công khai** (`docs-platform/agent-sessions/...`): Nhà cung cấp, mô hình, số token, thời gian, vai trò; không có nội dung prompt.
+- **Nội dung mật** (`docs-confidential/agent-sessions/...`): Nội dung prompt và kết quả thực tế; có rủi ro về PII/bí mật; được quản lý theo chính sách lưu trữ.
 
-### Phased rollout
+## Hệ quả
 
-| Layer                      | Phase                | Severity               |
-| -------------------------- | -------------------- | ---------------------- |
-| Agent roster               | 0                    | Critical               |
-| Handle convention          | 0                    | Critical               |
-| Front-matter `authors:`    | 0 (warn) → 1 (error) | Important → Critical   |
-| `last_human_read`          | 1                    | Critical               |
-| Commit trailers            | 1                    | Important              |
-| PR description auto-inject | 1                    | Cosmetic               |
-| Public meta session logs   | 2                    | Important              |
-| Confidential session logs  | 4                    | Critical-if-compliance |
+### Tích cực
 
-### The linter rule that holds the system together
+- Thực thi về mặt kỹ thuật quy tắc "A là con người".
+- Cung cấp nguồn gốc đầy đủ cho việc tính toán chi phí, truy vết ảo giác và kiểm toán tuân thủ.
+- `last_human_read` là rào cản cấu trúc chống lại việc phê duyệt tự động khi tỷ lệ Agent cao.
+- Hỗ trợ đa nhà cung cấp một cách đồng nhất.
 
-> _Every artifact's RACI A field MUST resolve to a `kind: employee | contractor` entry in `team-roster.md`. A fields resolving to `agent-roster.md` entries are rejected._
+### Hạn chế / Chi phí
 
-This is the mechanical enforcement of ADR-0006.
+- Phần khai báo đầu file trở nên dài dòng hơn.
+- Việc lưu trữ nhật ký phiên (đặc biệt là nội dung mật) tốn dung lượng và cần chính sách bảo trì.
+- Chi phí kỷ luật: `last_human_read` phải được cập nhật một cách trung thực; nếu con người coi đó chỉ là một ô để tích cho xong, nó sẽ trở nên vô nghĩa.
 
-## Consequences
+## Liên kết liên quan
 
-### Positive
-
-- Mechanically enforces A-is-human-only.
-- Provides full provenance for cost attribution, hallucination tracing, deprecation impact analysis, compliance audits.
-- `last_human_read` is the structural defense against rubber-stamping at 70% agent throughput.
-- Multi-provider works without special-casing — both Anthropic and zAI flow through the same roster + handle + trailer scheme.
-- Stable logical handles in OWNERS.md prevent weekly churn from version updates.
-
-### Negative / Costs
-
-- Front-matter verbosity grows; templates must include the new `authors:` block.
-- Session-log storage is non-trivial (especially confidential body); retention/archive policies needed.
-- Token-management complexity: machine-account PAT for cross-repo, scoped, audited.
-- zAI integration requires custom commit-trailer synthesis (no native GitHub identity).
-- Discipline cost: `last_human_read` must be updated honestly; if humans treat it as a checkbox, it becomes meaningless.
-
-### Neutral
-
-- Existing tooling (Claude Code's `Co-Authored-By` trailer) integrates naturally; this layer is an extension, not a replacement.
-- The roster grows over time but slowly (an agent every few weeks); manageable.
-
-## Alternatives Considered
-
-### A. Roster + handle + front-matter only (defer trailers and session logs) — Possible Phase 0 stopping point but rejected as final
-
-Gets to ~70% of the value; loses fine-grained git-history attribution and post-hoc audit ability. Acceptable for early phases; insufficient for compliance.
-
-### B. Minimal `Co-Authored-By` only — Rejected
-
-Relies entirely on Claude Code's native attribution; ignores GLM. **Breaks A-is-human-only enforcement** because the linter has no roster to check against.
-
-### C. Don't formalize, trust per-PR review — Rejected
-
-At 70% agent ratio, becomes the mathematical bottleneck (see ADR-0010).
-
-## Related
-
-- **ADR-0001** — Per-feature folder + per-artifact file (artifacts get the new front-matter)
-- **ADR-0004** — Two-tier confidentiality (session logs split by tier)
-- **ADR-0005** — Severity-tiered rule lifecycle (the new rules adopt the same lifecycle)
-- **ADR-0006** — A-is-human-only (the rule this enforces)
-- **ADR-0011** — Hybrid agent identity (the model/version pinning that historical attribution depends on)
-- **Design history**: [`design/2026-05-07-agent-augmentation-grill.md`](../design/2026-05-07-agent-augmentation-grill.md), Attack #2
-
-## Notes for future revision
-
-- Watch for `last_human_read` rot — humans may flip the field without actually reading. Pair with rubber-stamp time-window heuristic (Attack #3).
-- Session log retention (especially confidential body) interacts with compliance scope; tighten retention if HIPAA/PCI is added.
-- If a third provider is adopted, ensure the trailer-synthesis pattern and roster format extend cleanly. The current scheme is provider-agnostic by design.
+- **ADR-0001** — Cấu trúc thư mục (các sản phẩm có thêm phần khai báo đầu file mới).
+- **ADR-0004** — Bảo mật hai tầng (nhật ký phiên được chia theo tầng).
+- **ADR-0006** — Quy tắc A-luôn-là-người (quy tắc mà hệ thống này thực thi).
+- **ADR-0011** — Định danh Agent lai (việc ghim mô hình/phiên bản).
+- **ADR-0012** — Quản trị FinOps (theo dõi chi phí).

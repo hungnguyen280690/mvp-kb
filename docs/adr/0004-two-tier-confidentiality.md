@@ -1,125 +1,111 @@
-# ADR-0004: Two-tier confidentiality (`docs-platform` + `docs-confidential`) with classification front-matter
+# ADR-0004: Bảo mật hai tầng (`docs-platform` + `docs-confidential`) với phân loại ở phần đầu file
 
-- **Status:** Accepted
-- **Date:** 2026-05-07
-- **Deciders:** Security (lead), DevOps, SA, all roles consulted
-- **Tags:** security, compliance, repo-topology
-- **Supersedes:** —
-- **Superseded by:** —
+- **Trạng thái:** Đã phê duyệt
+- **Ngày:** 07-05-2026
+- **Người quyết định:** Bảo mật (SA dẫn dắt), DevOps, SA, tham vấn tất cả các vai trò
+- **Thẻ:** bảo-mật, tuân-thủ, cấu-trúc-kho-lưu-trữ
+- **Thay thế cho:** —
+- **Được thay thế bởi:** —
 
-## Context
+## Ngữ cảnh
 
-The doc system designed in ADR-0001 / ADR-0002 / ADR-0003 assumes everyone with repo access reads everything. That model collides with content classes that **cannot be openly shared**:
+Hệ thống tài liệu được thiết kế trong các ADR-0001 / ADR-0002 / ADR-0003 giả định rằng bất kỳ ai có quyền truy cập vào repo đều có thể đọc mọi thứ. Mô hình đó mâu thuẫn với các loại nội dung **không thể chia sẻ công khai**:
 
-- **Threat models** — map of how to attack us
-- **Compliance evidence** — SOC2/HIPAA/PCI/GDPR attestations, control mappings, audit-trail extracts
-- **Security incident playbooks** — runbooks naming exploit details, kill-switches
-- **Customer/PII references** — PII columns named in schema docs, example queries with realistic shapes
-- **Vendor terms / pricing** — contract confidentiality
-- **Pre-announcement strategy** — embargo'd roadmap
-- **Internal IP / trade secrets**
+- **Mô hình hóa mối đe dọa** — Bản đồ về cách tấn công chúng ta.
+- **Bằng chứng tuân thủ** — Các chứng nhận SOC2/HIPAA/PCI/GDPR, ánh xạ kiểm soát, trích xuất nhật ký kiểm toán.
+- **Kịch bản xử lý sự cố bảo mật** — Các tài liệu vận hành nêu chi tiết cách khai thác, các nút thắt khẩn cấp.
+- **Tham chiếu khách hàng / Dữ liệu cá nhân (PII)** — Các cột PII được nêu tên trong tài liệu cấu trúc bảng, các truy vấn ví dụ với dữ liệu thực tế.
+- **Điều khoản / Giá cả của nhà cung cấp** — Tính bảo mật của hợp đồng.
+- **Chiến lược trước khi công bố** — Lộ trình sản phẩm đang được giữ kín.
 
-GitHub does not support **per-file access control** within a repo. The only access boundary is **repo-level**. Therefore: any content that needs different visibility classes lives in **different repos**.
+GitHub không hỗ trợ **kiểm soát truy cập theo từng file** bên trong một repo. Ranh giới truy cập duy nhất là ở **mức repo**. Do đó: bất kỳ nội dung nào cần các cấp độ hiển thị khác nhau đều phải nằm ở **các repo khác nhau**.
 
-Compliance content additionally needs:
+Nội dung tuân thủ còn cần thêm:
 
-- **Chain of custody** — signed commits, hard-required CODEOWNERS
-- **Immutability** — append-only, no force-push, tag-based releases
-- **Retention** — documented retention periods, automated archive vs delete
-- **Audit trail** — every change linked to a ticket with reason
+- **Chuỗi lưu ký (Chain of custody)** — Các commit phải được ký số, bắt buộc phải có CODEOWNERS.
+- **Tính bất biến** — Chỉ thêm vào (append-only), không cho phép ép đẩy (force-push), phát hành dựa trên thẻ (tag).
+- **Lưu trữ** — Các giai đoạn lưu trữ được ghi chép lại, tự động lưu trữ hoặc xóa.
+- **Nhật ký kiểm toán** — Mọi thay đổi đều được liên kết với một phiếu yêu cầu kèm theo lý do.
 
-These requirements are stricter than ordinary documentation and don't fit a casual ADR repo.
+Các yêu cầu này nghiêm ngặt hơn tài liệu thông thường và không phù hợp với một repo ADR thông thường.
 
-## Decision
+## Quyết định
 
-Adopt **two-tier confidentiality** with **classification front-matter** on every artifact:
+Áp dụng **bảo mật hai tầng** với **phân loại ở phần khai báo đầu file** trên mọi sản phẩm bàn giao:
 
-**Tier 1 — `docs-platform`** (org-readable, the central repo from ADR-0003)
+**Tầng 1 — `docs-platform`** (Toàn tổ chức có quyền đọc, repo trung tâm từ ADR-0003)
 
-- CONTEXT, public-safe ADRs, standards, templates, dashboard, linter source
-- Default classification: `Internal`
-- Some content may be `Public` (e.g. an OSS project's published architecture overview)
+- NGỮ CẢNH, các ADR an toàn công khai, tiêu chuẩn, bản mẫu, bảng theo dõi, mã nguồn công cụ kiểm tra.
+- Phân loại mặc định: `Internal` (Nội bộ).
+- Một số nội dung có thể là `Public` (Công khai - ví dụ: tổng quan kiến trúc của một dự án mã nguồn mở).
 
-**Tier 2 — `docs-confidential`** (locked-down, Security-owned)
+**Tầng 2 — `docs-confidential`** (Bị khóa chặt, do bộ phận Bảo mật sở hữu)
 
-- Threat models, compliance evidence, restricted policies, security playbooks
-- Default classification: `Confidential` or `Restricted`
-- Signed commits required; CODEOWNERS hard-required for any merge
-- Append-only branches; tag-based releases; documented retention metadata
+- Mô hình mối đe dọa, bằng chứng tuân thủ, các chính sách hạn chế, kịch bản bảo mật.
+- Phân loại mặc định: `Confidential` (Bảo mật) hoặc `Restricted` (Hạn chế).
+- Bắt buộc ký số commit; bắt buộc có CODEOWNERS cho bất kỳ lần trộn mã nguồn nào.
+- Nhánh chỉ cho phép thêm; phát hành dựa trên thẻ; thông tin siêu dữ liệu về thời gian lưu trữ được ghi chép rõ ràng.
 
-**Classification front-matter** on every artifact across all repos:
+**Phân loại ở phần đầu file** trên mọi sản phẩm bàn giao ở tất cả các repo:
 
 ```yaml
 classification: Public | Internal | Confidential | Restricted
 ```
 
-**Stub-and-link pattern** for confidential content referenced from open repos:
+**Mô hình "Liên kết và Thế chỗ" (Stub-and-link)** cho các nội dung mật được tham chiếu từ repo mở:
 
-- A feature's `06-threat-model.md` in the code repo is a **stub** with `classification: Internal` containing only `see internal/threat-models/2026-05-feature.md` and a link to `docs-confidential`.
-- The actual threat model lives in `docs-confidential/threat-models/`.
-- The linter cross-fetches `docs-confidential` using a **machine-account token** to validate the stub target exists and isn't stale — **without rendering content** in the open repo.
+- File `06-threat-model.md` của một tính năng trong repo mã nguồn là một **file thế chỗ (stub)** với `classification: Internal` chỉ chứa nội dung `xem tại internal/threat-models/2026-05-feature.md` và một liên kết đến `docs-confidential`.
+- Nội dung mô hình mối đe dọa thực tế nằm trong `docs-confidential/threat-models/`.
+- Công cụ kiểm tra sẽ lấy dữ liệu từ `docs-confidential` bằng một **mã máy (machine-account token)** để xác nhận file đích tồn tại và không bị lạc hậu — mà **không hiển thị nội dung** trong repo mở.
 
-**Linter rules enforced:**
+**Các quy tắc kiểm tra được thực thi:**
 
-- `Public` files cannot embed PII patterns (regex-based heuristic + manual review).
-- `Restricted` files require signed-commit + retention metadata.
-- A feature folder cannot have a `Confidential`/`Restricted` artifact directly (must use stub-and-link to `docs-confidential`).
-- Cross-repo links from `Internal` files to `docs-confidential` paths are allowed only as stubs (link, no quoted content).
+- Các file `Public` không được chứa các mẫu dữ liệu cá nhân (PII).
+- Các file `Restricted` yêu cầu commit có chữ ký số + thông tin lưu trữ.
+- Một thư mục tính năng không được chứa trực tiếp sản phẩm `Confidential`/`Restricted` (phải dùng mô hình liên kết và thế chỗ đến `docs-confidential`).
+- Các liên kết chéo repo từ file `Internal` đến đường dẫn trong `docs-confidential` chỉ được phép ở dạng file thế chỗ (chỉ có link, không có nội dung trích dẫn).
 
-**Ownership:** Security role **owns** `docs-confidential` (with co-ownership from DevOps for tooling). This finally gives Security a place they're accountable for, not just a reviewer slot.
+**Quyền sở hữu:** Vai trò Bảo mật **sở hữu** `docs-confidential` (với sự đồng sở hữu từ DevOps cho các công cụ). Điều này giúp Bảo mật có một nơi để họ chịu trách nhiệm chính, không chỉ là một vai trò soát xét.
 
-## Consequences
+## Hệ quả
 
-### Positive
+### Tích cực
 
-- **Real security boundary** at the repo level — leakage of `docs-confidential` requires explicit access grant, not accidental over-share.
-- **Compliance posture preserved** — chain of custody, immutability, retention all attainable in `docs-confidential` without polluting `docs-platform`.
-- **Security has explicit ownership** of an artifact home, not just review duties.
-- **Auditors can be granted scoped access** to `docs-confidential` only.
-- **Stubs maintain doc graph integrity** — feature folders still have a `06-threat-model.md`; "no missing" enforceable.
-- **Classification front-matter** is useful even within a tier — labels content for human readers and supports future migrations.
+- **Ranh giới bảo mật thực sự** ở mức repo — việc rò rỉ `docs-confidential` yêu cầu phải được cấp quyền rõ ràng, không phải do vô ý chia sẻ.
+- **Duy trì vị thế tuân thủ** — chuỗi lưu ký, tính bất biến, việc lưu trữ đều có thể thực hiện được trong `docs-confidential` mà không làm ảnh hưởng đến `docs-platform`.
+- **Bảo mật có quyền sở hữu rõ ràng** đối với nơi chứa sản phẩm của mình.
+- **Các kiểm toán viên có thể được cấp quyền truy cập giới hạn** chỉ vào `docs-confidential`.
+- **Các file thế chỗ duy trì tính toàn vẹn của biểu đồ tài liệu** — các thư mục tính năng vẫn có file `06-threat-model.md`; mục tiêu "không thiếu sót" vẫn có thể thực thi được.
 
-### Negative / Costs
+### Hạn chế / Chi phí
 
-- **One additional repo and access matrix** to maintain.
-- **Linter complexity increases**: secret-token handling, classification rules, stub-target validation, cross-repo fetch.
-- **Compliance overhead is real**: signed commits, retention automation, audit-trail discipline. Small teams must decide if compliance is in scope before adopting this overhead (it is for SOC2/HIPAA/PCI/GDPR scope; not otherwise).
-- **Stub files in open repos are a known leak surface** — they reveal that a threat model exists for feature X. Acceptable for most cases; for highly-classified work, the stub itself must be omitted (and the linter rule for "every feature has a 06-threat-model.md" relaxed via waiver).
-- **Token management**: machine-account PAT for cross-repo fetch must be rotated, scoped to read-only, audit-logged.
-- **Cannot reuse single-repo tooling**: search, grep, dashboards must all handle two tiers.
+- **Thêm một repo và ma trận quyền truy cập** cần duy trì.
+- **Độ phức tạp của công cụ kiểm tra tăng lên**: Xử lý mã bí mật, các quy tắc phân loại, xác thực mục tiêu thế chỗ, lấy dữ liệu chéo repo.
+- **Chi phí tuân thủ là có thực**: Ký số commit, tự động hóa lưu trữ, kỷ luật nhật ký kiểm toán.
+- **Các file thế chỗ trong repo mở là một bề mặt rò rỉ thông tin**: Chúng tiết lộ rằng có một mô hình mối đe dọa tồn tại cho tính năng X.
+- **Quản lý mã (Token)**: Mã máy để lấy dữ liệu chéo repo phải được thay đổi định kỳ, giới hạn quyền chỉ đọc và có nhật ký kiểm toán.
 
-### Neutral
+### Trung lập
 
-- **Public-mirror option**: `docs-platform` content classified `Public` can be exported to a public-facing static site via filtered-publish workflow. Useful for OSS or external partners; deferred until needed.
-- **Three-tier escalation** (adding a fourth `Restricted-Plus` repo for top-secret content) is possible if scope grows. Don't pre-build it.
+- **Tùy chọn phản chiếu công khai**: Nội dung trong `docs-platform` được phân loại là `Public` có thể được xuất ra một trang web tĩnh công khai.
+- **Mở rộng ba tầng**: Có thể thêm tầng thứ tư cho các nội dung tối mật nếu phạm vi dự án mở rộng.
 
-## Alternatives Considered
+## Các phương án đã cân nhắc
 
-### A. Single private repo for everything — Rejected for general use
+### A. Một repo riêng tư duy nhất cho tất cả — Bị loại bỏ
 
-Works for small private orgs where everyone with repo access is cleared for everything. Ignores least-privilege. Acceptable if your org is small and internal-only; otherwise insufficient.
+Chỉ hoạt động cho các tổ chức nhỏ nơi mọi người đều có quyền đọc mọi thứ. Bỏ qua nguyên tắc đặc quyền tối thiểu.
 
-### B. Single repo + classification front-matter only (no access split) — Rejected
+### B. Một repo duy nhất + phân loại ở đầu file (không chia quyền truy cập) — Bị loại bỏ
 
-Labels content but cannot enforce visibility. Useful as a labeling discipline (and we adopted it within each tier), but **not a security control on its own**. Org-wide repo readers still see everything.
+Chỉ gắn nhãn nội dung nhưng không thể thực thi việc hiển thị. Đây không phải là một cơ chế kiểm soát bảo mật.
 
-### C. Confidential content not in markdown at all (SaaS GRC tools / IriusRisk for threat models / Vanta for compliance) — Considered
+### C. Nội dung bảo mật không để ở dạng Markdown — Cân nhắc
 
-Loses single-source-of-truth and offloads compliance machinery to a vendor. Reasonable for orgs that already use such tools; defer to existing investment if it exists. Otherwise, two-tier markdown is more cohesive.
+Làm mất đi nguồn dữ liệu gốc duy nhất và đẩy việc quản lý tuân thủ cho một bên thứ ba. Nếu tổ chức đã có sẵn các công cụ như Vanta hay IriusRisk thì có thể cân nhắc. Nếu không, Markdown hai tầng sẽ gắn kết hơn.
 
-### D. External secret store (Vault, GCP Secret Manager) for sensitive content — Rejected for living docs
+## Liên kết liên quan
 
-Good for short secrets and rotating credentials. **Awful for living documents** — vaults aren't markdown editors and don't merge.
-
-## Related
-
-- **ADR-0001** — Per-feature folder structure (artifact `06-threat-model.md` is the stub-link surface)
-- **ADR-0003** — Multi-repo hybrid (`docs-confidential` is the third repo in the topology)
-- **ADR-0005** — Linter rule lifecycle (classification rules and waiver mechanism enforce this)
-- **Design history**: [`design/2026-05-07-sdlc-system-grill.md`](../design/2026-05-07-sdlc-system-grill.md), Attack #10
-
-## Notes for future revision
-
-- **OSS / external contributors**: if the project is OSS, the public mirror of `docs-platform` becomes the contributor-facing surface. The `Internal`-classified content stays in the original repo, available only to org members. Plan this BEFORE going OSS, not after.
-- **Compliance scope changes**: if HIPAA/PCI/GDPR scope is added later, retention and signed-commit rules in `docs-confidential` may need to tighten. Capture as a new ADR superseding the relevant policies.
-- **Stub leak audits**: periodically (quarterly) the Security role audits whether stub filenames in open repos reveal too much. For features with extreme sensitivity, the stub itself is replaced with `00-internal-only.md` placeholder.
+- **ADR-0001** — Cấu trúc thư mục theo từng tính năng (file `06-threat-model.md` là bề mặt liên kết thế chỗ).
+- **ADR-0003** — Mô hình đa repo lai (`docs-confidential` là repo thứ ba trong cấu trúc).
+- **ADR-0005** — Quy trình kiểm tra quy tắc chất lượng (các quy tắc phân loại thực thi điều này).

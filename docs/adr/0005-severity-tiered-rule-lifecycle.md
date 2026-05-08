@@ -1,140 +1,107 @@
-# ADR-0005: Severity-tiered rule lifecycle with dated waivers and backfill program
+# ADR-0005: Vòng đời quy tắc phân tầng theo mức độ nghiêm trọng với các ngoại lệ có thời hạn và chương trình bổ sung tài liệu
 
-- **Status:** Accepted
-- **Date:** 2026-05-07
-- **Deciders:** DevOps (lead, owns linter), Security, SA, all roles consulted
-- **Tags:** linter, governance, infrastructure
-- **Supersedes:** —
-- **Superseded by:** —
+- **Trạng thái:** Đã phê duyệt
+- **Ngày:** 07-05-2026
+- **Người quyết định:** DevOps (dẫn dắt, sở hữu công cụ kiểm tra), Bảo mật, SA, tham vấn tất cả các vai trò
+- **Thẻ:** công-cụ-kiểm-tra, quản-trị, hạ-tầng
+- **Thay thế cho:** —
+- **Được thay thế bởi:** —
 
-## Context
+## Ngữ cảnh
 
-The custom doc-linter (committed in design-grill Attack #5) enforces ~20+ rules across file presence, front-matter schema, predecessor approval, ripple/staleness, cross-repo SHA pinning, ADR/policy/standard linkage, roster validation, classification, and CODEOWNERS sanity.
+Công cụ kiểm tra tài liệu tùy chỉnh thực thi khoảng hơn 20 quy tắc bao gồm sự hiện diện của file, cấu trúc phần đầu file, sự phê duyệt của sản phẩm trước, sự lan tỏa thay đổi, ghim mã SHA chéo repo, liên kết ADR/chính sách, xác thực nhân sự, phân loại bảo mật và tính hợp lệ của CODEOWNERS.
 
-**These rules will change over time**: incidents add rules, compliance changes tighten rules, new roles add checks, deprecated patterns get removed. Three pure approaches all break:
+**Các quy tắc này sẽ thay đổi theo thời gian**: Các sự cố phát sinh sẽ thêm quy tắc mới, các thay đổi về tuân thủ sẽ thắt chặt quy tắc, các vai trò mới sẽ thêm các bước kiểm tra. Có ba cách tiếp cận thuần túy nhưng đều có nhược điểm:
 
-- **Force migration always**: every PR must bring its feature folder up to current rule set. A typo PR gets blocked because someone added a `06-threat-model.md` requirement last week. **Sprint chaos.**
-- **Grandfather always**: rules apply only to features created after rule introduction. Two-tier docs forever. Old features rot. Dashboard becomes a graveyard. "No missing" becomes "no missing for features started after Q3."
-- **Per-feature linter version pin**: each feature pins to a linter version; only those rules apply. Reproducible but exponential maintenance — N versions of the linter forever, stale-rule rot invisible.
+- **Luôn ép buộc di chuyển**: Mọi PR phải đưa thư mục tính năng lên bộ quy tắc hiện tại. Một PR sửa lỗi chính tả nhỏ có thể bị chặn vì ai đó vừa thêm yêu cầu về file `06-threat-model.md` tuần trước. Gây ra sự hỗn loạn cho tiến độ Sprint.
+- **Luôn bảo lưu (Grandfathering)**: Quy tắc chỉ áp dụng cho các tính năng được tạo sau khi quy tắc đó ra đời. Tài liệu sẽ bị phân cấp vĩnh viễn. Các tính năng cũ bị mục nát. Bảng theo dõi trở thành "nghĩa địa".
+- **Cố định phiên bản kiểm tra theo từng tính năng**: Mỗi tính năng cố định một phiên bản công cụ kiểm tra. Có tính tái lập nhưng chi phí bảo trì tăng theo cấp số nhân.
 
-We need rule evolution without sprint paralysis or two-tier rot, plus a structured way to handle exceptions (a feature legitimately can't comply due to legacy code or emergency).
+Chúng ta cần sự tiến hóa của quy tắc mà không làm tê liệt tiến độ Sprint hoặc gây ra sự mục nát tài liệu, cộng với một cách có cấu trúc để xử lý các ngoại lệ (một tính năng thực sự không thể tuân thủ do mã nguồn cũ hoặc trường hợp khẩn cấp).
 
-## Decision
+## Quyết định
 
-Adopt **severity-tiered rule lifecycle with dated waivers and a tracked backfill program**.
+Áp dụng **vòng đời quy tắc phân tầng theo mức độ nghiêm trọng với các ngoại lệ (waiver) có thời hạn và một chương trình bổ sung tài liệu (backfill) được theo dõi**.
 
-### Every rule carries lifecycle metadata
+### Mỗi quy tắc mang siêu dữ liệu về vòng đời
 
 ```yaml
-# tools/doc-lint/rules/r0042-threat-model-required.yml
 id: R0042
-title: All features must have a threat-model artifact
-severity: error # error | warning | info
+title: Mọi tính năng phải có sản phẩm mô hình hóa mối đe dọa
+severity: error # error (lỗi) | warning (cảnh báo) | info (thông tin)
 introduced: 2026-Q3
-applies_to: all # all | new-features-only | architecturally-significant
-enforce_after: 2026-09-01 # before this date: warn; after: error
-bypass: requires-waiver # requires-waiver | not-allowed
-backport: needed # needed | not-needed
-owner: Security
+applies_to: all # all (tất cả) | new-features-only (chỉ tính năng mới)
+enforce_after: 2026-09-01 # trước ngày này: cảnh báo; sau ngày này: lỗi
+bypass: requires-waiver # requires-waiver (cần ngoại lệ) | not-allowed (không cho phép)
+backport: needed # needed (cần bổ sung) | not-needed (không cần)
+owner: Bảo mật
 ```
 
-### Severity tiers govern handling
+### Các tầng mức độ nghiêm trọng
 
-- **Critical (security/compliance)** — force migration immediately. Bot fan-out PRs to update all affected features. **No grandfathering.** Examples: PII handling, classification labels, signed-commit on `Restricted` artifacts.
-- **Important** — soft migration: warn for N weeks (default 6), then error. Examples: new required artifact (`07-observability.md`), new front-matter field.
-- **Cosmetic / advisory** — info-level, never blocks. Examples: preferred section ordering, cross-link style.
+- **Nghiêm trọng (Bảo mật/Tuân thủ)** — Ép buộc di chuyển ngay lập tức. Bot tự động tạo PR để cập nhật tất cả các tính năng bị ảnh hưởng. **Không bảo lưu.** Ví dụ: Xử lý dữ liệu cá nhân, nhãn phân loại.
+- **Quan trọng** — Di chuyển mềm: Cảnh báo trong N tuần (mặc định là 6), sau đó chuyển thành lỗi. Ví dụ: Thêm sản phẩm bắt buộc mới (`07-observability.md`), thêm trường mới ở phần đầu file.
+- **Trình bày / Gợi ý** — Mức độ thông tin, không bao giờ chặn PR. Ví dụ: Thứ tự các mục ưu tiên, phong cách liên kết chéo.
 
-### Waivers are explicit, dated, approved
+### Ngoại lệ (Waiver) phải rõ ràng, có thời hạn và được phê duyệt
 
 ```yaml
-# OWNERS.md or feature front-matter
+# OWNERS.md hoặc phần khai báo đầu file tính năng
 linter_waivers:
   - rule: R0042
-    reason: "Pre-existing feature, threat model planned for 2026-Q4"
+    reason: "Tính năng đã có từ trước, mô hình mối đe dọa dự kiến hoàn thành vào 2026-Q4"
     expires: 2026-12-31
-    approved_by: @security-lead     # required reviewer enforced by linter itself
+    approved_by: @security-lead     # người phê duyệt bắt buộc do chính công cụ kiểm tra thực thi
 ```
 
-The linter validates: waiver has `reason`, has `expires` (date), has `approved_by` from the rule's owner role. Expired waivers become errors automatically.
+Công cụ kiểm tra xác thực: Ngoại lệ phải có `reason` (lý do), `expires` (ngày hết hạn), và `approved_by` (người phê duyệt) từ vai trò sở hữu quy tắc đó. Các ngoại lệ hết hạn sẽ tự động trở thành lỗi.
 
-### Backfill is a tracked program
+### Chương trình bổ sung tài liệu (Backfill)
 
-When a critical rule is added, the linter auto-generates a **backfill issue** listing every non-compliant feature folder across all repos. The bot generates per-repo PRs proposing fixes. The rule's owner role is **Accountable** for closing the backfill within a stated timeframe.
+Khi một quy tắc Nghiêm trọng được thêm vào, công cụ kiểm tra sẽ tự động tạo một **issue bổ sung tài liệu** liệt kê mọi thư mục tính năng không tuân thủ trên tất cả các repo. Vai trò sở hữu quy tắc đó chịu trách nhiệm hoàn thành việc bổ sung trong khoảng thời gian quy định.
 
-### Linter version pinned per repo, not per feature
+### Phiên bản công cụ kiểm tra được cố định theo từng repo
 
-Each code repo has `mass-doc-lint@x.y.z` pin in CI config. Per-feature pinning would let one feature drift forever — kills "no missing." Repo-level pinning lets teams adopt rule changes on their cadence. Renovate-style PRs propose linter upgrades.
+Mỗi repo mã nguồn có phiên bản `mass-doc-lint@x.y.z` được cố định trong cấu hình CI. Việc cố định theo từng repo giúp các nhóm áp dụng thay đổi quy tắc theo nhịp độ của họ.
 
-### Rule deprecation cycle
+### Chu kỳ loại bỏ quy tắc
 
-Rules don't just get added. Removed rules must:
+Các quy tắc không chỉ được thêm vào. Các quy tắc bị loại bỏ phải:
 
-- Have **no waivers depending on them** (linter checks)
-- Have a **deprecation period** (3 months minimum) — warns "deprecated, will be removed in version X"
-- Be **announced** in `docs-platform/standards/linter-changelog.md`
+- Không có ngoại lệ nào đang phụ thuộc vào chúng.
+- Có giai đoạn thông báo loại bỏ (tối thiểu 3 tháng) — cảnh báo "đã lỗi thời, sẽ bị loại bỏ trong phiên bản X".
 
-### The linter has its own SDLC
+## Hệ quả
 
-Rule additions are PRs against `tools/doc-lint/`. Each rule has unit tests (golden-file: input → expected error). The linter is versioned with semver, has its own changelog, and follows the same PR review rules as production code. **DevOps role owns the linter as production code, with explicit time allocation.**
+### Tích cực
 
-Per-rule RACI:
+- **Tránh mục nát tài liệu**: Các quy tắc nghiêm trọng áp dụng cho tất cả; các tính năng cũ được bổ sung tài liệu.
+- **Tránh tê liệt tiến độ Sprint**: Các quy tắc quan trọng được chuyển đổi mềm; các quy tắc trình bày không chặn PR.
+- **Ngoại lệ hiển thị minh bạch và có thời hạn**: Công cụ kiểm tra sẽ đánh dấu các ngoại lệ đã hết hạn.
+- **Lộ trình triển khai quy tắc có thể dự đoán được**: Được thông báo, có ngày tháng và người sở hữu rõ ràng.
 
-- Security rules: **R**=Security, **A**=Security, **C**=DevOps + SA
-- Schema rules: **R**=DBA, **A**=DBA, **C**=DevOps + SA
-- General process rules: **R**=anyone, **A**=SA, **C**=DevOps + role owners
+### Hạn chế / Chi phí
 
-## Consequences
+- **Siêu dữ liệu quy tắc là một gánh nặng chi phí**: Việc viết một quy tắc mới tốn nhiều công sức hơn là chỉ thêm một hàm kiểm tra.
+- **Chương trình bổ sung tài liệu cần người sở hữu**: Việc thêm quy tắc Nghiêm trọng tạo ra công việc cho vai trò sở hữu quy tắc đó.
+- **Kỷ luật kiểm thử công cụ**: Mọi quy tắc đều cần được kiểm thử. Nếu không, các thay đổi quy tắc sẽ làm hỏng việc build trên tất cả các repo.
+- **Khả năng lạm dụng ngoại lệ**: Dưới áp lực tiến độ, các ngoại lệ có thể bị cấp quá mức. Cần soát xét định kỳ hàng quý.
 
-### Positive
+## Các phương án đã cân nhắc
 
-- **Avoids two-tier rot**: critical rules apply to everything; old features get backfilled.
-- **Avoids sprint paralysis**: important rules soft-migrate; cosmetic rules don't block.
-- **Waivers visible and time-bounded**: no `// TODO ignore` rot. The linter itself flags expired waivers.
-- **Predictable rule rollout**: announced, dated, owned. Teams plan around `enforce_after`.
-- **Linter as code**: tests, semver, changelog, ownership. Treats it like the production system it is.
+### A. Luôn ép buộc di chuyển — Bị loại bỏ
 
-### Negative / Costs
+Sạch sẽ nhất nhưng gây đau đớn trong thực tế. Chỉ phù hợp với các nhóm rất nhỏ (<5 người).
 
-- **Rule metadata is overhead**: writing a new rule costs more than just adding a check function. Templates and tooling can mitigate.
-- **Backfill program needs ownership**: critical-rule additions create work for the rule's owner role. **Cannot add critical rules without staffing the backfill.**
-- **Linter testing discipline**: every rule needs tests. Without this, rule changes break builds across all repos. ~20% of rule-development time is test-writing.
-- **Waiver creep**: under deadline pressure, waivers get over-issued. Periodic waiver audit (quarterly, by Security/DevOps) is required.
-- **DevOps capacity**: ongoing 10-15% team capacity for linter maintenance, rule additions, fan-out PRs. **Without explicit time allocation, this collapses within months.**
+### B. Luôn bảo lưu (chỉ tính năng mới mới áp dụng quy tắc mới) — Bị loại bỏ
 
-### Neutral
+Dễ nhất, rẻ nhất. Nhưng làm tài liệu bị phân cấp vĩnh viễn. Các tính năng cũ trở thành các sản phẩm di sản; bảng theo dõi bị chia thành hai phần "được bao phủ" và "không được bao phủ".
 
-- **Linter version skew across repos** is normal. Repos upgrade on their cadence; central tracking dashboard shows version distribution.
-- **Rule debate is healthy**: rule additions go through PR review like any other code. Disagreements force explicit decisions about scope.
+### C. Cố định phiên bản kiểm tra theo từng tính năng — Bị loại bỏ
 
-## Alternatives Considered
+Linh hoạt tối đa nhưng chi phí bảo trì theo cấp số nhân. Nhiều phiên bản công cụ kiểm tra cùng tồn tại vĩnh viễn.
 
-### A. Force migration always — Rejected for general use
+## Liên kết liên quan
 
-Cleanest state, painful in practice. Reasonable for very small teams (<5 people) or strict-compliance orgs that can absorb the friction. We expect typical teams of 8+ roles to reject this within the first month.
-
-### B. Grandfather always (only new features get new rules) — Rejected
-
-Easiest, cheapest. Permanent two-tier-docs cost. Old features become legacy artifacts; dashboard splits into "covered" and "uncovered." Acceptable if you explicitly drop the strict "no missing" claim — name it for what it is.
-
-### C. Per-feature linter version pinning — Rejected
-
-Maximum flexibility, exponential maintenance. N versions of the linter live forever; old versions accumulate technical debt. "Stale rules" rot invisible because each feature is "compliant for its version." Hard pass.
-
-### D. No rule lifecycle, manual rollout — Rejected (this is the trap)
-
-What teams default to without explicit design. Rules added ad-hoc, no `enforce_after`, no waivers. Trust collapses on the first surprise PR rejection. **Avoid by design.**
-
-## Related
-
-- **ADR-0001** — Per-feature folder structure (the rules enforce this)
-- **ADR-0002** — Doc-as-source-of-truth (the rules enforce front-matter as authoritative)
-- **ADR-0003** — Multi-repo hybrid (linter is published from `docs-platform`)
-- **ADR-0004** — Two-tier confidentiality (classification rules are critical-tier)
-- **Design history**: [`design/2026-05-07-sdlc-system-grill.md`](../design/2026-05-07-sdlc-system-grill.md), Attack #11
-
-## Notes for future revision
-
-- **First six months**: expect to discover rules you didn't anticipate. Add them as `important` (soft migration), watch the warning-rate on real PRs, decide whether to promote to `error` or relax to `info` based on signal.
-- **Waiver audit**: at least quarterly. If >10% of features have active waivers for the same rule, the rule may be too aggressive — re-evaluate.
-- **Linter performance**: cross-repo SHA fetches are slow. Cache aggressively. Linter runtime on a typical PR should stay <2 minutes; if it exceeds 5 minutes, teams will start adding `[skip ci]` workarounds.
-- **Helpful errors**: every rule's error message must include rule ID, one-sentence why, exact fix instructions, and a link to the example in `docs/templates/`. **This is non-optional** — without it, the linter becomes an obstacle, not a teacher.
+- **ADR-0001** — Cấu trúc thư mục theo từng tính năng (các quy tắc thực thi cấu trúc này).
+- **ADR-0004** — Bảo mật hai tầng (các quy tắc phân loại thuộc tầng Nghiêm trọng).

@@ -1,191 +1,89 @@
-# ADR-0011: Hybrid agent identity with tiered upgrades and behavioral testing
+# ADR-0011: Định danh Agent lai với nâng cấp phân tầng và kiểm thử hành vi
 
-- **Status:** Accepted
-- **Date:** 2026-05-07
-- **Deciders:** DevOps (lead, owns framework), SA, Security, role-owners (own golden files)
-- **Tags:** agents, lifecycle, versioning, drift-detection
-- **Supersedes:** —
-- **Superseded by:** —
+- **Trạng thái:** Đã phê duyệt
+- **Ngày:** 07-05-2026
+- **Người quyết định:** DevOps (dẫn dắt), SA, Bảo mật, các chủ sở hữu vai trò
+- **Thẻ:** agent, vòng-đời, phiên-bản, phát-hiện-trôi-dạt
+- **Thay thế cho:** —
+- **Được thay thế bởi:** —
 
-## Context
+## Ngữ cảnh
 
-The base SDLC's actors are humans, who do not have version numbers. Agents do — and they change on a cadence the team does not control. Concrete events the system must handle:
+Trong hệ thống SDLC truyền thống, con người không có số phiên bản. Agent thì có — và chúng thay đổi theo nhịp độ mà chúng ta không kiểm soát được. Các sự kiện cụ thể mà hệ thống phải xử lý:
 
-- Anthropic ships Opus 4.8; current `@claude-opus-reviewer` pinned to 4.7
-- zAI deprecates GLM-4 in favor of GLM-5; existing GLM-4-authored artifacts need decision
-- New specialized subagent proposed (`@claude-opus-incident-investigator`) — what's the gate?
-- Agent found to have systematic bias on schema-typing — how to remove without breaking work?
-- Provider silently rolls weights without version bump — how do you know?
+- Anthropic ra mắt Opus 4.8; `@claude-opus-reviewer` hiện tại đang cố định ở 4.7.
+- zAI ngừng hỗ trợ GLM-4 để thay bằng GLM-5.
+- Một Agent chuyên biệt mới được đề xuất (ví dụ: `@claude-opus-incident-investigator`).
+- Nhà cung cấp âm thầm cập nhật trọng số mô hình mà không đổi số phiên bản.
 
-If ungoverned, three failure modes:
+Nếu không quản trị, sẽ nảy sinh ba lỗi:
 
-| Failure                  | Consequence                                                                                                                  |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| Silent capability drift  | Workflow that worked Tuesday breaks Thursday; root cause invisible because attribution shows same handle                     |
-| Roster churn             | If every version is a new identity, OWNERS.md churns weekly; attribution graphs become noisy                                 |
-| Identity continuity loss | If only stable handle is recorded, you cannot reproduce what model authored an artifact 6 months later — auditor's nightmare |
+1. **Trôi dạt khả năng âm thầm**: Quy trình hoạt động tốt vào thứ Ba nhưng bị hỏng vào thứ Năm mà không rõ nguyên nhân.
+2. **Biến động danh sách**: Nếu mỗi phiên bản là một định danh mới, file `OWNERS.md` sẽ phải cập nhật hàng tuần.
+3. **Mất tính liên tục của định danh**: 6 tháng sau không thể tái lập được mô hình nào đã viết ra sản phẩm này — cơn ác mộng của kiểm toán.
 
-These conflict: continuity vs reproducibility. Both must be supported.
+## Quyết định
 
-## Decision
+Áp dụng **mô hình định danh lai hai cấp độ** kết hợp với **luồng nâng cấp phân tầng** và **kiểm thử hành vi dựa trên file mẫu (golden-file)**.
 
-Adopt a **two-level hybrid identity model** with **tiered upgrade flows** and **golden-file behavioral testing**.
+### Định danh hai cấp độ
 
-### Two-level identity
+| Cấp độ                                    | Vị trí lưu trữ                       | Tính ổn định                    |
+| :---------------------------------------- | :----------------------------------- | :------------------------------ |
+| **Agent Logic** (`@claude-opus-reviewer`) | OWNERS.md, RACI, cẩm nang vai trò    | Ổn định qua các phiên bản       |
+| **Phiên bản Mô hình** (`claude-opus-4-7`) | `agent-roster.md`, khai báo đầu file | Cố định tại thời điểm thực hiện |
 
-| Level                                          | Lives in                                                                     | Stable across              |
-| ---------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------- |
-| **Logical agent** (`@claude-opus-reviewer`)    | OWNERS.md, RACI, role-cards                                                  | Versions and minor updates |
-| **Concrete model version** (`claude-opus-4-7`) | `agent-roster.md`, artifact front-matter at authorship time, commit trailers | Pinned at each invocation  |
-
-Front-matter records both at authorship time:
+Khai báo đầu file ghi nhận cả hai:
 
 ```yaml
 authors:
   agents:
-    - handle: claude-opus-reviewer # stable logical identity
-      model_at_authorship: claude-opus-4-7 # frozen pin
-      model_version_introduced: 2026-04-01
-      session_started: 2026-05-07T14:23:00Z
+    - handle: claude-opus-reviewer # định danh logic ổn định
+      model_at_authorship: claude-opus-4-7 # cố định phiên bản
 ```
 
-Upgrading an agent's version changes only `agent-roster.md`'s `model:` field. OWNERS.md is unaffected. Historical artifacts retain their authorship-time pin. New artifacts get the new pin.
+### Bốn luồng vòng đời
 
-### Four lifecycle flows
+**Luồng 1 — Tiếp nhận Agent mới**
+Tương tự như tiếp nhận nhân sự mới (quan sát → thực hiện dưới giám sát):
 
-**Flow 1 — Onboarding a new agent**
+1. **ADR đề xuất** — nêu khoảng trống năng lực, chi phí-lợi ích.
+2. **Đánh giá Sandbox** (~1 tuần) — chạy các bộ kiểm thử hành vi mẫu.
+3. **Thử nghiệm (Pilot)** — áp dụng cho 1 tính năng duy nhất, con người soát xét sâu mọi PR.
+4. **Phát hành chính thức** — cập nhật danh sách Agent.
 
-Mirrors human onboarding (shadow → R → A advancement) but no path to A:
+**Luồng 2 — Nâng cấp phiên bản mô hình (thường xuyên nhất)**
 
-1. **Proposal ADR** — capability gap, cost-benefit, provider trust
-2. **Sandbox evaluation** (~1 week) — representative workloads + golden-file behavioral tests
-3. **Trust ramp** — added as `permitted_C_for_roles:` only; no R yet
-4. **Pilot** (~2 weeks) — single feature, single role, deep human review every PR
-5. **Promotion to R** — explicit ADR after pilot meets criteria (defect rate, cost, time saved)
-6. **General availability** — role-cards updated, agent-roster active
+- **Nâng cấp lớn (Major)**: Quy trình như tiếp nhận Agent mới.
+- **Nâng cấp nhỏ (Minor)**: Vượt qua các bài kiểm thử hành vi + chạy song song 1 tuần.
 
-**Flow 2 — Model version upgrade (most frequent)**
+**Luồng 3 — Ngừng hỗ trợ (Deprecation)**
+Khi Agent bị lỗi thời, tốn kém hoặc có lỗi hệ thống:
 
-Tiered by bump magnitude:
+- Đánh dấu trạng thái `deprecated_at:`.
+- Ma trận xử lý sản phẩm cũ: Sản phẩm Hạn chế/Bảo mật phải được viết lại bởi người hoặc Agent mới; sản phẩm Nội bộ chỉ cần xác nhận lại khi có thay đổi lớn.
 
-| Bump                                  | Process                                                                                                                       | Timing     |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| **Major** (Opus 4 → 5)                | Full proposal-evaluation-pilot flow as new agent; old remains in parallel for 30+ days                                        | 4-6 weeks  |
-| **Minor** (4.7 → 4.8)                 | Behavioral tests must pass + 1-week parallel run + ADR documenting behavioral changes                                         | 1-2 weeks  |
-| **Patch / weights** (no version bump) | Detect via fingerprint if possible; treat as silent if undisclosed; behavioral tests must still pass; failures raise incident | Continuous |
+### Phát hiện trôi dạt khả năng
 
-Behavioral tests are the gating mechanism. Live in `tools/doc-lint/agent-tests/<handle>/` with:
+1. **Kiểm thử hành vi hàng đêm**: Chạy lại các prompt chuẩn và so sánh cấu trúc đầu ra với "file mẫu".
+2. **Dấu vân tay đầu ra (Fingerprinting)**: Theo dõi độ dài, tỷ lệ trích dẫn, tỷ lệ ảo giác để phát hiện thay đổi đột ngột từ nhà cung cấp.
 
-- `prompts/` — standard test prompts
-- `expected/` — output shape (not exact text), substantive correctness criteria
-- `tolerance.yml` — similarity thresholds
+## Hệ quả
 
-Run nightly. Cannot pin "exact output" (non-determinism); pin **shape** and **substantive correctness**.
+### Tích cực
 
-**Flow 3 — Deprecation**
+- Tính liên tục: `OWNERS.md` và RACI không bị xáo trộn mỗi khi mô hình cập nhật.
+- Tính tái lập: Mọi sản phẩm cũ đều ghi chính xác phiên bản mô hình đã tạo ra nó.
+- Phát hiện sớm các thay đổi âm thầm từ nhà cung cấp trước khi chúng làm hỏng hệ thống.
 
-Triggers: cost issue, defect cluster, vendor deprecation, capability obsolescence, security finding.
+### Hạn chế / Chi phí
 
-1. **Quarantine** — `deprecated_at:` set; linter blocks new artifacts using the agent
-2. **Impact assessment** — query `model_at_authorship` matches; classify by artifact tier
-3. **Backfill matrix:**
+- Đòi hỏi xây dựng khung kiểm thử hành vi và duy trì các file mẫu (golden files).
+- Các bài kiểm thử hành vi không thể so sánh khớp 100% văn bản (do tính ngẫu nhiên), nên việc viết logic so sánh cấu trúc sẽ phức tạp hơn.
 
-   | Artifact classification | Action                                                                |
-   | ----------------------- | --------------------------------------------------------------------- |
-   | Restricted              | Re-author by replacement (human or new agent); old archived           |
-   | Confidential            | Human deep-review; if substantive issue found, re-author              |
-   | Internal                | Tag as `deprecated_authorship`; revalidate on next substantive change |
-   | Public                  | Grandfather; no action                                                |
+## Liên kết liên quan
 
-4. **Replacement migration** — bot opens fan-out PRs (mechanism from ADR-0003)
-5. **Removal** — after migration window (typically 90 days), agent removed from active roster; historical entry kept in `retired/`
-6. **Postmortem** — RCA in agent-incident-runbook (ADR-0009)
-
-**Flow 4 — Cross-provider migration**
-
-Special case: switching to a successor on a different provider. Treated as full deprecation + new onboarding. Sandbox specifically tests provider-specific gotchas (auth, attribution format, cost structure). Provider-specific runbook section.
-
-### Capability drift detection
-
-1. **Nightly behavioral tests** (above)
-2. **Output fingerprinting** — sample agent outputs daily; track entropy, length, citation rate, hallucination indicators; alert on sudden shift
-3. **Cost drift detection** — same prompt should cost similar tokens; big change = possible model swap
-4. **Cross-provider triangulation** — same prompt to multiple providers; if one diverges from historical pattern but others are stable, that one drifted
-5. **Vendor announcement scraping** — read provider release notes; correlate with detected drift
-
-When drift detected: pause adoption of new artifacts authored by drifted agent; rerun behavioral tests; ADR (accept the drift with documented behavior change, or rollback if vendor allows).
-
-### Roster lifecycle states
-
-```yaml
-agents:
-  claude-opus-reviewer:
-    status: Active # Proposed | Sandbox | Pilot | Active | Quarantined | Deprecated | Retired
-    model: claude-opus-4-7
-    since: 2026-04-15
-    behavioral_tests_passing: 14/14
-    next_review: 2026-Q3
-```
-
-State transitions are linter-enforced and ADR-tracked.
-
-### Ownership of behavioral tests
-
-- **Framework** (test runner, comparison logic, test definition format): **DevOps** owns
-- **Golden files** (specific prompts and expected shapes for each agent + role): **role that uses the agent** owns. e.g. `@claude-opus-reviewer`'s tests for design-review work are Dev/SA-authored; for security-heuristic work are Security-authored.
-
-This distributed ownership matches usage and prevents DevOps from becoming a bottleneck on every agent's golden-file maintenance.
-
-## Consequences
-
-### Positive
-
-- Continuity: OWNERS.md and RACI don't churn on every model update.
-- Reproducibility: every historical artifact pins exact model version at authorship; audit-friendly.
-- Drift detection catches silent vendor updates before they pollute production.
-- Tiered upgrade flow makes minor updates lightweight; major updates rigorous.
-- Deprecation has explicit migration path with classification-tier-based effort.
-- Distributed test ownership keeps the framework manageable.
-
-### Negative / Costs
-
-- ~3 weeks added: behavioral test framework + initial golden files (~1 wk), lifecycle state machine (~1 wk), drift detection harness (~0.5 wk), deprecation/backfill bot extension (~0.5 wk).
-- Ongoing: golden-file maintenance ~1 day/agent/quarter; ADR drafts on each upgrade.
-- Behavioral tests cannot pin exact output (non-determinism) — shape-based testing is harder to write and maintain.
-- Cross-provider triangulation costs tokens (running same prompt to multiple providers).
-- Deprecation backfill on Restricted/Confidential artifacts is expensive (re-authorship); cap it.
-
-### Neutral
-
-- Some upgrades will have no detected behavioral change; flow is fast in those cases.
-- Vendor lock-in risk decreases (cross-provider migration is a defined flow, not a panic).
-
-## Alternatives Considered
-
-### A. Lightweight: version-pinned handles only, no behavioral tests, no drift detection — Rejected
-
-Accept silent drift, manual ad-hoc deprecations. Cheaper but quietly rotting; first major drift incident is unmanageable.
-
-### B. Aggressive: every version is a new agent identity — Rejected
-
-Maximum reproducibility, OWNERS.md churn weekly, attribution graphs noisy.
-
-### C. Lazy: don't formalize; vendor manages deprecation — Rejected
-
-Fast and dangerous; vendor schedules don't align with audit needs.
-
-## Related
-
-- **ADR-0005** — Severity-tiered rule lifecycle (linter rule changes follow same pattern)
-- **ADR-0006** — A-is-human-only (preserved across version changes)
-- **ADR-0007** — Full attribution (the front-matter `model_at_authorship` field this depends on)
-- **ADR-0009** — Defense-in-depth (capability drift is one of the failure modes)
-- **ADR-0012** — FinOps governance (cost-drift detection feeds into cost dashboard)
-- **Design history**: [`design/2026-05-07-agent-augmentation-grill.md`](../design/2026-05-07-agent-augmentation-grill.md), Attack #6
-
-## Notes for future revision
-
-- **Golden-file maintenance** is the unsexy work that sustains the framework. Watch for stale tests after a year; they accumulate without intervention.
-- **Vendor announcement scraping** is fragile (provider docs change). Consider subscribing to vendor mailing lists or using their official changelogs as primary signal.
-- **Multi-provider triangulation cost** can grow unbounded; bound it to Critical-tier artifact decisions where the protection is worth the spend.
-- If a fourth or fifth provider is adopted, ensure the lifecycle state machine and roster format extend cleanly. The current scheme is provider-agnostic by design.
+- **ADR-0006** — Quy tắc A-luôn-là-người (được duy trì qua các phiên bản).
+- **ADR-0007** — Ghi nhận đầy đủ nguồn gốc (trường `model_at_authorship`).
+- **ADR-0009** — Phòng thủ chiều sâu (trôi dạt khả năng là một loại lỗi).
+- **ADR-0012** — Quản trị FinOps (theo dõi chi phí thay đổi theo phiên bản).

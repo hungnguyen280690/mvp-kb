@@ -1,119 +1,106 @@
-# ADR-0003: Multi-repo hybrid with central `docs-platform` + per-code-repo features + cross-repo SHA pins
+# ADR-0003: Mô hình đa kho lưu trữ lai với `docs-platform` trung tâm + tính năng theo từng kho code + ghim mã SHA chéo kho
 
-- **Status:** Accepted
-- **Date:** 2026-05-07
-- **Deciders:** SA (lead), DevOps, all roles consulted
-- **Tags:** repo-topology, foundation, infrastructure
-- **Supersedes:** —
-- **Superseded by:** —
+- **Trạng thái:** Đã phê duyệt
+- **Ngày:** 07-05-2026
+- **Người quyết định:** Kiến trúc sư trưởng (SA), DevOps, tham vấn tất cả các vai trò
+- **Thẻ:** cấu-trúc-kho-lưu-trữ, nền-tảng, hạ-tầng
+- **Thay thế cho:** —
+- **Được thay thế bởi:** —
 
-## Context
+## Ngữ cảnh
 
-Most real organizations have multiple code repositories — one per service, plus separate frontend, infra-as-code, mobile, shared libraries. Our SDLC documentation system must work with this reality, not against it.
+Hầu hết các tổ chức thực tế đều có nhiều kho lưu trữ mã nguồn (repo) — một repo cho mỗi dịch vụ, cộng với các repo riêng cho frontend, hạ tầng dạng code (IaC), mobile, thư viện dùng chung. Hệ thống tài liệu SDLC của chúng ta phải hoạt động được với thực tế này.
 
-A single-repo design (everything monorepo) makes the linter, ripple detection, and CODEOWNERS trivial — but is rarely available to existing organizations. Forcing a monorepo migration just to support a doc system is bad engineering economics.
+Một thiết kế đơn kho (monorepo - mọi thứ trong một repo) giúp việc kiểm tra quy tắc, phát hiện lan tỏa và phân quyền CODEOWNERS trở nên đơn giản — nhưng hiếm khi khả thi với các tổ chức đã có sẵn hệ thống. Ép buộc di chuyển sang monorepo chỉ để hỗ trợ hệ thống tài liệu là một lựa chọn kinh tế kỹ thuật tồi.
 
-Multi-repo introduces five problems any solution must answer:
+Mô hình đa repo tạo ra năm vấn đề mà bất kỳ giải pháp nào cũng phải trả lời:
 
-1. **Cross-repo ripple detection** — when ADR-0007 changes in one repo, every feature in other repos that pinned its SHA needs to know.
-2. **CODEOWNERS divergence** — each repo has its own; team handles drift over time.
-3. **Template drift** — without a single source, every repo's templates diverge in 6 months.
-4. **Feature folder placement** — a feature touching 3 repos is "owned" by which one?
-5. **Search & dashboards** — "find every feature referencing ADR-0007" requires federated search.
+1. **Phát hiện lan tỏa chéo repo** — khi ADR-0007 thay đổi trong một repo, mọi tính năng ở các repo khác đã ghim mã SHA của nó cần phải biết.
+2. **Sự phân kỳ CODEOWNERS** — mỗi repo có quyền sở hữu riêng; các nhóm sẽ phải xử lý sự sai lệch theo thời gian.
+3. **Sự sai lệch bản mẫu (Template)** — nếu không có nguồn duy nhất, các bản mẫu của mỗi repo sẽ khác nhau sau 6 tháng.
+4. **Vị trí thư mục tính năng** — một tính năng chạm vào 3 repo sẽ do repo nào "sở hữu"?
+5. **Tìm kiếm & Bảng theo dõi** — việc "tìm mọi tính năng tham chiếu đến ADR-0007" yêu cầu khả năng tìm kiếm liên hợp.
 
-Pure alternatives all have hard breakages:
+Các phương án thuần túy đều có những điểm gãy nghiêm trọng:
 
-- **Monorepo only**: assumes greenfield or willingness to migrate; not realistic for existing orgs.
-- **Central docs repo only** (no per-repo `docs/features/`): code changes in repo A don't trigger doc PRs in the central repo — code/doc drift is now the dominant failure.
-- **Distributed only** (every repo owns all its docs, no central): cross-cutting consistency dies; teams diverge on ADRs and policies.
+- **Chỉ dùng Monorepo**: Giả định dự án mới hoàn toàn hoặc sẵn sàng di chuyển; không thực tế với các tổ chức hiện tại.
+- **Chỉ dùng kho tài liệu trung tâm** (không có `docs/features/` trong từng repo): Thay đổi code ở repo A không kích hoạt PR tài liệu ở repo trung tâm — sự sai lệch giữa code và tài liệu sẽ trở thành lỗi phổ biến nhất.
+- **Chỉ dùng phân tán** (mỗi repo tự quản lý tài liệu, không có trung tâm): Tính nhất quán chéo bị phá vỡ; các nhóm sẽ khác nhau về ADR và chính sách.
 
-## Decision
+## Quyết định
 
-**Hybrid topology**:
+**Cấu trúc lai (Hybrid topology):**
 
-- **`docs-platform`** repo — central, authoritative for cross-cutting content (CONTEXT, ADRs, policies, standards, templates, team-roster, linter source, aggregator dashboard).
-- **Each code repo** — has its own `docs/features/` directory containing feature folders for features primarily owned by that service. Plus optional `docs/service-context.md` extending the central CONTEXT.
-- **Cross-repo references are SHA-pinned** in front-matter (e.g. `applies_adrs: [{id: 0007, repo: docs-platform, sha: <commit>}]`).
-- **A bot fans out PRs** when central documents change: bumping SHA pins or flagging staleness in dependent repos.
-- **The linter is published as a CLI** (`mass-doc-lint`), pulled into every repo's CI as a versioned dependency.
-- **A primary-repo rule** governs cross-repo features: each feature has exactly one primary repo (where its full feature folder lives); other repos host thin "shadow" folders with only their slice of work, linking back to the primary.
+- **Repo `docs-platform`** — trung tâm, có thẩm quyền đối với nội dung dùng chung (NGỮ CẢNH, các ADR, chính sách, tiêu chuẩn, bản mẫu, danh sách nhân sự, mã nguồn công cụ kiểm tra, bảng theo dõi tổng hợp).
+- **Mỗi repo mã nguồn** — có thư mục `docs/features/` riêng chứa các thư mục tính năng cho các tính năng chủ yếu thuộc sở hữu của dịch vụ đó. Cộng với file `docs/service-context.md` tùy chọn để mở rộng NGỮ CẢNH trung tâm.
+- **Các tham chiếu chéo repo được ghim mã SHA** trong phần khai báo đầu file (ví dụ: `applies_adrs: [{id: 0007, repo: docs-platform, sha: <mã_commit>}]`).
+- **Một bot sẽ tự động tạo PR** khi các tài liệu trung tâm thay đổi: cập nhật mã SHA đã ghim hoặc đánh dấu sự lạc hậu trong các repo phụ thuộc.
+- **Công cụ kiểm tra (linter) được phát hành dưới dạng CLI** (`mass-doc-lint`), được đưa vào CI của mọi repo như một thư viện phụ thuộc có phiên bản.
+- **Quy tắc repo chính** điều phối các tính năng chéo repo: mỗi tính năng có đúng một repo chính (nơi chứa thư mục tính năng đầy đủ); các repo khác chứa các thư mục "bóng" (shadow) chỉ bao gồm phần việc của họ và dẫn link ngược lại repo chính.
 
 ```
-docs-platform/                       (org-readable, central)
-├── CONTEXT.md
-├── adr/
-├── policies/
-├── standards/
-│   ├── team-handles.md             (canonical CODEOWNER team names)
+docs-platform/                       (toàn tổ chức có quyền đọc, trung tâm)
+├── CONTEXT.md                       (NGỮ CẢNH)
+├── adr/                             (các quyết định kiến trúc)
+├── policies/                        (chính sách)
+├── standards/                       (tiêu chuẩn)
+│   ├── team-handles.md              (tên chuẩn của các nhóm CODEOWNER)
 │   └── linter-changelog.md
-├── templates/                      (manifest.yml + per-artifact templates)
-├── team-roster.md
-└── tools/doc-lint/                 (linter source, versioned releases)
+├── templates/                       (các bản mẫu sản phẩm bàn giao)
+├── team-roster.md                   (danh sách nhân sự)
+└── tools/doc-lint/                  (mã nguồn công cụ kiểm tra)
 
-service-orders/                      (each code repo same shape)
+service-orders/                      (mỗi repo mã nguồn có cấu trúc tương tự)
 ├── docs/
 │   ├── features/
-│   │   └── 2026-05-XX-feature/     (full feature folder, with cross-repo SHA pins)
+│   │   └── 2026-05-XX-feature/      (thư mục tính năng đầy đủ, có ghim SHA chéo repo)
 │   └── service-context.md
-├── .github/CODEOWNERS              (validated by linter against team-handles.md)
+├── .github/CODEOWNERS               (được kiểm tra đối chiếu với team-handles.md)
 └── src/
 ```
 
-## Consequences
+## Hệ quả
 
-### Positive
+### Tích cực
 
-- **Code and feature docs co-located**: PRs touching code can also touch the feature design atomically.
-- **Single source of cross-cutting truth**: ADRs and policies don't diverge across repos.
-- **Linter version pinning per repo**: each repo team controls its upgrade cadence.
-- **Each repo's compliance scope can differ** without forcing the loosest standard everywhere.
-- **Aggregator dashboard** runs in `docs-platform`, fetches feature folders from every repo via GitHub API.
+- **Code và tài liệu tính năng nằm cùng nhau**: Các PR sửa code có thể sửa luôn thiết kế tính năng một cách đồng bộ.
+- **Nguồn dữ liệu gốc duy nhất cho nội dung dùng chung**: Các ADR và chính sách không bị phân kỳ giữa các repo.
+- **Cố định phiên bản công cụ kiểm tra cho từng repo**: Mỗi nhóm repo tự kiểm soát nhịp độ nâng cấp của họ.
+- **Bảng theo dõi tổng hợp** chạy trong `docs-platform`, thu thập dữ liệu từ mọi repo thông qua GitHub API.
 
-### Negative / Costs
+### Hạn chế / Chi phí
 
-- **Linter must speak HTTP/Git for cross-repo SHA fetch** — significantly more complex than single-repo.
-- **Bot for fan-out PRs** is a real piece of infrastructure (GitHub App or scheduled action with PAT) — ~1 week to build, ongoing maintenance.
-- **CODEOWNERS consistency** is a discipline, not automatic — linter rule needed (`docs-platform/standards/team-handles.md` is canonical; per-repo CODEOWNERS validated against it).
-- **Cross-repo ripple is best-effort**: when ADR changes in `docs-platform`, the bot opens PRs but they may sit unreviewed for days. Staleness windows are wider than single-repo.
-- **Primary-repo selection is a judgment call** for cross-cutting features; sometimes contested (which service "owns" a feature touching 3 services?).
-- **Token management**: linter and bot need machine-account tokens with cross-repo read; rotation, scope, audit are all real ops concerns.
+- **Công cụ kiểm tra phải xử lý Git chéo repo** để lấy mã SHA — phức tạp hơn nhiều so với đơn repo.
+- **Bot tự động tạo PR** là một thành phần hạ tầng thực sự — mất khoảng 1 tuần để xây dựng và cần bảo trì liên tục.
+- **Tính nhất quán của CODEOWNERS** là một kỷ luật, không phải tự động — cần quy tắc kiểm tra (file `team-handles.md` là chuẩn; CODEOWNERS từng repo được kiểm tra dựa trên đó).
+- **Lan tỏa chéo repo là nỗ lực tối đa (best-effort)**: Khi ADR thay đổi ở `docs-platform`, bot mở các PR nhưng chúng có thể nằm chờ soát xét trong nhiều ngày. Khoảng thời gian sai lệch sẽ lớn hơn so với đơn repo.
+- **Việc chọn repo chính là một quyết định cảm tính** cho các tính năng chéo; đôi khi gây tranh cãi (dịch vụ nào "sở hữu" một tính năng chạm vào 3 dịch vụ?).
 
-### Neutral
+### Trung lập
 
-- **Search**: federated. The dashboard provides the single search surface. Direct grep across repos requires a local tool (`mass-doc-lint search` or similar).
-- **Public/private mix**: `docs-platform` can be partially mirrored to a public-facing site (e.g. via subset-publish workflow) while keeping `docs-confidential` (ADR-0004) entirely private.
+- **Tìm kiếm**: Liên hợp. Bảng theo dõi tổng hợp cung cấp giao diện tìm kiếm duy nhất. Việc tìm kiếm trực tiếp (grep) trên các repo yêu cầu một công cụ cục bộ (`mass-doc-lint search` hoặc tương tự).
+- **Kết hợp Công khai/Riêng tư**: `docs-platform` có thể được phản chiếu một phần sang một trang web công khai trong khi vẫn giữ `docs-confidential` (ADR-0004) hoàn toàn riêng tư.
 
-## Alternatives Considered
+## Các phương án đã cân nhắc
 
-### A. Monorepo (code + all docs, single repo) — Rejected for general use
+### A. Monorepo (code + tất cả tài liệu trong 1 repo) — Bị loại bỏ cho mục đích chung
 
-Simplest. Works only if greenfield or already-monorepo. Most existing orgs can't migrate just for a doc system. Acceptable if your situation matches; otherwise pick the hybrid.
+Đơn giản nhất. Chỉ hoạt động nếu dự án mới hoặc đã là monorepo. Hầu hết các tổ chức hiện tại không thể di chuyển chỉ vì một hệ thống tài liệu.
 
-### B. Central docs repo only, code repos have no docs — Rejected
+### B. Chỉ có repo tài liệu trung tâm, các repo code không có tài liệu — Bị loại bỏ
 
-Code/doc drift becomes the dominant failure mode. Every code change requires a separate PR in another repo. Sprint pressure ensures this drifts within weeks. Effectively turns "no missing" into wishful thinking.
+Sự sai lệch giữa code và tài liệu trở thành lỗi phổ biến nhất. Mọi thay đổi code yêu cầu một PR riêng ở một repo khác. Áp lực tiến độ sẽ khiến việc này bị bỏ qua chỉ sau vài tuần.
 
-### C. Distributed only — every repo owns all its docs, no central — Rejected
+### C. Chỉ phân tán — mỗi repo tự quản lý tài liệu, không có trung tâm — Bị loại bỏ
 
-Cross-cutting consistency dies. Different services adopt different ADRs, policies, even templates. Defeats the whole point of "no overlap/conflict."
+Tính nhất quán chéo bị phá vỡ. Các dịch vụ khác nhau áp dụng các ADR, chính sách, thậm chí cả bản mẫu khác nhau. Làm mất đi mục đích của "không chồng chéo/mâu thuẫn".
 
-### D. Docs-as-submodule (central docs repo pulled into each code repo as git submodule) — Rejected
+### D. Tài liệu dạng submodule — Bị loại bỏ
 
-Submodules are notoriously painful: version-pinning is awkward, contributors hit checkout traps, and updates require submodule bumps in every repo. Bot-driven fan-out PRs are simpler and more transparent.
+Submodule rất khó dùng: cố định phiên bản phức tạp, người đóng góp dễ gặp lỗi khi checkout, và việc cập nhật yêu cầu thao tác ở mọi repo. Bot tự động tạo PR đơn giản và minh bạch hơn.
 
-### E. Backstage / TechDocs platform — Rejected (for now)
+## Liên kết liên quan
 
-Industry-standard, decent search. Adds a heavy stack (Backstage app, plugins, hosting) and learning curve. Not necessary for our scope; reconsider if team grows past ~30 engineers and search/discovery becomes the bottleneck.
-
-## Related
-
-- **ADR-0001** — Per-feature folder structure (lives inside each code repo's `docs/features/`)
-- **ADR-0004** — Two-tier confidentiality (`docs-confidential` is the third repo in the topology)
-- **ADR-0005** — Linter rule lifecycle (linter is published from `docs-platform`)
-- **Design history**: [`design/2026-05-07-sdlc-system-grill.md`](../design/2026-05-07-sdlc-system-grill.md), Attack #8
-
-## Notes for future revision
-
-- **Migration path to monorepo**: if the org consolidates repos in the future, the hybrid collapses gracefully — feature folders move to subdirectories, SHA-pinning becomes trivial. The hybrid is forward-compatible.
-- **Migration path to Backstage**: front-matter is structured enough that Backstage's `mkdocs-techdocs-core` plugin can ingest it. Adoption deferred but not foreclosed.
-- **Watch for**: primary-repo arguments about cross-cutting features. If they recur, that's a signal a feature is too cross-cutting for a single primary — split into sub-features per service, each with its own primary.
+- **ADR-0001** — Cấu trúc thư mục theo từng tính năng (nằm trong `docs/features/` của mỗi repo code).
+- **ADR-0004** — Bảo mật hai tầng (`docs-confidential` là repo thứ ba trong cấu trúc).
+- **ADR-0005** — Quy trình kiểm tra quy tắc chất lượng (công cụ được phát hành từ `docs-platform`).

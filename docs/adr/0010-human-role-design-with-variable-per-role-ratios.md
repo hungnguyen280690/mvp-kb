@@ -1,189 +1,78 @@
-# ADR-0010: Human role design with variable per-role ratios and structural defenses
+# ADR-0010: Thiết kế vai trò con người với tỷ lệ linh hoạt và các biện pháp bảo vệ cấu trúc
 
-- **Status:** Accepted
-- **Date:** 2026-05-07
-- **Deciders:** SA + Engineering Manager (lead), DevOps, HR/leadership consulted
-- **Tags:** agents, organization, human-role, sustainability
-- **Supersedes:** —
-- **Superseded by:** —
+- **Trạng thái:** Đã phê duyệt
+- **Ngày:** 07-05-2026
+- **Người quyết định:** Kiến trúc sư trưởng (SA) + Quản lý kỹ thuật (lead), DevOps, tham vấn nhân sự/lãnh đạo
+- **Thẻ:** agent, tổ-chức, vai-trò-con-người, tính-bền-vững
+- **Thay thế cho:** —
+- **Được thay thế bởi:** —
 
-## Context
+## Ngữ cảnh
 
-ADRs 0006-0009 build mechanism (roles, attribution, gates, defenses) but do not define **what humans actually do** at 30/70 ratio. The default assumption is "humans do whatever agents don't" — the residual-role trap, with predictable failure modes:
+Các ADR 0006-0009 xây dựng các cơ chế vận hành (vai trò, ghi nhận, cổng soát xét, phòng thủ) nhưng chưa định nghĩa **con người thực sự làm gì** trong tỷ lệ 30/70. Giả định mặc định là "con người làm những gì Agent không làm" sẽ dẫn đến các lỗi hệ thống có thể dự đoán được:
 
-| Failure                 | Symptom                                                                                    | Timeline    |
-| ----------------------- | ------------------------------------------------------------------------------------------ | ----------- |
-| Rubber-stamping         | PRs approved 2 minutes after open; `last_human_read` recent but humans visibly didn't read | Weeks       |
-| Skill atrophy           | Humans haven't authored from scratch in months; junior pipeline broken                     | Months      |
-| Morale collapse         | "I'm just a janitor for AI output"; voluntary turnover spikes                              | 6-12 months |
-| Knowledge fragmentation | Agent makes decisions, human rubber-stamps; nobody understands the system                  | Months      |
-| Hiring crisis           | "Senior engineer who reviews AI code" is a hard pitch                                      | Continuous  |
-| Bus-factor collapse     | Only one human can intervene when an agent fails; that human leaves                        | Variable    |
+| Lỗi hệ thống        | Triệu chứng                                                                            | Lộ trình   |
+| :------------------ | :------------------------------------------------------------------------------------- | :--------- |
+| Phê duyệt tự động   | PR được duyệt sau 2 phút mở; con người không thực sự đọc.                              | Vài tuần   |
+| Teo tóp kỹ năng     | Con người không tự viết gì từ đầu trong nhiều tháng; mất khả năng đào tạo nhân sự trẻ. | Vài tháng  |
+| Sụp đổ tinh thần    | "Tôi chỉ là người dọn dẹp đầu ra của AI"; tỷ lệ nghỉ việc tăng cao.                    | 6-12 tháng |
+| Phân mảnh kiến thức | Agent đưa ra quyết định, người duyệt cho xong; không ai hiểu toàn bộ hệ thống.         | Vài tháng  |
 
-Without explicit role design, **70% agent throughput hollows the human role into gatekeeping**. Gatekeeping doesn't sustain a career, doesn't build expertise, doesn't onboard juniors. The system survives Phase 1-2 on novelty energy and collapses in Phase 4 when the first senior leaves.
+Nếu không có thiết kế vai trò rõ ràng, **sản lượng 70% của Agent sẽ biến vai trò con người thành "người gác cổng" thuần túy**. Việc gác cổng không giúp phát triển sự nghiệp, không xây dựng chuyên môn và không thể đào tạo người mới. Hệ thống sẽ sụp đổ khi những nhân sự nòng cốt đầu tiên rời đi.
 
-A blanket 30/70 across all roles is also wrong — different roles have different judgment-density and risk profiles. Security and PO need higher human ratios than QA or routine Dev work.
+Việc áp dụng cứng nhắc tỷ lệ 30/70 cho tất cả các vai trò cũng là sai lầm — mỗi vai trò có mật độ phán đoán và hồ sơ rủi ro khác nhau. Bảo mật và PO cần tỷ lệ con người cao hơn so với QA hoặc Dev thông thường.
 
-This decision requires **management buy-in beyond DevOps**: career ladder updates, hiring profile changes, quarterly calibration cadence are HR/leadership decisions.
+## Quyết định
 
-## Decision
+Áp dụng **thiết kế vai trò con người rõ ràng** với năm thành phần chính:
 
-Adopt **explicit human role design** with five components:
+### 1. Năm loại công việc con người BẮT BUỘC phải thực hiện
 
-### 1. Five work classes humans must perform
+| Loại công việc          | Mô tả                                                                 | Tại sao Agent không thể thay thế                     |
+| :---------------------- | :-------------------------------------------------------------------- | :--------------------------------------------------- |
+| **Định hướng**          | Định nghĩa thứ cần xây dựng, mục tiêu kinh doanh, ưu tiên, phạm vi.   | Agent thiếu ngữ cảnh của các bên liên quan.          |
+| **Phán đoán trọng yếu** | Các quyết định cấp A: ADR, giải quyết đánh đổi, chấp nhận rủi ro.     | Quy tắc A-luôn-là-người (ADR-0006).                  |
+| **Tích hợp**            | Tư duy liên hệ thống; phát hiện tương tác chéo giữa các tính năng.    | Agent chỉ làm việc trong ngữ cảnh hẹp.               |
+| **Gỡ rối & Phục hồi**   | Giải quyết khi Agent bế tắc, xử lý sự cố, các tình huống mới lạ.      | Theo định nghĩa: nơi mà Agent đã thất bại.           |
+| **Hiệu chuẩn**          | Tinh chỉnh prompt, danh sách Agent; định nghĩa tiêu chuẩn chất lượng. | Agent không thể tự hiệu chuẩn một cách đáng tin cậy. |
 
-| Work class                | Description                                                                           | Cannot be agent-substituted because                    |
-| ------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| **Direction**             | Defining what to build, business goals, prioritization, scope                         | Agents lack stakeholder context                        |
-| **Critical judgment**     | A-RACI decisions: ADRs, supersession, trade-off resolution, risk acceptance           | A-is-human-only (ADR-0006); legal/compliance authority |
-| **Integration**           | Cross-system reasoning; spotting feature-folder boundary interactions                 | Agents work in narrow contexts                         |
-| **Unblocking + recovery** | Agent-failure resolution, ambiguity escalation, novel situations, incident response   | By definition: where agents have failed                |
-| **Calibration**           | Tuning prompts, role-cards, agent rosters; defining quality standards; auditing drift | Agents can't tune themselves trustworthily             |
+### 2. Mục tiêu tỷ lệ linh hoạt theo từng vai trò
 
-### 2. Per-role variable ratio targets
+| Vai trò        | Tỷ lệ mục tiêu (Người/Agent) | Lý do                                                                      |
+| :------------- | :--------------------------- | :------------------------------------------------------------------------- |
+| PO             | 90/10                        | Chiến lược, quan hệ đối tác.                                               |
+| BA             | 60/40                        | Khơi gợi yêu cầu là việc của người; cấu trúc hóa là việc của Agent.        |
+| SA (Kiến trúc) | 60/40                        | Quyết định là việc của người; phân tích thường nhật là Agent.              |
+| Dev            | 30/70                        | Mặc định — Agent xử lý các khuôn mẫu mã nguồn.                             |
+| QA             | 25/75                        | Agent tạo khung/bao phủ lỗi cũ tốt; người tập trung vào kiểm thử khám phá. |
+| Bảo mật        | 70/30                        | Mô hình mối đe dọa, chính sách cần con người; quét lỗi cần Agent.          |
 
-In `docs-platform/standards/role-ratio-targets.md`:
+### 3. Biện pháp bảo vệ cấu trúc
 
-| Role               | Target ratio (human/agent) | Reason                                                        |
-| ------------------ | -------------------------- | ------------------------------------------------------------- |
-| PO                 | 90/10                      | Strategy, stakeholder relationships                           |
-| BA                 | 60/40                      | Elicitation human; structuring agent-good                     |
-| Solution Architect | 60/40                      | Decisions human; routine analysis agent                       |
-| DBA                | 40/60                      | Patterns agent-good; constraints human-verified               |
-| Dev                | 30/70                      | Default — patterns agents handle                              |
-| QA                 | 25/75                      | Stubs, regression coverage agent-good; exploratory human      |
-| DevOps             | 50/50                      | Decisions human; routine config agent                         |
-| Security           | 70/30                      | Threat models, policy decisions human; routine scanning agent |
+- **Chống phê duyệt tự động**: Công cụ kiểm tra đo lường thời gian từ khi mở PR đến khi duyệt. Các phê duyệt < 30 giây cho các sản phẩm quan trọng sẽ bị cảnh báo.
+- **Chống teo tóp kỹ năng (Quy tắc luân phiên tác giả)**: Mỗi nhân sự BẮT BUỘC phải tự viết ít nhất 1 sản phẩm bàn giao quan trọng mỗi quý mà không có sự hỗ trợ của Agent.
+- **Lộ trình đào tạo nhân sự trẻ**: Các tính năng trong môi trường thử nghiệm (sandbox) phải được nhân sự trẻ tự viết từ đầu đến cuối không dùng Agent trong 6-12 tháng đầu tiên.
 
-Reviewed quarterly by SA + Tech Lead + DevOps. Adjustments are ADR-tracked.
+### 4. Quản trị và soát xét hàng quý
 
-### 3. Per-role contract in role-cards
+Tỷ lệ này sẽ được soát xét và điều chỉnh hàng quý dựa trên các chỉ số sức khỏe hệ thống (tỷ lệ lỗi, tốc độ bàn giao, sự hài lòng của nhân viên).
 
-Role-cards (from base SDLC's onboarding) get explicit human-work / agent-work / hybrid sections:
+## Hệ quả
 
-```yaml
-# docs-platform/onboarding/dev.md
-role: Dev
-human_responsibilities:
-  - All A-RACI decisions
-  - Cross-feature integration design
-  - Critical bug investigation (production incidents)
-  - Code review of Confidential/Restricted-tier changes
-  - Author at least 1 substantive feature artifact per quarter (skill maintenance)
-  - Mentor agent: weekly review of agent output quality
-agent_responsibilities:
-  - Initial drafting of routine code/test/doc artifacts
-  - Mechanical updates (link bumps, SHA refresh, format fixes)
-  - First-pass code review
-  - Test stub generation
-hybrid:
-  - Refactors: human direction, agent execution, human verification
-  - Schema migrations: agent drafts, human owns A
-target_ratio: 30/70
-```
+### Tích cực
 
-### 4. Structural defenses
+- Duy trì tỷ lệ 30/70 bền vững — vai trò con người có nội hàm, không chỉ là gác cổng.
+- Bảo tồn được lộ trình thăng tiến và đào tạo người mới.
+- Tỷ lệ linh hoạt phù hợp với rủi ro của từng vai trò.
 
-**Anti-rubber-stamp:**
+### Hạn chế / Chi phí
 
-- Linter metric: time-from-PR-open to approval. Approvals <30s on Critical-tier flagged.
-- Quarterly **deep-dive cycle**: every Critical-tier artifact gets substantive human re-read, tracked as `last_human_deep_review`.
+- Đòi hỏi sự cam kết từ ban lãnh đạo và bộ phận nhân sự.
+- Việc đào tạo nhân sự trẻ (không dùng Agent) sẽ làm giảm sản lượng tạm thời.
+- Các buổi họp hiệu chuẩn hàng quý tiêu tốn thời gian của nhân sự cấp cao.
 
-**Anti-skill-atrophy:**
+## Liên kết liên quan
 
-- **Authorship rotation rule**: every human authors ≥1 substantive artifact/quarter without agent assistance.
-- Protected human-only time slot (cultural mechanism, not linter).
-
-**Anti-morale-collapse:**
-
-- Career ladder explicitly recognizes "AI orchestration", "quality engineering", "system architect" as senior tracks.
-- Promotion criteria include: agent calibration, role-card contributions, incident-response leadership, integration work.
-
-**Anti-knowledge-fragmentation:**
-
-- **Bus-factor metric**: per-artifact, count of humans with `last_human_deep_review` within 90 days. Alert at <2.
-- Confidential/Restricted artifacts require ≥2 humans with deep-review history.
-
-**Anti-hiring-crisis:**
-
-- Job descriptions explicitly describe the human role at 30/70.
-- **Junior pathway**: sandbox features authored end-to-end without agent assistance for first 6-12 months.
-- Senior pathway: judgment work, system thinking, agent calibration explicitly recognized.
-
-**Anti-bus-factor-collapse:**
-
-- Same as knowledge-fragmentation defense + quarterly rotation across feature folders.
-
-### 5. Governed metrics + quarterly review
-
-```yaml
-# docs-platform/standards/role-ratio-targets.md
-roles:
-  Dev:
-    target_ratio: 30/70
-    measurement: artifacts_with_human_R / total_artifacts
-    review_cadence: quarterly
-    last_calibrated: 2026-Q2
-    next_review: 2026-Q3
-    trajectory: stable # stable | drifting-up | drifting-down
-    health_signals:
-      rubber_stamp_rate: 4% # target <10%
-      bus_factor_avg: 2.3 # target ≥2
-      junior_authorship_share: 12% # target ≥10%
-      voluntary_turnover_q: 2
-```
-
-Quarterly review reads these signals; trajectory + adjustments captured as ADR.
-
-## Consequences
-
-### Positive
-
-- Sustainable 30/70 — human role has substance, not just gatekeeping.
-- Career ladder and junior pathway preserved; team can grow and onboard.
-- Per-role variable ratios match risk and judgment-density; not a forced uniform standard.
-- Failure modes (rubber-stamp, atrophy, fragmentation) have explicit detection + remediation.
-- Quarterly governance creates a feedback loop; ratio is a target, not a destination.
-
-### Negative / Costs
-
-- Requires HR/leadership engagement, not just engineering team buy-in.
-- Career ladder updates and hiring profile changes are slow organizational work.
-- Junior pathway (sandbox features without agents) costs throughput; explicit allocation needed.
-- Mentor allocation (humans reviewing agent output quality) competes with feature work.
-- Quarterly calibration meetings consume senior time.
-- ~3 weeks added to platform work (role-card rewrites, ratio governance, linter metrics) + cultural work continues forever.
-
-### Neutral
-
-- Some roles may be permanently outside agent reach (e.g. PO at 90/10); this is fine.
-- The ratio is a target, not a measurement of success. Drift detection matters more than hitting an exact number.
-
-## Alternatives Considered
-
-### A. Variable ratio per role only — Rejected
-
-Let teams calibrate; skip skill maintenance and bus-factor enforcement. Cheaper but relies on individual managers catching failure modes; doesn't scale.
-
-### B. Accept hollowing — Rejected (unless explicitly chosen as strategy)
-
-Hire for orchestration, accept skill drift, treat 30/70 as transition state. Honest if explicitly chosen; commit to it via ADR if so.
-
-### C. Don't formalize — Rejected
-
-Ratio emerges, role evolves organically. Highest risk of failure modes hitting full force; worst sustainability.
-
-## Related
-
-- **ADR-0001** — Per-feature folder + per-artifact file (where humans contribute as authors)
-- **ADR-0006** — A-is-human-only (the structural reason humans cannot be eliminated)
-- **ADR-0007** — `last_human_read` + `last_human_deep_review` (mechanism for tracking engagement)
-- **ADR-0008** — Tiered approval matrix (where human review work happens)
-- **Design history**: [`design/2026-05-07-agent-augmentation-grill.md`](../design/2026-05-07-agent-augmentation-grill.md), Attack #5
-
-## Notes for future revision
-
-- **30/70 may not be steady state**. Three trajectories possible: stabilizes at 30/70 with discipline; drifts to 10/90 as agents improve; reverts to 70/30 due to burnout or novel-problem failures. Build the metrics to detect trajectory; revisit ratio targets quarterly.
-- **Junior pathway** is the most fragile component. Without it, the role becomes pure-senior and the org cannot grow. Allocate explicitly.
-- **Career ladder** updates require HR partnership; without it, "AI orchestration engineer" is a vague title that doesn't translate to compensation bands.
-- Watch the `voluntary_turnover_q` signal early — it's the leading indicator of morale collapse.
+- **ADR-0006** — Quy tắc A-luôn-là-người (lý do cấu trúc khiến con người không thể bị loại bỏ).
+- **ADR-0007** — Xác nhận của con người (cơ chế theo dõi sự tham gia thực tế).
+- **ADR-0008** — Ma trận phê duyệt phân tầng (nơi công việc soát xét của con người diễn ra).

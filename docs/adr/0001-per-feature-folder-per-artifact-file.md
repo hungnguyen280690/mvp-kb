@@ -1,92 +1,75 @@
-# ADR-0001: Per-feature folder + per-artifact file structure
+# ADR-0001: Cấu trúc thư mục theo từng tính năng và từng sản phẩm bàn giao
 
-- **Status:** Accepted
-- **Date:** 2026-05-07
-- **Deciders:** SA (lead), DevOps, all roles consulted
-- **Tags:** doc-architecture, foundation
-- **Supersedes:** —
-- **Superseded by:** —
+- **Trạng thái:** Đã phê duyệt
+- **Ngày:** 07-05-2026
+- **Người quyết định:** Kiến trúc sư trưởng (SA), DevOps, tham vấn tất cả các vai trò
+- **Thẻ:** kiến-trúc-tài-liệu, nền-tảng
+- **Thay thế cho:** —
+- **Được thay thế bởi:** —
 
-## Context
+## Ngữ cảnh
 
-We need a markdown-based SDLC documentation system across 8 roles (PO, BA, Solution Architect, DBA, Dev, QA, DevOps, Security) with multi-personnel per role. The stated goal is **no missing, no conflict, no overlap** of role/scope/task across the lifecycle (idea → requirements → analyze → design → develop → test → deploy).
+Chúng ta cần một hệ thống quản lý tài liệu SDLC dựa trên Markdown cho 8 vai trò (PO, BA, SA, DBA, Dev, QA, DevOps, Bảo mật) với nhiều nhân sự cho mỗi vai trò. Mục tiêu đặt ra là **không thiếu sót, không mâu thuẫn, không chồng chéo** giữa các vai trò/phạm vi/nhiệm vụ trong suốt vòng đời dự án (từ ý tưởng → yêu cầu → phân tích → thiết kế → lập trình → kiểm thử → triển khai).
 
-The naïve interpretation — "share some common .md file" — fails immediately:
+Cách tiếp cận thông thường là "dùng chung một file .md" sẽ thất bại ngay lập tức:
 
-- A **single shared file** edited by 8+ roles produces line-level merge conflicts hourly. Markdown merges are notoriously fragile even for non-overlapping edits.
-- **One file per role** (`po.md`, `dba.md`, `dev.md`, …) fragments the document by author rather than by content. The same fact (e.g. schema choice) ends up in three role-files, drifting out of sync. This is "overlap" by our own definition.
-- **Sections inside a single file with section-level ownership** is unenforceable: GitHub CODEOWNERS does not support sub-file granularity.
+- **Một file chung duy nhất** được chỉnh sửa bởi hơn 8 vai trò sẽ gây ra xung đột khi trộn mã nguồn (merge conflict) liên tục.
+- **Mỗi vai trò một file** (`ba.md`, `dba.md`, ...) sẽ làm phân mảnh tài liệu theo tác giả thay vì theo nội dung. Cùng một thông tin (ví dụ: cấu trúc bảng DB) sẽ nằm ở 3 file khác nhau dẫn đến mất đồng bộ. Đây chính là sự "chồng chéo".
+- **Các mục trong cùng một file với quyền sở hữu theo mục** là không thể thực thi được vì GitHub CODEOWNERS không hỗ trợ phân quyền chi tiết dưới mức file.
 
-We need a structure where (a) each fact has exactly one home file, (b) each file has exactly one writer at a time, (c) each role has clear ownership, and (d) the structure scales to multiple concurrent features.
+Chúng ta cần một cấu trúc mà: (a) mỗi thông tin chỉ có một file duy nhất, (b) mỗi file chỉ có một người viết tại một thời điểm, (c) mỗi vai trò có quyền sở hữu rõ ràng, và (d) cấu trúc này có thể mở rộng cho nhiều tính năng chạy song song.
 
-## Decision
+## Quyết định
 
-Adopt a **per-feature folder + per-artifact file** structure. Each feature in flight gets a folder under `docs/features/`. Inside the folder, a fixed set of artifact files, each owned by exactly one role via CODEOWNERS, with named reviewer roles.
+Áp dụng cấu trúc **thư mục theo từng tính năng + file riêng cho từng sản phẩm bàn giao**. Mỗi tính năng đang thực hiện sẽ có một thư mục riêng trong `features/`. Bên trong thư mục đó là tập hợp các file sản phẩm cố định, mỗi file do đúng một vai trò sở hữu thông qua CODEOWNERS, với các vai trò soát xét (reviewer) cụ thể.
 
 ```
-docs/features/2026-XX-<feature-slug>/
-├── OWNERS.md              # Per-feature human assignment (Attack #3)
-├── 00-idea.md             # PO owns,    BA reviews
-├── 01-requirements.md     # BA owns,    PO + SA + QA + Security review
-├── 02-design.md           # SA owns,    Dev + DBA + Security review
-├── 03-schema.md           # DBA owns,   Dev + SA review
-├── 04-test-plan.md        # QA owns,    Dev + BA review
-├── 05-runbook.md          # DevOps owns, SA + Dev + Security review
-├── 06-threat-model.md     # Security owns (stub → docs-confidential)
-└── decisions/             # Feature-local ADR drafts; promoted on accept
+features/2026-XX-<tên-tính-năng>/
+├── OWNERS.md              # Phân công nhân sự cho tính năng này
+├── 00-idea.md             # PO sở hữu, BA soát xét
+├── 01-requirements.md     # BA sở hữu, PO + SA + QA + Bảo mật soát xét
+├── 02-design.md           # SA sở hữu, Dev + DBA + Bảo mật soát xét
+├── 03-schema.md           # DBA sở hữu, Dev + SA soát xét
+├── 04-test-plan.md        # QA sở hữu, Dev + BA soát xét
+├── 05-runbook.md          # DevOps sở hữu, SA + Dev + Bảo mật soát xét
+├── 06-threat-model.md     # Bảo mật sở hữu
+└── decisions/             # Các bản nháp ADR nội bộ của tính năng
 ```
 
-Cross-references between artifacts are **markdown links** to specific files/sections — never copy-paste of facts. Each fact has exactly one home file; other artifacts link to it.
+Việc tham chiếu giữa các sản phẩm được thực hiện qua **liên kết Markdown** đến các file/mục cụ thể — tuyệt đối không sao chép nội dung. Mỗi thông tin chỉ nằm tại một file gốc duy nhất.
 
-## Consequences
+## Hệ quả
 
-### Positive
+### Tích cực
 
-- **No file-level merge conflicts**: each artifact has a single CODEOWNER, so only one author at a time writes to it.
-- **No content overlap**: a fact (e.g. schema choice) lives only in `03-schema.md`; everything else links to it.
-- **No missing artifact** (when paired with a linter): a CI job can verify every feature folder has the required files (template manifest).
-- **Cross-role consistency**: adjacent roles are required PR reviewers. `02-design.md` cannot merge without DBA + Security approval.
-- **Phase progression encoded by file numbering**: makes lifecycle order obvious without separate phase folders.
-- **Parallel features**: each feature is its own folder — no global lock, no contention.
+- **Không có xung đột merge file**: Mỗi sản phẩm chỉ có một vai trò sở hữu, vì vậy tại một thời điểm chỉ có một tác giả viết.
+- **Không chồng chéo nội dung**: Một thông tin (ví dụ: cấu trúc bảng) chỉ nằm ở `03-schema.md`; các file khác chỉ dẫn link đến đó.
+- **Không thiếu sót sản phẩm**: Công cụ kiểm tra (linter) sẽ xác nhận mọi thư mục tính năng đều phải có đủ các file theo mẫu.
+- **Tính nhất quán đa vai trò**: Các vai trò liên quan bắt buộc phải soát xét PR. Ví dụ, `02-design.md` không thể merge nếu thiếu sự phê duyệt của DBA và Bảo mật.
+- **Thứ tự vòng đời rõ ràng**: Việc đánh số file (00, 01, ...) giúp nhận biết giai đoạn mà không cần chia thư mục theo giai đoạn.
 
-### Negative / Costs
+### Hạn chế / Chi phí
 
-- **More files** than a single-file approach. Discoverability needs a generated dashboard.
-- **Requires templates** (Attack #5) for required-section enforcement and joiner ramp.
-- **Requires linter** (ADR-0005) to catch missing files / empty sections — without it, completeness is aspirational.
-- **Cross-references break if files are renamed** — must enforce stable paths or use IDs.
-- **Folder count grows linearly** with features; needs a retirement/archive convention long-term.
+- **Số lượng file nhiều hơn**: Cần một trang tổng hợp (dashboard) để dễ dàng tra cứu.
+- **Yêu cầu các bản mẫu (Template)**: Để đảm bảo cấu trúc nội dung thống nhất.
+- **Cần công cụ kiểm tra (Linter)**: Để phát hiện các file bị thiếu hoặc các mục bị để trống.
+- **Liên kết có thể bị hỏng nếu đổi tên file**: Cần duy trì đường dẫn ổn định.
 
-### Neutral
+## Các phương án đã cân nhắc
 
-- The number of artifacts (currently 7) is calibrated for a typical feature. Some features will have empty/stub artifacts (e.g. no schema change → `03-schema.md` is `status: Not Applicable`). This is fine — emptiness is recorded, not absent.
+### A. Một file chia sẻ duy nhất (`SDLC.md` chứa tất cả các giai đoạn) — Bị loại bỏ
 
-## Alternatives Considered
+Gây ra xung đột merge liên tục và không thể phân quyền sở hữu theo vai trò.
 
-### A. Single shared file (`SDLC.md` containing all phases) — Rejected
+### B. Mỗi vai trò một file (`po.md`, `dba.md`, ...) — Bị loại bỏ
 
-Direct expression of the "common .md file" framing. **Fails on day one** — 8 roles editing one file produces constant merge conflicts. Cannot enforce per-role ownership. Cannot detect missing content. **Literally the opposite of "no conflict."**
+Làm phân mảnh nội dung. Thông tin về DB sẽ nằm ở cả file của DBA, Dev và DevOps. Dẫn đến mất đồng bộ nhanh chóng.
 
-### B. One file per role (`po.md`, `dba.md`, `dev.md`, …) — Rejected
+### C. Các file sản phẩm dùng chung cho toàn bộ kho lưu trữ (`/docs/design.md`, ...) — Bị loại bỏ
 
-Fragments by author, not by content. The schema decision lives in DBA's, Dev's, and DevOps' files simultaneously. Drift is guaranteed within weeks. **"Overlap" by our own definition.**
+Chỉ hoạt động nếu tại một thời điểm chỉ có duy nhất một tính năng được thực hiện. Khi có nhiều tính năng chạy song song, mọi vai trò sẽ sửa cùng một file `design.md`, gây ra xung đột merge trầm trọng.
 
-### C. Single repo-wide files per artifact (`/docs/requirements.md`, `/docs/design.md`, …) — Rejected
+## Liên kết liên quan
 
-Works only if exactly one feature is in flight at a time. With multiple parallel features, all roles edit the same `requirements.md` simultaneously. Same merge-hell as Option A.
-
-### D. Per-phase folder with role-owned sections inside — Rejected
-
-Tempting (`design.md` has `## Schema (DBA)`, `## API (Dev)`, …) but **section-level CODEOWNERS doesn't exist** in GitHub. Cannot enforce ownership. Cannot prevent two people editing the same file via different sections at the same time → merge conflict.
-
-## Related
-
-- **ADR-0002** — Doc-as-source-of-truth (lifecycle state lives in front-matter of these files)
-- **ADR-0003** — Multi-repo hybrid (these feature folders live in code repos, not central docs repo)
-- **ADR-0005** — Linter rule lifecycle (the linter that enforces this structure)
-- **Design history**: [`design/2026-05-07-sdlc-system-grill.md`](../design/2026-05-07-sdlc-system-grill.md), Attack #2
-
-## Notes for future revision
-
-- If feature scope routinely grows beyond 7 artifacts (e.g. data-pipeline projects with separate ingestion/transform/load designs), consider sub-artifacts (`02-design/01-ingestion.md`, `02-design/02-transform.md`) rather than expanding the top-level set. Keep the file count per folder bounded.
-- File-numbering (`00-`, `01-`, …) is a convention, not enforced semantics. The lifecycle is enforced via `predecessors:` in front-matter (ADR-0002 / ADR-0005).
+- **ADR-0002** — Tài liệu là nguồn dữ liệu gốc duy nhất (Trạng thái vòng đời nằm trong khai báo đầu file).
+- **ADR-0005** — Quy trình kiểm tra quy tắc chất lượng (Công cụ kiểm tra cấu trúc này).

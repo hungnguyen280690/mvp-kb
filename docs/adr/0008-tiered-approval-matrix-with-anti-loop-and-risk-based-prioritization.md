@@ -1,142 +1,94 @@
-# ADR-0008: Tiered approval matrix with anti-loop guard and risk-based prioritization
+# ADR-0008: Ma trận phê duyệt phân tầng với cơ chế chống lặp và ưu tiên dựa trên rủi ro
 
-- **Status:** Accepted
-- **Date:** 2026-05-07
-- **Deciders:** SA (lead), Security, DevOps, all roles consulted
-- **Tags:** agents, review-gates, workflow, foundation
-- **Supersedes:** —
-- **Superseded by:** —
+- **Trạng thái:** Đã phê duyệt
+- **Ngày:** 07-05-2026
+- **Người quyết định:** Kiến trúc sư trưởng (SA), Bảo mật, DevOps, tham vấn tất cả các vai trò
+- **Thẻ:** agent, cổng-soát-xét, luồng-công-việc, nền-tảng
+- **Thay thế cho:** —
+- **Được thay thế bởi:** —
 
-## Context
+## Ngữ cảnh
 
-The base SDLC's review model assumed: PR opens → named human reviewer approves → merge. Adding agents creates four scenarios, only one of which is safe by default:
+Mô hình soát xét của SDLC cơ bản giả định: PR được mở → người soát xét được chỉ định phê duyệt → trộn mã nguồn (merge). Việc thêm Agent tạo ra bốn tình huống, trong đó chỉ có một tình huống là an toàn mặc định:
 
-| Author | Reviewer | Default safety                                                |
-| ------ | -------- | ------------------------------------------------------------- |
-| Agent  | Human    | ✅ Standard "AI assists, human approves"                      |
-| Human  | Agent    | ⚠️ Agent finds bugs but shouldn't substitute for human review |
-| Agent  | Agent    | ❌ Catastrophic auto-merge loop                               |
-| Human  | Human    | ✅ Pre-existing rule                                          |
+| Tác giả   | Người soát xét | Độ an toàn mặc định                                          |
+| :-------- | :------------- | :----------------------------------------------------------- |
+| Agent     | Con người      | ✅ Chuẩn: "AI hỗ trợ, con người phê duyệt"                   |
+| Con người | Agent          | ⚠️ Agent tìm lỗi nhưng không nên thay thế con người soát xét |
+| Agent     | Agent          | ❌ Nguy hiểm: Vòng lặp tự động trộn mã nguồn                 |
+| Con người | Con người      | ✅ Quy tắc đã có từ trước                                    |
 
-GitHub branch protection cannot distinguish these. It just counts approvals — setting "1 approval required" lets two agents form a closed loop and merge unchecked.
+Tính năng bảo vệ nhánh của GitHub không phân biệt được các thực thể này. Nó chỉ đếm số lượt phê duyệt — nếu thiết lập "cần 1 lượt phê duyệt", hai Agent có thể tạo thành một vòng lặp kín và tự merge mà không có sự kiểm soát.
 
-A second problem at 30/70: **the math doesn't work**. A senior engineer reviews ~8-12 PRs/day meaningfully. At 70% agent throughput, raw output exceeds review capacity. Either humans rubber-stamp (which `last_human_read` from ADR-0007 detects but doesn't prevent), or PRs queue and throughput collapses to human capacity.
+Vấn đề thứ hai ở tỷ lệ 30/70: **phép toán không khớp**. Một kỹ sư cao cấp soát xét khoảng 8-12 PR/ngày một cách kỹ lưỡng. Với tỷ lệ Agent 70%, sản lượng đầu ra vượt quá khả năng soát xét. Hoặc con người sẽ phê duyệt "cho xong" ( rubber-stamping), hoặc các PR sẽ bị dồn ứ và năng suất bị kéo xuống mức khả năng của con người.
 
-The system needs **selective review**: humans review what matters most, with reduced touch on routine.
+Hệ thống cần **soát xét có chọn lọc**: con người soát xét những gì quan trọng nhất, giảm bớt sự can thiệp vào các việc thường nhật.
 
-## Decision
+## Quyết định
 
-Adopt a **tiered approval matrix enforced by custom CI check (not GitHub branch protection)**, with anti-loop guard and risk-based review modes.
+Áp dụng **ma trận phê duyệt phân tầng được thực thi bởi công cụ kiểm tra (CI check)**, với cơ chế chống lặp và các chế độ soát xét dựa trên rủi ro.
 
-### Rule 1 — Asymmetric approval substitutability
+### Quy tắc 1 — Tính bất đối xứng trong việc thay thế phê duyệt
 
-- A human approval ALWAYS satisfies any approval requirement.
-- An agent approval NEVER satisfies a "human approval required" requirement.
-- Agent approvals can fail (block PR) but cannot satisfy required-reviewer counts.
+- Một lượt phê duyệt của con người LUÔN LUÔN thỏa mãn bất kỳ yêu cầu phê duyệt nào.
+- Một lượt phê duyệt của Agent KHÔNG BAO GIỜ thỏa mãn yêu cầu "cần con người phê duyệt".
+- Sự phê duyệt của Agent có thể làm thất bại PR (nếu phát hiện lỗi) nhưng không thể giúp PR đạt đủ số lượng phê duyệt bắt buộc.
 
-Enforced by linter parsing approval-reviewer handles against rosters, NOT by GitHub's native count.
+### Quy tắc 2 — Cơ chế chống lặp
 
-### Rule 2 — Anti-loop guard
+- Một Agent không thể phê duyệt PR do chính nó là đồng tác giả.
+- Một Agent không thể phê duyệt PR do một Agent khác cùng dòng mô hình/nhà cung cấp tạo ra (tránh các điểm mù tương quan).
+- Việc soát xét chéo nhà cung cấp (Claude soát xét GLM và ngược lại) được khuyến khích nhưng vẫn không thay thế được lượt phê duyệt của con người.
 
-- An agent cannot approve a PR it co-authored.
-- An agent cannot approve a PR authored by another agent of the same provider+model family (correlated blind spots).
-- Cross-provider agent review (Claude reviewing GLM, GLM reviewing Claude) is permitted as advisory; still doesn't satisfy human-required counts.
+### Quy tắc 3 — Yêu cầu phê duyệt theo tầng sản phẩm
 
-### Rule 3 — Per-artifact-class approval requirements
+| Loại sản phẩm                   | Tác giả = Agent                                      | Tác giả = Con người               |
+| :------------------------------ | :--------------------------------------------------- | :-------------------------------- |
+| Sản phẩm Public / Internal      | 1 người (chủ sở hữu vai trò)                         | Theo quy tắc cũ: 1 người đồng cấp |
+| Sản phẩm Confidential (Bảo mật) | 2 người (1 người từ Bảo mật)                         | 1 người + 1 vai trò chéo          |
+| Sản phẩm Restricted (Hạn chế)   | Agent KHÔNG ĐƯỢC làm vai R                           | 2 người (Bảo mật hoặc DevOps)     |
+| ADR (Bất kỳ loại nào)           | Chỉ là bản nháp; merge cần SA + 1 người vai trò chéo | SA phê duyệt                      |
+| Tiêu chuẩn / Bản mẫu / Quy tắc  | Chỉ là bản nháp; merge cần DevOps                    | Theo quy tắc cũ                   |
+| Danh sách nhân sự / Agent       | KHÔNG ĐƯỢC PHÉP                                      | 2 người (DevOps + SA)             |
 
-| Artifact                                   | Author = Agent                                            | Author = Human                  |
-| ------------------------------------------ | --------------------------------------------------------- | ------------------------------- |
-| Public / Internal feature artifact         | 1 human (named role-owner)                                | Existing rule: named human peer |
-| Confidential                               | 2 humans (one Security)                                   | 1 human + 1 cross-role          |
-| Restricted                                 | NOT PERMITTED as R; agent may only be C                   | 2 humans (Security or DevOps)   |
-| ADR (any)                                  | Draft only; promotion needs human SA + 1 human cross-role | SA approval                     |
-| Standards / Templates / Linter rules       | Draft only; merge needs human DevOps                      | Existing rule                   |
-| `team-roster.md` / `agent-roster.md`       | NOT PERMITTED                                             | 2 humans (DevOps + SA)          |
-| Cross-feature fan-out PR (template ripple) | 1 human batch-approval after sample-check                 | Existing rule                   |
+### Quy tắc 4 — Các chế độ soát xét dựa trên rủi ro
 
-### Rule 4 — Risk-based review modes
+Công cụ kiểm tra sẽ chỉ định cường độ soát xét khi PR được mở:
 
-Three review intensities, assigned by linter at PR open:
+1. **Soát xét sâu (Deep review)**: Đọc toàn bộ + nhận xét + có thể yêu cầu thay đổi. Dùng cho: các ADR, sản phẩm Bảo mật/Hạn chế, thay đổi cấu trúc DB, code liên quan đến bảo mật.
+2. **Soát xét mẫu (Sample review)**: Các PR của Agent trong các loại ít rủi ro được soát xét sâu theo tỷ lệ lấy mẫu (bắt đầu 100% ở Giai đoạn 1, giảm xuống ~25% ở Giai đoạn 4). Việc chọn mẫu ngẫu nhiên do công cụ thực hiện.
+3. **Phê duyệt tự động (Approve-on-green)**: Các thay đổi cơ học thuần túy (cập nhật link, cập nhật mã SHA) được tự động phê duyệt nếu mọi CI xanh VÀ thay đổi khớp với các mẫu an toàn đã biết.
 
-1. **Deep review** — full reading + comments + may request changes. Reserved for: ADRs, Confidential/Restricted, schema migrations, security-touching code, anything `applies_adrs`/`applies_policies` cites a critical-tier item.
-2. **Sample review** — agent PRs in low-risk classes get deep-reviewed at a sampling rate (start 100% in Phase 1, drop to ~25% by Phase 4). Random selection enforced by linter; recorded in front-matter for audit.
-3. **Approve-on-green** — pure mechanical changes (link bumps, SHA pin updates from fan-out bot) auto-approved if all CI checks pass AND change matches a known-safe diff pattern. Logged but not deeply reviewed.
+### Quy tắc 5 — Ngưỡng giới hạn tốc độ (Velocity caps)
 
-The review-mode assignment is recorded in front-matter so audits show what intensity each merge received.
-
-### Rule 5 — Velocity caps as circuit breakers
-
-In agent-roster:
+Trong danh sách Agent:
 
 ```yaml
 glm-4-air-doc-drafter:
   rate_limit:
     max_open_prs: 5
     max_daily_merges: 20
-    cool_down_after_human_block: 30min
 ```
 
-Linter enforces; prevents flood (intentional or hallucinatory).
+Điều này ngăn chặn tình trạng "lụt" PR (do vô tình hoặc do Agent bị lỗi).
 
-### Rule 6 — Cross-provider advisory routine
+## Hệ quả
 
-Always have an opposite-provider agent give advisory review on agent-authored PRs before requesting human review. Advisory PR comments accelerate human review and catch cross-provider-uncorrelated errors cheaply.
+### Tích cực
 
-## Consequences
+- Tỷ lệ 30/70 trở nên khả thi về mặt toán học — con người tập trung vào thứ quan trọng; việc thường nhật được lấy mẫu hoặc tự động duyệt.
+- Loại bỏ được vòng lặp tự động merge của Agent.
+- Nhật ký kiểm toán ghi nhận cả cường độ soát xét, không chỉ là sự phê duyệt.
 
-### Positive
+### Hạn chế / Chi phí
 
-- 30/70 ratio becomes mathematically viable — humans review what matters; routine is sample/auto-approved.
-- Auto-merge ouroboros eliminated by anti-loop guard.
-- Critical artifacts (ADRs, Confidential/Restricted) get extra-strict review automatically.
-- Cross-provider advisory provides cheap pre-review; humans get pre-vetted PRs.
-- Audit trail records review intensity, not just approval.
+- Cần xây dựng CI check tùy chỉnh để phân tích người phê duyệt, đối soát với danh sách và chặn merge.
+- Tỷ lệ lấy mẫu cần được điều chỉnh dựa trên dữ liệu thực tế; tỷ lệ sai sẽ gây lãng phí nguồn lực hoặc tạo ra điểm mù.
+- Các chế độ tự động duyệt (Approve-on-green) đòi hỏi sự chấp nhận rủi ro từ tổ chức.
 
-### Negative / Costs
+## Liên kết liên quan
 
-- Custom CI check is non-trivial (parse approvers, validate against rosters, gate merge); ~1.5-2 weeks build.
-- Sampling rate is a tunable that requires observed-data calibration; wrong rate burns capacity or creates blind spots.
-- Cross-provider advisory adds tokens to every agent PR; budget impact (mitigated by cheap-model routing).
-- Approve-on-green mode is risk-tolerance call; conservative orgs may reject it.
-- Reviewers may resent randomized deep-review assignment ("why is THIS routine PR my deep review?"); cultural framing needed.
-
-### Neutral
-
-- The matrix is per-artifact-class, not per-PR-touched-files; some PRs touch multiple classes — linter takes the strictest.
-- Rate limits are per-agent in roster; can be tightened or relaxed without rule changes.
-
-## Alternatives Considered
-
-### A. Simple any-human approval suffices, agent approvals advisory only — Rejected
-
-Works at low agent throughput (≤10 PRs/day per human). Math fails at 30/70.
-
-### B. Strict two-human rule for everything — Rejected
-
-Safest. Mathematically incompatible with 30/70 unless team is large.
-
-### C. GitHub-default — any approver counts, no agent/human distinction — Rejected with strong warning
-
-Allows agent auto-merge loops. Fundamentally unsafe.
-
-### D. Skip sampling, deep-review all — Rejected
-
-At 30/70, this is the rubber-stamp trap dressed up as discipline. Fails on first sprint pressure.
-
-## Related
-
-- **ADR-0001** — Per-feature folder + per-artifact file (artifacts being approved)
-- **ADR-0004** — Two-tier confidentiality (Confidential/Restricted classes drive matrix rows)
-- **ADR-0005** — Severity-tiered rule lifecycle (matrix rules live in linter)
-- **ADR-0006** — A-is-human-only (the rule this matrix mechanically enforces)
-- **ADR-0007** — Full attribution (handle resolution depends on rosters)
-- **ADR-0010** — Human role design (review work is one of the human work classes)
-- **Design history**: [`design/2026-05-07-agent-augmentation-grill.md`](../design/2026-05-07-agent-augmentation-grill.md), Attack #3
-
-## Notes for future revision
-
-- **Sampling rate** is the most important tunable. Start at 100% in Phase 1; observe defect rate; drop in steps to ~25% by Phase 4. Tune per artifact class, not globally.
-- **Cross-provider advisory cost**: budget for it. GLM-4-Air pre-checking Opus output is cheap; Opus checking GLM is more expensive but justifies on Critical artifacts.
-- **Review-mode escalation**: a deep reviewer who finds substantive issues should be empowered to flag the artifact for permanent deep-review status (escape sampling). Linter respects this flag.
-- **Approve-on-green diff patterns**: maintain a curated list. New patterns require human approval to be added (meta-rule).
-- **At lower agent ratios** (e.g. 60/40 or 70/30), this matrix is overkill — relax to (a) of the alternatives. Only use full matrix at high agent ratios where math demands it.
+- **ADR-0004** — Bảo mật hai tầng (các mức độ bảo mật định hướng ma trận phê duyệt).
+- **ADR-0006** — Quy tắc A-luôn-là-người (ma trận này thực thi quy tắc đó).
+- **ADR-0007** — Ghi nhận đầy đủ nguồn gốc (định danh để đối soát).
+- **ADR-0010** — Thiết kế vai trò con người (công việc soát xét là một phần việc của con người).
