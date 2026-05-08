@@ -143,10 +143,11 @@ git-init: ## Init git repo local (chưa có remote)
 	@echo "   GitHub: git remote add origin git@github.com:ORG/mvp-kho-bac.git"
 	@echo "   GitLab: git remote add origin git@gitlab.local:ORG/mvp-kho-bac.git"
 
-git-hooks: ## Cài pre-commit hook (gitleaks, prettier, yamllint, ...)
+git-hooks: ## Cài pre-commit hook (gitleaks, prettier, yamllint, ...) + pre-push hook
 	@pre-commit install
 	@pre-commit install --hook-type commit-msg
-	@echo "✅ Pre-commit hooks installed"
+	@cp scripts/git-hooks/pre-push .git/hooks/pre-push 2>/dev/null && chmod +x .git/hooks/pre-push || true
+	@echo "✅ Pre-commit + pre-push hooks installed"
 
 # ─────────────────────────────────────────────────
 # CI helper (chạy giống GitHub Actions local)

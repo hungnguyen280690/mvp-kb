@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Pre-push hook — chặn push trực tiếp lên main sau khi G1 đã sign-off
+# Cài: cp scripts/git-hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+# Hoặc: make git-hooks (tự động copy)
+#
+# Convention: từ Stage 1 trở đi, mọi thay đổi phải qua branch → PR → review → merge
+
+set -euo pipefail
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+REMOTE="$1"
+URL="$2"
+
+# Kiểm tra xem G1 đã sign-off chưa
+if [[ -f "gates/G1-ba-signoff.md" ]]; then
+    if [[ "$BRANCH" == "main" ]]; then
+        echo "❌ BLOCKED: G1 đã sign-off — không push trực tiếp lên main."
+        echo "   Tạo branch → PR → review → merge."
+        echo "   Ví dụ: git checkout -b stage/2-sa && git push -u origin stage/2-sa"
+        exit 1
+    fi
+fi
+
+# Chặn force push lên mọi branch
+if echo "$@" | grep -q "\-\-force\|\-f"; then
+    echo "❌ BLOCKED: force push không được phép. Dùng --force-with-lease lên branch riêng."
+    exit 1
+fi
+
+exit 0
