@@ -1,0 +1,43 @@
+# generated_by: Claude Opus 4.7 (DevOps/SRE)
+# applies_adrs: [ADR-0007]
+# classification: Public
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vdbas-ltt-service-uat
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: ltt-service
+    app.kubernetes.io/part-of: vdbas
+    app.kubernetes.io/environment: uat
+  annotations:
+    generated_by: "Claude Opus 4.7 (DevOps/SRE)"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: vdbas
+  source:
+    repoURL: "https://github.com/kbnn/vdbas-tt-out-manual.git"
+    targetRevision: main
+    path: workspaces/devops/deploy/helm/ltt-service
+    helm:
+      valueFiles:
+        - "../_shared/values-uat.yaml"
+        - "values.yaml"
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: vdbas-uat
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 3
+      backoff:
+        duration: "5s"
+        factor: 2
+        maxDuration: "1m"

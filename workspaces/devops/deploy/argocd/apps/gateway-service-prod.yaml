@@ -1,0 +1,36 @@
+# generated_by: Claude Opus 4.7 (DevOps/SRE)
+# applies_adrs: [ADR-0007]
+# classification: Public
+# Prod: NO automated sync — requires manual approval
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vdbas-gateway-service-prod
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: gateway-service
+    app.kubernetes.io/part-of: vdbas
+    app.kubernetes.io/environment: prod
+  annotations:
+    generated_by: "Claude Opus 4.7 (DevOps/SRE)"
+    notifications.argoproj.io/subscribe.on-deployed.slack: "vdbas-prod-deploys"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: vdbas
+  source:
+    repoURL: "https://github.com/kbnn/vdbas-tt-out-manual.git"
+    targetRevision: main
+    path: workspaces/devops/deploy/helm/gateway-service
+    helm:
+      valueFiles:
+        - "../_shared/values-prod.yaml"
+        - "values.yaml"
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: vdbas-prod
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -1,0 +1,13 @@
+package vn.gov.kbnn.vdbas.bff.dto;
+
+import lombok.Data;
+
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+@Data
+public class DeleteResponse {
+    private UUID id;
+    private String status;
+    private OffsetDateTime deletedAt;
+}

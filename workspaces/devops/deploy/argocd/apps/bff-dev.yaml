@@ -1,0 +1,48 @@
+# generated_by: Claude Opus 4.7 (DevOps/SRE)
+# applies_adrs: [ADR-0007]
+# classification: Public
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vdbas-bff-dev
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: bff
+    app.kubernetes.io/part-of: vdbas
+    app.kubernetes.io/environment: dev
+  annotations:
+    generated_by: "Claude Opus 4.7 (DevOps/SRE)"
+    argocd-image-updater.argoproj.io/image-list: "bff=image-registry.openshift-image-registry.svc:5000/vdbas/bff"
+    argocd-image-updater.argoproj.io/bff.update-strategy: "newest-build"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: vdbas
+  source:
+    repoURL: "https://github.com/kbnn/vdbas-tt-out-manual.git"
+    targetRevision: main
+    path: workspaces/devops/deploy/helm/bff
+    helm:
+      valueFiles:
+        - "../_shared/values-dev.yaml"
+        - "values.yaml"
+      parameters:
+        - name: image.tag
+          value: "latest"
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: vdbas-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 3
+      backoff:
+        duration: "5s"
+        factor: 2
+        maxDuration: "1m"

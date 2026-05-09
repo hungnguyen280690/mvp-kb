@@ -1,0 +1,25 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: vdbas-bff
+  security:
+    user:
+      name: disabled
+      password: disabled
+
+# LTT Service URL
+ltt-service:
+  url: http://localhost:8081
+
+logging:
+  level:
+    vn.gov.kbnn.vdbas.bff: DEBUG
+    org.springframework.security: WARN
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
