@@ -1,0 +1,29 @@
+# generated_by: Claude Opus 4.7 (DevOps/SRE)
+# applies_adrs: [ADR-0007]
+# classification: Public
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "vdbas.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vdbas.labels" . | nindent 4 }}
+  annotations:
+    generated_by: "Claude Opus 4.7 (DevOps/SRE)"
+data:
+  SPRING_PROFILES_ACTIVE: {{ .Values.environment | default "dev" | quote }}
+  NHNN_BASE_URL: {{ .Values.config.nhnnBaseUrl | quote }}
+  CALLBACK_PATH: {{ .Values.config.callbackPath | quote }}
+  RETRY_MAX_ATTEMPTS: {{ .Values.config.retry.maxAttempts | quote }}
+  RETRY_BACKOFF_DELAYS_MS: {{ .Values.config.retry.backoffDelaysMs | quote }}
+  MQ_CHANNEL_LNH: {{ .Values.config.mq.channels.lnh | quote }}
+  MQ_CHANNEL_SP: {{ .Values.config.mq.channels.sp | quote }}
+  MQ_CHANNEL_LKB: {{ .Values.config.mq.channels.lkb | quote }}
+  MQ_REPLY_QUEUE_LNH: {{ .Values.config.mq.replyQueues.lnh | quote }}
+  MQ_REPLY_QUEUE_SP: {{ .Values.config.mq.replyQueues.sp | quote }}
+  MQ_REPLY_QUEUE_LKB: {{ .Values.config.mq.replyQueues.lkb | quote }}
+  MQ_DLQ_PREFIX: {{ .Values.config.mq.dlqPrefix | quote }}
+  OUTBOX_POLLING_INTERVAL_MS: {{ .Values.config.outbox.pollingIntervalMs | quote }}
+  OUTBOX_BATCH_SIZE: {{ .Values.config.outbox.batchSize | quote }}
+  LOGGING_FORMAT: {{ .Values.logging.format | default "json" | quote }}
+  OTEL_SERVICE_NAME: {{ include "vdbas.name" . }}
