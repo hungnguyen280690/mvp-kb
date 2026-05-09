@@ -1,0 +1,313 @@
+# ============================================================================
+# LTT State Machine — TT.OUT.MANUAL
+# Nguồn: SRS sheet "8-Trang thai giao dich" + cross-ref 5.4/5.5
+# Sinh tu dong tu srs_extract.json — khong chinh sua thu cong ma khong cap nhat SRS
+# ============================================================================
+
+ltt_states:
+
+  # --------------------------------------------------------------------------
+  # State 1: DRAFT (initial)
+  # --------------------------------------------------------------------------
+  - name: DRAFT
+    description: "Maker tạo mới và lưu nháp"
+    is_initial: true
+    is_final: false
+    allowed_actions: [edit, delete, submit]
+    transitions:
+      - event: SUBMIT
+        target: SUBMITTED
+        guards: [VAL-005, VAL-019, BIZ-COA-CROSS, BIZ-LIMIT, BIZ-COT-CHECK]
+        actions: [reserve_fund, audit_create, notify_checker]
+        description: "Maker bấm Gửi kiểm soát (E004)"
+
+      - event: EDIT
+        target: DRAFT
+        guards: [VAL-031, VAL-032, VAL-033, VAL-036, BIZ-EDIT-OWN, BIZ-OPTIMISTIC-LOCK]
+        actions: [update_version, audit_edit_diff]
+        description: "Maker bấm Sửa (E022-Edit) và Lưu nháp"
+
+      - event: DELETE
+        target: "(deleted)"
+        guards: [VAL-031, VAL-032, VAL-035, BIZ-DELETE-DRAFT, BIZ-OPTIMISTIC-LOCK]
+        actions: [soft_delete, release_hold, audit_delete]
+        description: "Maker bấm Xoá (E014-Delete) trên S07"
+
+  # --------------------------------------------------------------------------
+  # State 2: SUBMITTED
+  # --------------------------------------------------------------------------
+  - name: SUBMITTED
+    description: "LTT đã gửi kiểm soát, chờ Checker thẩm định"
+    is_initial: false
+    is_final: false
+    allowed_actions: [approve_check, reject]
+    transitions:
+      - event: APPROVE_CHECK
+        target: IN_CONTROL
+        guards: [VAL-032, BIZ-MAKER-CHECKER, BIZ-SOD]
+        actions: [set_checker, audit_approve, notify_approver]
+        description: "Checker bấm Phê duyệt KS (E005)"
+
+      - event: REJECT
+        target: RETURNED_TO_MAKER
+        guards: [VAL-030, BIZ-REJECT-REASON, BIZ-MAKER-CHECKER, BIZ-SOD]
+        actions: [save_reject_reason, release_hold, audit_reject, notify_maker]
+        description: "Checker bấm Từ chối (E007)"
+
+  # --------------------------------------------------------------------------
+  # State 3: IN_CONTROL
+  # --------------------------------------------------------------------------
+  - name: IN_CONTROL
+    description: "Checker đã phê duyệt, chờ Approver phê duyệt"
+    is_initial: false
+    is_final: false
+    allowed_actions: [approve, reject]
+    transitions:
+      - event: APPROVE
+        target: APPROVED
+        guards: [VAL-032, BIZ-MAKER-CHECKER, BIZ-SOD]
+        actions: [set_approver, audit_approve, notify_signer]
+        description: "Approver bấm Phê duyệt (E006)"
+
+      - event: REJECT
+        target: RETURNED_TO_CHECKER
+        guards: [VAL-030, BIZ-REJECT-REASON, BIZ-MAKER-CHECKER, BIZ-SOD]
+        actions: [save_reject_reason, audit_reject, notify_checker]
+        description: "Approver bấm Từ chối (E007)"
+
+  # --------------------------------------------------------------------------
+  # State 4: RETURNED_TO_MAKER
+  # --------------------------------------------------------------------------
+  - name: RETURNED_TO_MAKER
+    description: "Checker từ chối, LTT trả lại Maker để chỉnh sửa"
+    is_initial: false
+    is_final: false
+    allowed_actions: [edit, submit, delete]
+    transitions:
+      - event: SUBMIT
+        target: SUBMITTED
+        guards: [VAL-005, VAL-019, BIZ-COA-CROSS, BIZ-LIMIT, BIZ-COT-CHECK]
+        actions: [reserve_fund, audit_resubmit, notify_checker]
+        description: "Maker chỉnh sửa và Submit lại"
+
+      - event: EDIT
+        target: DRAFT
+        guards: [VAL-031, VAL-032, VAL-033, VAL-036, BIZ-EDIT-OWN, BIZ-OPTIMISTIC-LOCK]
+        actions: [update_version, audit_edit_after_return]
+        description: "Maker bấm Sửa và Lưu nháp (chưa Submit lại)"
+
+      - event: DELETE
+        target: "(deleted)"
+        guards: [VAL-031, VAL-032, VAL-035, BIZ-DELETE-DRAFT, BIZ-OPTIMISTIC-LOCK]
+        actions: [soft_delete, release_hold, audit_delete_after_return]
+        description: "Maker bấm Xoá"
+
+  # --------------------------------------------------------------------------
+  # State 5: RETURNED_TO_CHECKER
+  # --------------------------------------------------------------------------
+  - name: RETURNED_TO_CHECKER
+    description: "Approver từ chối, LTT trả lại Checker để tái thẩm"
+    is_initial: false
+    is_final: false
+    allowed_actions: [submit]
+    transitions:
+      - event: SUBMIT
+        target: IN_CONTROL
+        guards: [BIZ-MAKER-CHECKER, BIZ-SOD]
+        actions: [audit_resubmit, notify_approver]
+        description: "Checker tái thẩm + Submit lại"
+
+  # --------------------------------------------------------------------------
+  # State 6: APPROVED
+  # --------------------------------------------------------------------------
+  - name: APPROVED
+    description: "Approver đã phê duyệt, chờ Ký số"
+    is_initial: false
+    is_final: false
+    allowed_actions: [sign]
+    transitions:
+      - event: SIGN
+        target: SIGNED
+        guards: [BIZ-SIGN-TAD-COMM, BIZ-MAKER-CHECKER]
+        actions: [save_signature, save_hash, audit_sign]
+        description: "Approver Ký số (E009)"
+
+  # --------------------------------------------------------------------------
+  # State 7: SIGNED
+  # --------------------------------------------------------------------------
+  - name: SIGNED
+    description: "Đã ký số, sẵn sàng gửi NHNN/KB"
+    is_initial: false
+    is_final: false
+    allowed_actions: [send, cancel]
+    transitions:
+      - event: SEND
+        target: SENT
+        guards: [BIZ-CHANNEL-ROUTING, BIZ-RETRY]
+        actions: [push_gateway, audit_send]
+        description: "Approver bấm Gửi NH (E010)"
+
+      - event: CANCEL
+        target: CANCELLED
+        guards: [VAL-030, BIZ-REJECT-REASON]
+        actions: [save_cancel_reason, release_hold, audit_cancel, notify_maker]
+        description: "Approver bấm Huỷ (E008)"
+
+  # --------------------------------------------------------------------------
+  # State 8: SENT
+  # --------------------------------------------------------------------------
+  - name: SENT
+    description: "Đã gửi qua gateway, chờ callback từ NH/KB"
+    is_initial: false
+    is_final: false
+    allowed_actions: []
+    transitions:
+      - event: CALLBACK_SUCCESS
+        target: CONFIRMED
+        guards: [BIZ-RETRY]
+        actions: [push_gl_posted, push_ecm, push_qlt_qlchi, audit_confirm]
+        description: "Callback success từ NH/KB"
+
+      - event: CALLBACK_FAIL
+        target: SEND_FAILED
+        guards: [BIZ-RETRY]
+        actions: [release_hold, audit_fail, notify_approver]
+        description: "Callback fail/timeout retry hết"
+
+  # --------------------------------------------------------------------------
+  # State 9: SEND_FAILED
+  # --------------------------------------------------------------------------
+  - name: SEND_FAILED
+    description: "Gửi thất bại sau retry, cho phép sửa hoặc huỷ"
+    is_initial: false
+    is_final: false
+    allowed_actions: [edit, cancel]
+    transitions:
+      - event: RESEND
+        target: SIGNED
+        guards: [BIZ-RETRY, BIZ-OPTIMISTIC-LOCK]
+        actions: [re_sign, audit_resend]
+        description: "Approver chỉnh sửa và gửi lại"
+
+      - event: CANCEL
+        target: CANCELLED
+        guards: [VAL-030, BIZ-REJECT-REASON]
+        actions: [save_cancel_reason, audit_cancel]
+        description: "Approver Huỷ"
+
+  # --------------------------------------------------------------------------
+  # State 10: CONFIRMED
+  # --------------------------------------------------------------------------
+  - name: CONFIRMED
+    description: "NH/KB xác nhận thành công, chờ GL post"
+    is_initial: false
+    is_final: false
+    allowed_actions: []
+    transitions:
+      - event: GL_SUCCESS
+        target: POSTED
+        guards: [BIZ-COA-CROSS]
+        actions: [update_gl_voucher_no, lock_ltt, audit_post]
+        description: "GL post thành công"
+
+      - event: GL_FAIL
+        target: POST_FAILED
+        guards: []
+        actions: [push_dlq, block_ltt, alert_ops, audit_fail]
+        description: "GL fail (kỳ đóng/COA sai)"
+
+  # --------------------------------------------------------------------------
+  # State 11: POSTED (final)
+  # --------------------------------------------------------------------------
+  - name: POSTED
+    description: "GL đã ghi sổ thành công, LTT khoá chỉnh sửa"
+    is_initial: false
+    is_final: true
+    allowed_actions: [reverse]
+    transitions:
+      - event: REVERSE
+        target: REVERSED
+        guards: [BIZ-MAKER-CHECKER, BIZ-SOD]
+        actions: [create_reversal_ltt, lock_original_ltt, audit_reverse]
+        description: "Approver tạo bút toán đảo (E011)"
+
+  # --------------------------------------------------------------------------
+  # State 12: POST_FAILED
+  # --------------------------------------------------------------------------
+  - name: POST_FAILED
+    description: "GL post thất bại, LTT bị chặn, cảnh báo vận hành"
+    is_initial: false
+    is_final: false
+    allowed_actions: []
+    transitions: []
+
+  # --------------------------------------------------------------------------
+  # State 13: CANCELLED (final)
+  # --------------------------------------------------------------------------
+  - name: CANCELLED
+    description: "LTT đã bị huỷ, hold quỹ được giải phóng"
+    is_initial: false
+    is_final: true
+    allowed_actions: []
+    transitions: []
+
+  # --------------------------------------------------------------------------
+  # State 14: REVERSED
+  # --------------------------------------------------------------------------
+  - name: REVERSED
+    description: "LTT đã đảo, LTT gốc bị khoá, LTT đảo chạy chu trình mới"
+    is_initial: false
+    is_final: true
+    allowed_actions: []
+    transitions: []
+
+  # --------------------------------------------------------------------------
+  # State 15: BLOCKED (system-triggered from any non-final state)
+  # --------------------------------------------------------------------------
+  - name: BLOCKED
+    description: "Hệ thống phát hiện vi phạm SoD hoặc trùng lặp, chặn mọi thao tác"
+    is_initial: false
+    is_final: false
+    allowed_actions: []
+    transitions:
+      - event: UNBLOCK
+        target: "(previous_state)"
+        guards: [BIZ-SOD, BIZ-DUPLICATE]
+        actions: [audit_unblock, alert_ops]
+        description: "Vận hành giải block sau khi xác minh"
+
+# ============================================================================
+# Global transitions (co the kich hoat tu bat ky trang thai nao non-final)
+# ============================================================================
+global_transitions:
+  - event: BLOCK
+    target: BLOCKED
+    source_states: [DRAFT, SUBMITTED, IN_CONTROL, RETURNED_TO_MAKER, RETURNED_TO_CHECKER,
+                    APPROVED, SIGNED, SENT, SEND_FAILED, CONFIRMED, POST_FAILED]
+    guards: [BIZ-SOD, BIZ-DUPLICATE]
+    actions: [block_operations, audit_block, alert_ops]
+    description: "He thong phat hien vi pham SoD/BIZ-DUPLICATE"
+
+# ============================================================================
+# State set summary
+# ============================================================================
+state_set:
+  total: 15
+  states:
+    - DRAFT
+    - SUBMITTED
+    - IN_CONTROL
+    - RETURNED_TO_MAKER
+    - RETURNED_TO_CHECKER
+    - APPROVED
+    - SIGNED
+    - SENT
+    - SEND_FAILED
+    - CONFIRMED
+    - POSTED
+    - POST_FAILED
+    - CANCELLED
+    - REVERSED
+    - BLOCKED
+  initial: DRAFT
+  final: [POSTED, CANCELLED, REVERSED]
