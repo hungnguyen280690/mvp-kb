@@ -131,37 +131,37 @@ Linter phát hiện _hình thức_ khoảng trống mà nó biết; kiểm tra q
 
 Gen 2 đã giao frontend với 75% trang giữ chỗ và hệ thống báo cáo "tất cả xanh." Đó chính là chế độ lỗi mà ADR này khắc phục.
 
-## Related
+## Liên kết liên quan
 
-- ADR-0001 — Per-feature folder + per-artifact file (the artifacts these checks span)
-- ADR-0009 — Defense-in-depth (R-family extended to R0240-R0246)
-- ADR-0013 — Agentic loop topology (per-batch reviewer is the catch-all)
-- ADR-0014 — UI/UX role (proactive check added to workflow)
-- ADR-0015 — Test data first-class (R0242 includes test-data coverage)
-- ADR-0016 — UI testing strategy (R0241 + R0244 ensure UI tests cover spec)
-- ADR-0017 — Output completeness discipline (per-artifact; this ADR is its cross-artifact counterpart)
+- ADR-0001 — Thư mục theo tính năng + file theo sản phẩm bàn giao (các sản phẩm bàn giao mà các kiểm tra này bao phủ)
+- ADR-0009 — Phòng thủ chiều sâu (họ R mở rộng đến R0240-R0246)
+- ADR-0013 — Cấu trúc liên kết vòng lặp agent (reviewer theo lô là bộ bắt tất)
+- ADR-0014 — Vai trò UI/UX (kiểm tra chủ động được thêm vào quy trình)
+- ADR-0015 — Dữ liệu kiểm thử hạng nhất (R0242 bao gồm bao phủ dữ liệu kiểm thử)
+- ADR-0016 — Chiến lược kiểm thử UI (R0241 + R0244 đảm bảo kiểm thử UI bao phủ spec)
+- ADR-0017 — Kỷ luật tính đầy đủ của đầu ra (per-artifact; ADR này là đối ứng chéo sản phẩm bàn giao)
 
-## Workflow updates required
+## Cập nhật quy trình yêu cầu
 
 ### BA (`roles/ba/workflow.md`)
 
-Add states `MonitoringDesign` between `Approved01` and feature deployment. New procedure: `roles/ba/procedures/design-gap-review.md`.
+Thêm trạng thái `MonitoringDesign` giữa `Approved01` và triển khai tính năng. Quy trình mới: `roles/ba/procedures/design-gap-review.md`.
 
 ### QA (`roles/qa/workflow.md`)
 
-Add state `GapDetection` between `Reviewing03` and `Drafting04`. New procedure: `roles/qa/procedures/pre-implementation-gap-detection.md`.
+Thêm trạng thái `GapDetection` giữa `Reviewing03` và `Drafting04`. Quy trình mới: `roles/qa/procedures/pre-implementation-gap-detection.md`.
 
 ### UI/UX (`roles/ui/workflow.md`)
 
-Embed data-contract consistency check inside `Drafting07` state. Update procedure: `roles/ui/procedures/draft-ui-spec.md` (add §"Data contract verification").
+Nhúng kiểm tra nhất quán hợp đồng dữ liệu trong trạng thái `Drafting07`. Cập nhật quy trình: `roles/ui/procedures/draft-ui-spec.md` (thêm mục "Xác minh hợp đồng dữ liệu").
 
-### Cross-role workflow (`workflows/agentic-loop.md`)
+### Quy trình xuyên vai trò (`workflows/agentic-loop.md`)
 
-Add explicit "gap-detection wave" between artifact-authoring waves and Dev-implementation wave.
+Thêm "đợt phát hiện khoảng trống" (gap-detection wave) rõ ràng giữa các đợt tác giả sản phẩm bàn giao và đợt triển khai Dev.
 
-## Notes for future revision
+## Ghi chú cho lần xem xét sau
 
-- **R0240-R0246 false-positive rate** — observe in first 3 features; tune normalization (synonyms, alternate paths)
-- **R0244-R0246 timing**: enforced at code-PR time, not doc-PR time. Code repos opt in via CI config; first-time onboarding requires manual coverage backfill. ADR-0005 grandfathering applies.
-- **BA/QA workload** — if proactive review takes >15% of role capacity, automate further (additional linter rules)
-- **Per-batch reviewer ROI** — track how many gaps it catches that R0240-R0246 missed; if <5% after a year, the linter has caught up and per-batch can downgrade to advisory
+- **Tỷ lệ dương tính giả R0240-R0246** — quan sát trong 3 tính năng đầu; điều chỉnh chuẩn hóa (từ đồng nghĩa, đường dẫn thay thế)
+- **Thời điểm R0244-R0246**: ép buộc tại thời điểm PR code, không phải PR tài liệu. Kho code tham gia qua cấu hình CI; lần onboard đầu tiên yêu cầu bổ sung bao phủ thủ công. Quy tắc miễn trừ ADR-0005 được áp dụng.
+- **Khối lượng công việc BA/QA** — nếu soát xét chủ động chiếm >15% năng lực vai trò, tự động hóa thêm (quy tắc linter bổ sung)
+- **ROI reviewer theo lô** — theo dõi bao nhiêu khoảng trống nó phát hiện mà R0240-R0246 bỏ sót; nếu <5% sau một năm, linter đã bắt kịp và reviewer theo lô có thể hạ xuống advisory
