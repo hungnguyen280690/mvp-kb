@@ -1,0 +1,91 @@
+# generated_by: Claude Opus 4.7 (DevOps/SRE)
+# applies_adrs: [ADR-0007]
+# classification: Public
+#
+# Shared values — UAT environment
+# 2 replicas, medium resources, info logging
+
+replicaCount: 2
+
+image:
+  registry: "image-registry.openshift-image-registry.svc:5000"
+  repository: "vdbas"
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "512Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+
+autoscaling:
+  enabled: false
+
+logging:
+  level: "INFO"
+  format: "json"
+
+tracing:
+  enabled: true
+  endpoint: "http://otel-collector.vdbas-observability:4317"
+  samplingRate: 0.5
+
+metrics:
+  enabled: true
+  path: "/actuator/prometheus"
+
+database:
+  host: "oracle-uat.vdbas-uat.svc"
+  port: 1521
+  service: "VDBASUAT"
+  secretName: "oracle-credentials"
+
+mq:
+  host: "ibm-mq-uat.vdbas-uat.svc"
+  port: 1414
+  queueManager: "QM_UAT"
+  channel: "UAT.APP.SVRCONN"
+  secretName: "mq-credentials"
+
+serviceAccount:
+  create: true
+  annotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+networkPolicy:
+  enabled: true
+  ingressFrom:
+    - namespaceSelector:
+        matchLabels:
+          name: vdbas-uat
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - "{{ .Values.serviceName }}"
+          topologyKey: kubernetes.io/hostname
+
+tolerations: []
+
+nodeSelector: {}

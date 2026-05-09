@@ -1,0 +1,117 @@
+# generated_by: Claude Opus 4.7 (DevOps/SRE)
+# applies_adrs: [ADR-0007]
+# classification: Public
+#
+# Shared values — PROD environment
+# 3 replicas, high resources, production logging, HPA enabled
+
+replicaCount: 3
+
+image:
+  registry: "image-registry.openshift-image-registry.svc:5000"
+  repository: "vdbas"
+  pullPolicy: IfNotPresent
+  tag: "stable"
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "1Gi"
+  limits:
+    cpu: "2000m"
+    memory: "2Gi"
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+logging:
+  level: "WARN"
+  format: "json"
+  # Audit logs always INFO regardless of level
+  auditLevel: "INFO"
+
+tracing:
+  enabled: true
+  endpoint: "http://otel-collector.vdbas-observability:4317"
+  samplingRate: 0.1
+
+metrics:
+  enabled: true
+  path: "/actuator/prometheus"
+
+database:
+  host: "oracle-prod.vdbas-prod.svc"
+  port: 1521
+  service: "VDBASPROD"
+  secretName: "oracle-credentials"
+
+mq:
+  host: "ibm-mq-prod.vdbas-prod.svc"
+  port: 1414
+  queueManager: "QM_PROD"
+  channel: "PROD.APP.SVRCONN"
+  secretName: "mq-credentials"
+
+serviceAccount:
+  create: true
+  annotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+  fsGroup: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+  runAsUser: 1001
+
+networkPolicy:
+  enabled: true
+  ingressFrom:
+    - namespaceSelector:
+        matchLabels:
+          name: vdbas-prod
+    - namespaceSelector:
+        matchLabels:
+          name: vdbas-observability
+
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values:
+                - "{{ .Values.serviceName }}"
+        topologyKey: kubernetes.io/hostname
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: "{{ .Values.serviceName }}"
+
+tolerations:
+  - key: "dedicated"
+    operator: "Equal"
+    value: "vdbas"
+    effect: "NoSchedule"
+
+nodeSelector:
+  node-role.kubernetes.io/worker: "true"
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
