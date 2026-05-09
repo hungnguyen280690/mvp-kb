@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  LNH Message Schema — TT.OUT.MANUAL
+  XSD cho tin nhan gui qua kenh Lien ngan hang (LNH/CITAD)
+  Source: SRS sheet "6-API Spec" API-OUT-001
+  Generated: 2026-05-10 | Stage 2 — SA
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="urn:vdbas:tt:out:manual:lnh:v1"
+           xmlns:lnh="urn:vdbas:tt:out:manual:lnh:v1"
+           elementFormDefault="qualified">
+
+  <!-- ============================================================ -->
+  <!-- Root element: LnhPaymentMessage                              -->
+  <!-- ============================================================ -->
+  <xs:element name="LnhPaymentMessage" type="lnh:PaymentMessageType"/>
+
+  <xs:complexType name="PaymentMessageType">
+    <xs:sequence>
+      <xs:element name="Header" type="lnh:HeaderType"/>
+      <xs:element name="Payment" type="lnh:PaymentType"/>
+      <xs:element name="Sender" type="lnh:PartyType"/>
+      <xs:element name="Receiver" type="lnh:PartyType"/>
+      <xs:element name="Signature" type="lnh:SignatureType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ============================================================ -->
+  <!-- Header — thong tin dieu huong                                -->
+  <!-- ============================================================ -->
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="CorrelationId" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>Idempotency key — unique per request</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="RequestId" type="lnh:RequestIdType">
+        <xs:annotation>
+          <xs:documentation>So YCTT — pattern: ddMMyyyy + 6-digit seq</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Channel" type="lnh:ChannelType"/>
+      <xs:element name="OrderType" type="xs:string"/>
+      <xs:element name="MessageType">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="PAYMENT_REQUEST"/>
+            <xs:enumeration value="PAYMENT_CALLBACK"/>
+            <xs:enumeration value="PAYMENT_RECALL"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="Timestamp" type="xs:dateTime"/>
+      <xs:element name="Version" type="xs:string" fixed="1.0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ============================================================ -->
+  <!-- Payment — thong tin giao dich                                -->
+  <!-- ============================================================ -->
+  <xs:complexType name="PaymentType">
+    <xs:sequence>
+      <xs:element name="Amount" type="lnh:AmountType"/>
+      <xs:element name="ValueDate" type="xs:date"/>
+      <xs:element name="Currency" type="lnh:CurrencyCodeType"/>
+      <xs:element name="Remark" type="lnh:RemarkType" minOccurs="0"/>
+      <xs:element name="ReferenceNo" type="xs:string" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>So chung tu goc</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Purpose" type="xs:string" minOccurs="0">
+        <xs:annotation>
+          <xs:documentation>Noi dung thanh toan</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="COA" type="lnh:COAType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="AmountType">
+    <xs:simpleContent>
+      <xs:extension base="lnh:PositiveDecimalType">
+        <xs:attribute name="currency" type="lnh:CurrencyCodeType" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <!-- ============================================================ -->
+  <!-- Party — thong tin nguoi gui/nhan                            -->
+  <!-- ============================================================ -->
+  <xs:complexType name="PartyType">
+    <xs:sequence>
+      <xs:element name="BankCode" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>Ma NH (BIN code)</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="BankName" type="xs:string" minOccurs="0"/>
+      <xs:element name="Account" type="lnh:AccountType"/>
+      <xs:element name="Name" type="xs:string" minOccurs="0"/>
+      <xs:element name="Address" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="AccountType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="type" use="optional">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:enumeration value="NHNN"/>
+              <xs:enumeration value="NHTM"/>
+              <xs:enumeration value="KBNN"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:attribute>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <!-- ============================================================ -->
+  <!-- COA — Chart of Accounts segments                             -->
+  <!-- ============================================================ -->
+  <xs:complexType name="COAType">
+    <xs:sequence>
+      <xs:element name="MaQuy" type="xs:string" minOccurs="0"/>
+      <xs:element name="CapNS" type="xs:string" minOccurs="0"/>
+      <xs:element name="Chuong" type="xs:string" minOccurs="0"/>
+      <xs:element name="NganhKT" type="xs:string" minOccurs="0"/>
+      <xs:element name="NDKT" type="xs:string" minOccurs="0"/>
+      <xs:element name="NDND" type="xs:string" minOccurs="0"/>
+      <xs:element name="DVQHNS" type="xs:string" minOccurs="0"/>
+      <xs:element name="DiaBan" type="xs:string" minOccurs="0"/>
+      <xs:element name="CTMT" type="xs:string" minOccurs="0"/>
+      <xs:element name="MaNguyen" type="xs:string" minOccurs="0"/>
+      <xs:element name="DuPhong" type="xs:string" minOccurs="0"/>
+      <xs:element name="MaKB" type="xs:string" minOccurs="0"/>
+      <xs:element name="TKNH" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ============================================================ -->
+  <!-- Signature — chu ky so                                       -->
+  <!-- ============================================================ -->
+  <xs:complexType name="SignatureType">
+    <xs:sequence>
+      <xs:element name="SignedData" type="xs:base64Binary"/>
+      <xs:element name="Certificate" type="xs:base64Binary"/>
+      <xs:element name="Algorithm" type="xs:string" default="SHA256withRSA"/>
+      <xs:element name="SignerId" type="xs:string"/>
+      <xs:element name="SignDate" type="xs:dateTime"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ============================================================ -->
+  <!-- Simple type restrictions                                     -->
+  <!-- ============================================================ -->
+  <xs:simpleType name="RequestIdType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d{2}\d{2}\d{4}\d{6}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ChannelType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="LNH"/>
+      <xs:enumeration value="SP"/>
+      <xs:enumeration value="LKB"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="CurrencyCodeType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[A-Z]{3}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="PositiveDecimalType">
+    <xs:restriction base="xs:decimal">
+      <xs:minExclusive value="0"/>
+      <xs:fractionDigits value="2"/>
+      <xs:totalDigits value="15"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="RemarkType">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="500"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+</xs:schema>
