@@ -3,7 +3,7 @@
 // Read-only view + Audit trail + Action buttons
 // ============================================================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { StatusBadge } from '@/components/payment/StatusBadge';
@@ -13,7 +13,7 @@ import { ApprovalActions } from '@/components/approval/ApprovalActions';
 import { getPaymentOrder, getAuditTrail, approvePaymentOrder, rejectPaymentOrder, cancelPaymentOrder, reversePaymentOrder } from '@/lib/api-client';
 import { useAuth } from '@/auth';
 import { useNotification } from '@/lib/notification-context';
-import { isEditableState, isDeletableState, UserRole } from '@/types';
+import { EDITABLE_STATES, UserRole } from '@/types';
 import { formatAmount, formatDate, formatDateTime, maskAccountNumber } from '@/lib/utils';
 import type { PaymentOrder, AuditEntry } from '@/types';
 
@@ -59,8 +59,7 @@ export function S03PaymentOrderDetail() {
 
   const handleApprove = useCallback(async (orderId: string) => {
     try {
-      const result = await approvePaymentOrder(orderId);
-      setData(result);
+      await approvePaymentOrder(orderId);
       notify('success', 'Phe duyet thanh cong');
       fetchData();
     } catch (error: unknown) {
@@ -95,7 +94,7 @@ export function S03PaymentOrderDetail() {
 
   const handleReverse = useCallback(async (orderId: string, reason: string) => {
     try {
-      const result = await reversePaymentOrder(orderId, { reason });
+      await reversePaymentOrder(orderId, { reason });
       notify('success', 'Tao but toan dao thanh cong');
       navigate('/');
     } catch (error: unknown) {
@@ -119,8 +118,7 @@ export function S03PaymentOrderDetail() {
     );
   }
 
-  const canEdit = user && isEditableState(data.status as never) && data.makerId === user.userId && user.role === UserRole.MAKER;
-  const canDelete = user && isDeletableState(data.status as never) && data.makerId === user.userId && user.role === UserRole.MAKER;
+  const canEdit = user && EDITABLE_STATES.includes(data.status as LttState) && data.makerId === user.userId && user.role === UserRole.MAKER;
   const canClone = user?.role === UserRole.MAKER;
 
   const infoClass = 'text-sm text-gray-900';

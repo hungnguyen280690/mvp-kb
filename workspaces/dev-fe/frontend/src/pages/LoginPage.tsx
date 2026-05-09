@@ -2,7 +2,6 @@
 // Login Page — role selection for dev/mock environment
 // ============================================================================
 
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/auth';
 import { MOCK_USERS } from '@/auth/mock-auth';

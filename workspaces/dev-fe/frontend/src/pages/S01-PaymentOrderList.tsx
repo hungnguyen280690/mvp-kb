@@ -3,13 +3,12 @@
 // Filter bar + Data table with pagination + Actions
 // ============================================================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { PaymentOrderFilter } from '@/components/payment/PaymentOrderFilter';
 import { PaymentOrderTable } from '@/components/payment/PaymentOrderTable';
 import { Pagination } from '@/components/common/Pagination';
-import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { listPaymentOrders, deletePaymentOrder } from '@/lib/api-client';
 import { useAuth } from '@/auth';
 import { useNotification } from '@/lib/notification-context';
@@ -18,7 +17,6 @@ import type { PaymentOrderListParams, PaymentOrderSummary, DeleteRequest } from 
 export function S01PaymentOrderList() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { notify } = useNotification();
 
   const [data, setData] = useState<PaymentOrderSummary[]>([]);

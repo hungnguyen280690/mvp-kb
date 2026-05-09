@@ -3,10 +3,9 @@
 // Auth header, error handling, 409 conflict, optimistic lock
 // ============================================================================
 
-import axios, { type AxiosError, type AxiosRequestConfig, type AxiosResponse } from 'axios';
-import { v4 as uuidv4 } from 'uuid';
+import axios, { type AxiosError, type AxiosResponse } from 'axios';
 
-// Fallback UUID generator if uuid package not available
+// UUID generator using crypto API
 function generateUUID(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();

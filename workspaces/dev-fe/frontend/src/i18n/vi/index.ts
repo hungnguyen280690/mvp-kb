@@ -187,7 +187,6 @@ const vi = {
         receiverName: 'Ten',
         receiverAddress: 'Dia chi',
         receiverAccount: 'Tai khoan',
-        receiverBankCode: 'Mo tai NH/KB',
         receiverAccountName: 'Ten tai khoan',
         receiverIdentityDoc: 'CMND/CCCD/HC/Ma DN',
         receiverIdentityDocDate: 'Ngay cap',

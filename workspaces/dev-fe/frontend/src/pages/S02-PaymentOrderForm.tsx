@@ -3,7 +3,7 @@
 // 4 field groups: Thong tin chung, Luoi COA, Nguoi chuyen, Nguoi nhan
 // ============================================================================
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -20,9 +20,9 @@ import {
 } from '@/lib/api-client';
 import { useAuth } from '@/auth';
 import { useNotification } from '@/lib/notification-context';
-import { paymentOrderFormSchema, paymentOrderDraftSchema } from '@/lib/validation-rules';
+import { paymentOrderFormSchema } from '@/lib/validation-rules';
 import { createEmptyLineItem, calculateTotalAmount } from '@/lib/coa-validator';
-import { generateIdempotencyKey, getTodayDate, formatAmount } from '@/lib/utils';
+import { getTodayDate, formatAmount } from '@/lib/utils';
 import type { PaymentOrder, PaymentOrderCreateRequest, LineItem, SenderInfo, ReceiverInfo, FormMode } from '@/types';
 import { LttState, UserRole, EDITABLE_STATES } from '@/types';
 
@@ -70,14 +70,12 @@ export function S02PaymentOrderForm() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [existingData, setExistingData] = useState<PaymentOrder | null>(null);
-  const [etag, setEtag] = useState('');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
   const isReadOnly = mode === 'view';
   const isEditMode = mode === 'edit';
-  const isCreateMode = mode === 'create' || (mode === 'edit' && !id);
   const isCloneMode = mode === 'clone' || !!cloneFromId;
 
   const {
