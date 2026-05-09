@@ -1,0 +1,317 @@
+# =============================================================================
+# validation-rules.yaml — 36 quy tac kiem tra du lieu (VAL rules)
+# Module: TT.OUT.MANUAL — Lenh thanh toan di NHNN thu cong
+# Source: SRS sheet "5.4-Quy tac kiem tra du lieu"
+# Generated: 2026-05-10
+# =============================================================================
+
+rules:
+  # ---- Generic field validations (VAL-001 .. VAL-005) ----
+
+  - id: VAL-001
+    field: "Danh muc (Dropdown/Lookup)"
+    condition: "Gia tri nhap khong ton tai trong danh muc cau hinh"
+    error_code: E-VAL-001
+    error_message: "Gia tri khong nam trong danh muc"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-002
+    field: "Truong du lieu dang ky tu (String fields)"
+    condition: "Do dai vuot qua gioi han cau hinh cua truong"
+    error_code: E-VAL-002
+    error_message: "Vuot qua so ky tu cho phep"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-003
+    field: "Truong du lieu ngay (Date fields)"
+    condition: "Sai dinh dang ngay"
+    error_code: E-VAL-003
+    error_message: "Ngay khong hop le"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-004
+    field: "Tu ngay / Den ngay"
+    condition: "Tu ngay lon hon Den ngay"
+    error_code: E-VAL-004
+    error_message: "Khoang thoi gian khong hop le"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-005
+    field: "Truong bat buoc (Required fields)"
+    condition: "Truong bat buoc bi bo trong khi Submit/Gui kiem soat"
+    error_code: E-VAL-005
+    error_message: "Vui long nhap [Ten truong]"
+    ui_behavior: highlight_red
+    triggered_at: [submit, send_for_check]
+
+  # ---- Channel / Payment-type validations (VAL-006 .. VAL-008) ----
+
+  - id: VAL-006
+    field: "Kenh thanh toan"
+    condition: "Kenh = Lien ngan hang nhung NH nhan khong co trong danh muc NHNN/CITAD"
+    error_code: E-VAL-006
+    error_message: "NH nhan khong thuoc kenh LNH; vui long kiem tra cau hinh"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-007
+    field: "Loai lenh theo kenh"
+    condition: "Kenh = Thanh toan song phuong nhung Loai lenh khong thuoc nhom SP"
+    error_code: E-VAL-007
+    error_message: "Loai lenh khong hop le voi kenh da chon"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-008
+    field: "NH/KB chuyen"
+    condition: "Ma NH/KB chuyen khac ma NH truc tiep cua user dang nhap"
+    error_code: E-VAL-008
+    error_message: "Don vi khong co quyen chuyen tu ma NH nay"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  # ---- Counter-party / Reference validations (VAL-009 .. VAL-011) ----
+
+  - id: VAL-009
+    field: "NH/KB nhan"
+    condition: "Trung voi NH/KB chuyen"
+    error_code: E-VAL-009
+    error_message: "NH chuyen va NH nhan khong duoc trung nhau"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-010
+    field: "So YCTT / So but toan"
+    condition: "Da ton tai trong cung ngay lam viec, cung don vi"
+    error_code: E-VAL-010
+    error_message: "So YCTT da ton tai, vui long kiem tra hoac de he thong tu sinh"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-011
+    field: "So YCTT dinh dang"
+    condition: "Khong khop pattern cau hinh theo kenh (vd LNH = ddMMyyyy + seq)"
+    error_code: E-VAL-011
+    error_message: "So YCTT khong dung dinh dang cau hinh"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  # ---- Date validations (VAL-012 .. VAL-013) ----
+
+  - id: VAL-012
+    field: "Ngay thanh toan"
+    condition: "Ngay TT < ngay lam viec hien tai cua he thong"
+    error_code: E-VAL-012
+    error_message: "Ngay thanh toan khong duoc nho hon ngay lam viec hien tai"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-013
+    field: "Ngay thanh toan"
+    condition: "Ngay TT roi vao ngay nghi/le trong lich he thong"
+    error_code: E-VAL-013
+    error_message: "Ngay thanh toan roi vao ngay nghi; vui long chon ngay lam viec"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  # ---- Amount / Currency validations (VAL-014 .. VAL-017) ----
+
+  - id: VAL-014
+    field: "So tien chuyen"
+    condition: "So tien <= 0 hoac khong phai so"
+    error_code: E-VAL-014
+    error_message: "So tien phai lon hon 0"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-015
+    field: "So tien chuyen (tong khoan muc)"
+    condition: "Tong so tien cac dong khoan muc khac So tien tong cua LTT"
+    error_code: E-VAL-015
+    error_message: "Tong tien chi tiet khac tong tien LTT"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-016
+    field: "Loai tien / Ty gia"
+    condition: "Loai tien la ngoai te nhung Ty gia <= 0 hoac bo trong"
+    error_code: E-VAL-016
+    error_message: "Vui long nhap ty gia hop le voi ngoai te"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-017
+    field: "Loai giao dich"
+    condition: "Kenh = LNH nhung khong chon Loai giao dich"
+    error_code: E-VAL-017
+    error_message: "Loai giao dich la bat buoc voi kenh LNH"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  # ---- Document / Channel-specific validations (VAL-018) ----
+
+  - id: VAL-018
+    field: "So chung tu goc"
+    condition: "Kenh = SP nhung bo trong So chung tu goc"
+    error_code: E-VAL-018
+    error_message: "Vui long nhap So chung tu goc cho kenh TTSP"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  # ---- COA / Budget validations (VAL-019 .. VAL-022) ----
+
+  - id: VAL-019
+    field: "To hop COA"
+    condition: "To hop Ma quy / TK tu nhien / Cap NS / Chuong / NDKT khong hop le theo BIZ-COA-CROSS"
+    error_code: E-VAL-019
+    error_message: "To hop COA khong hop le tai [segment]"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-020
+    field: "DVQHNS"
+    condition: "Ma DVQHNS khong ton tai hoac da bi khoa trong DMHT.DVQHNS"
+    error_code: E-VAL-020
+    error_message: "Ma DVQHNS khong hop le hoac dang bi khoa"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-021
+    field: "Cap NS / Chuong"
+    condition: "Khong thuoc danh muc cho phep theo Ma quy da chon"
+    error_code: E-VAL-021
+    error_message: "Cap NS / Chuong khong khop voi ma quy"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-022
+    field: "NDKT"
+    condition: "NDKT khong thuoc nhom cho phep theo Loai lenh"
+    error_code: E-VAL-022
+    error_message: "NDKT khong hop le voi loai lenh da chon"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  # ---- Line-item detail validations (VAL-023) ----
+
+  - id: VAL-023
+    field: "Dien giai khoan muc"
+    condition: "Bo trong hoac > 250 ky tu"
+    error_code: E-VAL-023
+    error_message: "Dien giai bat buoc va toi da 250 ky tu"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  # ---- Account / Identity validations (VAL-024 .. VAL-027) ----
+
+  - id: VAL-024
+    field: "Tai khoan nguoi chuyen / nguoi nhan"
+    condition: "Sai checksum theo chuan TK NHNN (LNH) hoac chuan NHTM (SP)"
+    error_code: E-VAL-024
+    error_message: "So tai khoan khong hop le"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-025
+    field: "CMND / CCCD / HC / Ma DN"
+    condition: "Dinh dang sai (CCCD 12 so, CMND 9 so, Ma DN 10-13 ky tu)"
+    error_code: E-VAL-025
+    error_message: "Dinh dang giay to khong hop le"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-026
+    field: "Ngay cap / Noi cap"
+    condition: "Da nhap CMND/CCCD nhung bo trong Ngay cap hoac Noi cap"
+    error_code: E-VAL-026
+    error_message: "Vui long nhap day du Ngay cap va Noi cap"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  - id: VAL-027
+    field: "Ma TPCP"
+    condition: "Loai lenh = Trai phieu chinh phu nhung bo trong / khong dung dinh dang Ma TPCP"
+    error_code: E-VAL-027
+    error_message: "Ma TPCP bat buoc va phai dung dinh dang"
+    ui_behavior: highlight_red
+    triggered_at: [submit, save_draft_with_validation]
+
+  # ---- Limit / Attachment / Reject validations (VAL-028 .. VAL-030) ----
+
+  - id: VAL-028
+    field: "Han muc giao dich"
+    condition: "So tien > Han muc cau hinh theo Kenh / Loai lenh / Vai tro"
+    error_code: E-VAL-028
+    error_message: "So tien vuot han muc duoc phe duyet"
+    ui_behavior: highlight_red
+    triggered_at: [submit]
+
+  - id: VAL-029
+    field: "Dinh kem chung tu"
+    condition: "File > 10MB hoac dinh dang ngoai (pdf, jpg, png, docx)"
+    error_code: E-VAL-029
+    error_message: "File dinh kem vuot gioi han hoac sai dinh dang"
+    ui_behavior: highlight_red
+    triggered_at: [upload_attachment]
+
+  - id: VAL-030
+    field: "Ly do tu choi / huy"
+    condition: "Khi Reject/Cancel, ly do < 10 ky tu hoac bo trong"
+    error_code: E-VAL-030
+    error_message: "Vui long nhap ly do toi thieu 10 ky tu"
+    ui_behavior: highlight_red
+    triggered_at: [reject, cancel]
+
+  # ---- State / Ownership / Concurrency validations (VAL-031 .. VAL-036) ----
+
+  - id: VAL-031
+    field: "Trang thai cho phep Sua / Xoa"
+    condition: "User bam Sua/Xoa nhung LTT KHONG o trang thai DRAFT/RETURNED_TO_MAKER"
+    error_code: E-VAL-031
+    error_message: "LTT dang o trang thai [<state>], khong cho phep Sua/Xoa"
+    ui_behavior: disable_button
+    triggered_at: [edit, delete]
+
+  - id: VAL-032
+    field: "Quyen so huu LTT (Own)"
+    condition: "User bam Sua/Xoa nhung KHONG phai Maker goc cua LTT"
+    error_code: E-VAL-032
+    error_message: "Chi Nguoi lap goc moi duoc phep Sua/Xoa LTT nay"
+    ui_behavior: disable_button
+    triggered_at: [edit, delete]
+
+  - id: VAL-033
+    field: "Khoa phien (Concurrent edit)"
+    condition: "LTT dang duoc user khac mo de chinh sua (lock chua het han)"
+    error_code: E-VAL-033
+    error_message: "LTT dang duoc [<user>] chinh sua, vui long thu lai sau"
+    ui_behavior: disable_form
+    triggered_at: [open_for_edit]
+
+  - id: VAL-034
+    field: "Truong immutable"
+    condition: "Nguoi dung co gang thay doi So YCTT / Nguoi lap / Ngay lap trong Edit-mode"
+    error_code: E-VAL-034
+    error_message: "Truong nay khong duoc phep thay doi"
+    ui_behavior: disable_field
+    triggered_at: [edit, submit]
+
+  - id: VAL-035
+    field: "Confirm 2 buoc Xoa"
+    condition: "Nguoi dung bam Xoa nhung chua nhap Ly do hoac chua tick checkbox xac nhan"
+    error_code: E-VAL-035
+    error_message: "Vui long tick xac nhan da ra soat"
+    ui_behavior: disable_confirm_button
+    triggered_at: [delete_confirm]
+
+  - id: VAL-036
+    field: "Optimistic lock (Version mismatch)"
+    condition: "Khi luu/Xoa, version trong request khac version hien tai cua ban ghi (da bi thay doi boi luong khac)"
+    error_code: E-VAL-036
+    error_message: "Ban ghi da bi thay doi tu phien khac. Vui long tai lai truoc khi tiep tuc"
+    ui_behavior: reload_prompt
+    triggered_at: [submit, delete, save_draft_with_validation]

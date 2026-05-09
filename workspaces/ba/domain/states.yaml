@@ -212,7 +212,7 @@ ltt_states:
 
       - event: GL_FAIL
         target: POST_FAILED
-        guards: []
+        guards: [BIZ-COA-CROSS]
         actions: [push_dlq, block_ltt, alert_ops, audit_fail]
         description: "GL fail (kỳ đóng/COA sai)"
 

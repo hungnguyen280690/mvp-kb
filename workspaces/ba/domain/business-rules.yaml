@@ -1,0 +1,370 @@
+# ============================================================
+# Business Rules — TT.OUT.MANUAL (Lệnh thanh toán đi NHNN thủ công)
+# Source: SRS v7, sheet "5.5-Quy tac xu ly nghiep vu"
+# Generated: 2026-05-08 | Stage 1 — BA
+# ============================================================
+
+rules:
+
+  - id: BIZ-001
+    title: "Tìm kiếm — chỉ khi tham số hợp lệ"
+    statement: >
+      Tìm kiếm chỉ thực hiện khi toàn bộ tham số nhập hợp lệ;
+      trường rỗng được hiểu là không lọc theo trường đó.
+    applies_to: [DRAFT, SUBMITTED, IN_CONTROL, APPROVED, SENT, CONFIRMED, FAILED]
+    enforcement: service_check
+    test_scenarios:
+      - "Nhập tất cả tham số hợp lệ → kết quả trả về"
+      - "Bỏ trống một tham số → kết quả không lọc theo trường đó"
+
+  - id: BIZ-002
+    title: "Phân trang/sort mặc định"
+    statement: >
+      Phân trang/sort mặc định: page size=20, sort theo Ngày giao dịch giảm dần.
+      User có thể thay đổi page size 10/20/50/100.
+    applies_to: [DRAFT, SUBMITTED, IN_CONTROL, APPROVED, SENT, CONFIRMED, FAILED]
+    enforcement: service_check + ui_default
+    test_scenarios:
+      - "Mở danh sách LTT → page size mặc định = 20, sort Ngày GD giảm dần"
+      - "Chọn page size 50 → danh sách hiển thị 50 bản ghi"
+
+  - id: BIZ-IDGEN
+    title: "Sinh số YCTT tự động theo kênh"
+    statement: >
+      Hệ thống tự sinh số YCTT theo cấu hình kênh nếu Maker bỏ trống.
+      Pattern LNH: ddMMyyyy + 6-digit seq theo đơn vị;
+      pattern SP: <maNH>YYYYMMDD<seq>;
+      LKB: <maKB>YYYY<seq>.
+    applies_to: [DRAFT]
+    enforcement: service_check + db_sequence
+    test_scenarios:
+      - "Maker bỏ trống số YCTT, kênh LNH → hệ thống sinh ddMMyyyy + 6-digit seq"
+      - "Maker nhập sẵn số YCTT → hệ thống giữ nguyên giá trị nhập"
+      - "Hai LTT cùng kênh LNH, cùng ngày → seq tăng dần, không trùng"
+
+  - id: BIZ-AUTOFILL
+    title: "Autofill thông tin mặc định"
+    statement: >
+      Autofill thông tin: NH/KB chuyển = mã NH trực tiếp của user;
+      Người lập = user hiện tại; Ngày TT = ngày làm việc;
+      Loại tiền = VND; Mã quỹ = 01.
+    applies_to: [DRAFT]
+    enforcement: service_check + ui_autofill
+    test_scenarios:
+      - "Mở form tạo LTT → NH/KB chuyển, Người lập, Ngày TT, Loại tiền, Mã quỹ được fill tự động"
+      - "User thuộc NH khác → NH/KB chuyển khác nhau tương ứng"
+
+  - id: BIZ-COA-CROSS
+    title: "Ràng buộc kết hợp chéo COA"
+    statement: >
+      Tổ hợp các segment Mã quỹ/TK/Cấp NS/Chương/Ngành KT/NDKT/ĐB/CTMT/MN/Kho bạc/DP
+      phải hợp lệ theo bảng cấu hình QLT/QLChi (đối chiếu với DMHT.COA-MATRIX).
+    applies_to: [DRAFT, SUBMITTED]
+    enforcement: service_check + db_constraint
+    test_scenarios:
+      - "Chọn tổ hợp COA hợp lệ → pass"
+      - "Chọn tổ hợp COA không có trong DMHT.COA-MATRIX → reject với lỗi COA"
+      - "Đổi Mã quỹ → kiểm tra lại toàn bộ tổ hợp"
+
+  - id: BIZ-COT-CHECK
+    title: "Kiểm soát phiên (cut-off)"
+    statement: >
+      Chỉ cho phép tạo/gửi LTT trong giờ giao dịch.
+      Sau giờ cut-off của kênh tương ứng, hệ thống chuyển sang ngày làm việc kế tiếp.
+    applies_to: [DRAFT, SUBMITTED]
+    enforcement: service_check
+    test_scenarios:
+      - "Tạo LTT trong giờ giao dịch → thành công"
+      - "Submit LTT sau giờ cut-off kênh LNH → hệ thống chuyển sang ngày làm việc kế tiếp"
+      - "Trước cut-off 5 phút → vẫn cho phép submit"
+
+  - id: BIZ-CHANNEL-ROUTING
+    title: "Định tuyến kênh sau phê duyệt"
+    statement: >
+      Sau khi phê duyệt, hệ thống căn cứ Kênh + Loại lệnh + NH nhận
+      để định tuyến gửi đến gateway phù hợp (LNH/SP/LKB).
+      Nếu nhiều route khả dụng, ưu tiên theo bảng Routing Priority.
+    applies_to: [APPROVED, SENT]
+    enforcement: service_check + routing_config
+    test_scenarios:
+      - "LTT kênh LNH → gửi gateway LNH"
+      - "LTT kênh SP → gửi gateway SP"
+      - "Nhiều route khả dụng → chọn theo Routing Priority"
+
+  - id: BIZ-LIMIT
+    title: "Hạn mức giao dịch"
+    statement: >
+      Kiểm tra Số tiền LTT so với hạn mức theo Kênh x Loại lệnh x Vai trò x Đơn vị.
+      Vượt hạn mức → cảnh báo + bắt buộc cấp phê duyệt cao hơn.
+    applies_to: [DRAFT, SUBMITTED]
+    enforcement: service_check
+    test_scenarios:
+      - "Số tiền trong hạn mức → pass"
+      - "Số tiền vượt hạn mức → cảnh báo, yêu cầu phê duyệt cao hơn"
+      - "Số tiền = 0 → reject"
+
+  - id: BIZ-MAKER-CHECKER
+    title: "Quy trình 3 cấp Maker→Checker→Approver"
+    statement: >
+      Quy trình 3 cấp Maker→Checker→Approver.
+      Mỗi cấp phải khác user và khác vai trò.
+      Hệ thống bắt buộc nhập lý do khi Reject.
+    applies_to: [SUBMITTED, IN_CONTROL, APPROVED]
+    enforcement: db_constraint + service_check
+    test_scenarios:
+      - "user A là maker, user A approve checker → reject (cùng user)"
+      - "user B là checker, user B approve approver → reject (cùng user)"
+      - "maker, checker, approver là 3 user khác nhau → pass"
+      - "Reject không nhập lý do → reject thao tác"
+
+  - id: BIZ-SOD
+    title: "Phân tách trách nhiệm (SoD)"
+    statement: >
+      Enforce theo bảng SoD (xem sheet 3).
+      Vi phạm → chặn thao tác, ghi audit.
+    applies_to: [SUBMITTED, IN_CONTROL, APPROVED]
+    enforcement: service_check + audit_log
+    test_scenarios:
+      - "User vi phạm SoD → chặn thao tác, ghi audit"
+      - "User không vi phạm SoD → pass"
+
+  - id: BIZ-FEE-CALC
+    title: "Tính phí tự động"
+    statement: >
+      Tự động tính phí theo Kênh x Loại lệnh x Số tiền theo bảng phí.
+      Áp dụng làm tròn theo quy định (đến đồng cho VND, đến cent cho ngoại tệ).
+    applies_to: [DRAFT, SUBMITTED]
+    enforcement: service_check
+    test_scenarios:
+      - "LTT VND 100.500 → phí tính đúng theo bảng phí, làm tròn đến đồng"
+      - "LTT ngoại tệ → phí làm tròn đến cent"
+      - "Đổi Kênh hoặc Loại lệnh → phí tính lại"
+
+  - id: BIZ-FX-RATE
+    title: "Tỷ giá ngoại tệ"
+    statement: >
+      Với LTT ngoại tệ, lấy tỷ giá theo cấu hình (NHNN hằng ngày hoặc Sở giao dịch).
+      Nếu vượt biên độ ±2% so với tỷ giá tham chiếu, cảnh báo Approver.
+    applies_to: [DRAFT, SUBMITTED, IN_CONTROL, APPROVED]
+    enforcement: service_check
+    test_scenarios:
+      - "LTT ngoại tệ, tỷ giá trong biên độ → pass"
+      - "LTT ngoại tệ, tỷ giá vượt ±2% → cảnh báo Approver"
+      - "LTT VND → không kiểm tra tỷ giá"
+
+  - id: BIZ-SIGN-TAD-COMM
+    title: "Ký số Approver"
+    statement: >
+      Approver phải ký bằng chứng thư hợp lệ, không hết hạn, đúng cá nhân.
+      Lưu chữ ký vào ECM, hash SHA-256.
+    applies_to: [IN_CONTROL, APPROVED]
+    enforcement: service_check + external_system (ECM)
+    test_scenarios:
+      - "Approver ký bằng chứng thư hợp lệ → pass, lưu vào ECM"
+      - "Chứng thư hết hạn → reject ký số"
+      - "Chứng thư không đúng cá nhân → reject"
+
+  - id: BIZ-AUDIT
+    title: "Audit log mọi thao tác"
+    statement: >
+      Ghi nhận mọi thao tác create/update/submit/approve/reject/cancel/sign/send
+      với user, timestamp, IP, oldValue→newValue.
+    applies_to: [DRAFT, SUBMITTED, IN_CONTROL, APPROVED, SENT, CONFIRMED, FAILED]
+    enforcement: service_check + db_trigger
+    test_scenarios:
+      - "Tạo LTT → audit log ghi create, user, timestamp, IP"
+      - "Sửa LTT → audit log ghi update, oldValue, newValue"
+      - "Submit LTT → audit log ghi submit"
+
+  - id: BIZ-EVENT-PUBLISH
+    title: "Publish event khi chuyển trạng thái"
+    statement: >
+      Sau mỗi chuyển trạng thái LTT, publish event lên message bus (TT.OUT.MANUAL.*)
+      cho QLChi/QLT/So cái/ECM/Notification subscribe.
+    applies_to: [SUBMITTED, IN_CONTROL, APPROVED, SENT, CONFIRMED, FAILED]
+    enforcement: service_check + message_bus
+    test_scenarios:
+      - "Submit LTT → event TT.OUT.MANUAL.SUBMITTED publish lên bus"
+      - "Approve LTT → event TT.OUT.MANUAL.APPROVED publish"
+      - "Subscriber nhận event đúng payload"
+
+  - id: BIZ-RESERVE-FUND
+    title: "Đặt giữ quỹ khi Submit"
+    statement: >
+      Sau khi Submit, đặt hold số dư khả dụng tài khoản nguồn = Số tiền LTT
+      để chống chi vượt. Release khi LTT bị huỷ/Reject.
+    applies_to: [SUBMITTED]
+    enforcement: service_check + db_constraint
+    test_scenarios:
+      - "Submit LTT → hold số dư TK nguồn = Số tiền LTT"
+      - "Số dư không đủ → không cho submit"
+      - "Reject LTT → release hold"
+
+  - id: BIZ-CONTRACT-LINK
+    title: "Liên kết hợp đồng/cam kết chi"
+    statement: >
+      Nếu LTT có liên kết hợp đồng QLChi, kiểm tra số dư hợp đồng còn lại
+      >= Số tiền LTT, giảm trừ tương ứng khi Approve.
+    applies_to: [DRAFT, SUBMITTED, APPROVED]
+    enforcement: service_check + db_constraint
+    test_scenarios:
+      - "LTT liên kết hợp đồng, số dư đủ → pass"
+      - "LTT liên kết hợp đồng, số dư không đủ → reject"
+      - "Approve LTT → giảm trừ số dư hợp đồng"
+
+  - id: BIZ-NDND-RULE
+    title: "Ràng buộc NDKT theo Loại lệnh"
+    statement: >
+      NDKT phải nằm trong tập hợp NDKT cho phép theo Loại lệnh.
+      Một số NDKT đặc thù chỉ áp dụng cho TT từ Quỹ NSNN.
+    applies_to: [DRAFT, SUBMITTED]
+    enforcement: service_check + db_constraint
+    test_scenarios:
+      - "Chọn NDKT hợp lệ theo Loại lệnh → pass"
+      - "Chọn NDKT không thuộc tập hợp cho phép → reject"
+      - "NDKT đặc thù Quỹ NSNN + LTT không từ NSNN → reject"
+
+  - id: BIZ-DUPLICATE
+    title: "Chống trùng lặp LTT"
+    statement: >
+      Cảnh báo nếu trong N phút gần nhất có LTT cùng Đơn vị, NH nhận,
+      Số tiền, Số chứng từ gốc → confirm trước khi cho gửi.
+    applies_to: [DRAFT, SUBMITTED]
+    enforcement: service_check + ui_confirm
+    test_scenarios:
+      - "Tạo LTT trùng (cùng ĐV, NH nhận, Số tiền, Số CT) trong N phút → cảnh báo"
+      - "User confirm sau cảnh báo → cho gửi"
+      - "LTT không trùng → không cảnh báo"
+
+  - id: BIZ-RETRY
+    title: "Retry/idempotency gateway gửi NH"
+    statement: >
+      Gateway gửi NH có cơ chế retry (3 lần, backoff 5/15/45s) với cùng correlationId;
+      chỉ chuyển trạng thái thành công khi nhận callback success.
+    applies_to: [SENT]
+    enforcement: service_check + message_bus
+    test_scenarios:
+      - "Gửi NH lần 1 fail → retry sau 5s"
+      - "Gửi NH lần 2 fail → retry sau 15s"
+      - "Gửi NH lần 3 fail → retry sau 45s, nếu vẫn fail → FAILED"
+      - "Callback success → chuyển CONFIRMED"
+
+  - id: BIZ-REJECT-REASON
+    title: "Lý do từ chối/huỷ bắt buộc"
+    statement: >
+      Lý do từ chối/huỷ: bắt buộc nhập, độ dài 10–500 ký tự,
+      lưu vào audit và gửi notify cho Maker.
+    applies_to: [SUBMITTED, IN_CONTROL]
+    enforcement: service_check + ui_validation
+    test_scenarios:
+      - "Reject không nhập lý do → chặn"
+      - "Lý do < 10 ký tự → chặn"
+      - "Lý do > 500 ký tự → chặn"
+      - "Lý do hợp lệ → lưu audit, notify Maker"
+
+  - id: BIZ-NOTIFY
+    title: "Thông báo workflow"
+    statement: >
+      Gửi notification (in-app + email) cho user kế tiếp trong workflow
+      khi LTT chuyển trạng thái Submit/Reject/Approve/Sent/Confirmed/Failed.
+    applies_to: [SUBMITTED, IN_CONTROL, APPROVED, SENT, CONFIRMED, FAILED]
+    enforcement: service_check + message_bus + external_system (email)
+    test_scenarios:
+      - "Submit LTT → notify Checker"
+      - "Reject LTT → notify Maker"
+      - "Approve LTT → notify toàn bộ involved users"
+      - "Sent → notify Maker"
+      - "Confirmed → notify Maker"
+
+  - id: BIZ-EDIT-OWN
+    title: "Sửa LTT — chỉ Maker gốc ở trạng thái cho phép"
+    statement: >
+      Sửa LTT chỉ áp dụng khi: (a) user là Maker gốc,
+      (b) LTT ở DRAFT hoặc RETURNED_TO_MAKER.
+      Vi phạm → chặn thao tác và thông báo VAL-031/VAL-032.
+    applies_to: [DRAFT, RETURNED_TO_MAKER]
+    enforcement: service_check + ui_disable
+    test_scenarios:
+      - "Maker gốc sửa LTT DRAFT → pass"
+      - "Maker gốc sửa LTT RETURNED_TO_MAKER → pass"
+      - "User khác sửa LTT → chặn, thông báo VAL-031"
+      - "Maker gốc sửa LTT SUBMITTED → chặn, thông báo VAL-032"
+
+  - id: BIZ-DELETE-DRAFT
+    title: "Xoá LTT — điều kiện bắt buộc"
+    statement: >
+      Xoá LTT chỉ áp dụng khi: (a) user là Maker gốc,
+      (b) LTT ở DRAFT/RETURNED_TO_MAKER,
+      (c) đã nhập Lý do xoá >= 10 ký tự,
+      (d) đã tick checkbox xác nhận trên S07.
+    applies_to: [DRAFT, RETURNED_TO_MAKER]
+    enforcement: service_check + ui_validation
+    test_scenarios:
+      - "Maker gốc xoá LTT DRAFT, lý do >= 10 ký tự, đã tick confirm → pass"
+      - "Xoá không nhập lý do → chặn"
+      - "Lý do < 10 ký tự → chặn"
+      - "Chưa tick checkbox → chặn"
+      - "User khác xoá → chặn"
+
+  - id: BIZ-OPTIMISTIC-LOCK
+    title: "Optimistic lock mọi thao tác Sửa/Xoá"
+    statement: >
+      Mọi thao tác Sửa/Xoá đều dùng optimistic-lock theo (id, version, updatedAt).
+      Nếu version client != version server → từ chối thao tác (VAL-036).
+    applies_to: [DRAFT, RETURNED_TO_MAKER]
+    enforcement: service_check + If-Match_header
+    test_scenarios:
+      - "Version client = version server → pass"
+      - "Version client != version server → reject, thông báo VAL-036"
+      - "Hai user sửa cùng lúc → user sau bị reject"
+
+  - id: BIZ-EDIT-IMMUTABLE
+    title: "Trường immutable khi Edit"
+    statement: >
+      Trường immutable trong Edit-mode: Số YCTT, Người lập, Ngày lập, audit_id của bản ghi.
+      UI disable; backend reject nếu nhận request đổi giá trị.
+    applies_to: [DRAFT, RETURNED_TO_MAKER]
+    enforcement: service_check + ui_disable
+    test_scenarios:
+      - "Sửa LTT nhưng không đổi immutable fields → pass"
+      - "Gửi request đổi Số YCTT → backend reject"
+      - "UI hiển thị immutable fields ở trạng thái disabled"
+
+  - id: BIZ-DELETE-SOFT
+    title: "Soft-delete LTT"
+    statement: >
+      Xoá LTT là SOFT-DELETE: set is_deleted=true, deleted_by, deleted_at, deleted_reason;
+      bản ghi không bị xoá vật lý; vẫn truy vết được qua báo cáo soft-deleted.
+      Số YCTT KHÔNG được tái sử dụng.
+    applies_to: [DRAFT, RETURNED_TO_MAKER]
+    enforcement: service_check + db_constraint
+    test_scenarios:
+      - "Xoá LTT → is_deleted=true, deleted_by, deleted_at, deleted_reason được ghi"
+      - "Bản ghi soft-delete vẫn truy vết qua báo cáo"
+      - "Số YCTT đã soft-delete không được dùng lại cho LTT mới"
+
+  - id: BIZ-EDIT-AUDIT
+    title: "Audit diff cấp trường khi Sửa"
+    statement: >
+      Mỗi lần Sửa, audit log lưu diff cấp trường: {field, oldValue, newValue},
+      kèm version trước/sau. Diff được hiển thị ở màn hình audit/lịch sử giao dịch.
+    applies_to: [DRAFT, RETURNED_TO_MAKER]
+    enforcement: service_check + ui_display
+    test_scenarios:
+      - "Sửa 2 trường → audit log có 2 diff entry, mỗi entry {field, oldValue, newValue}"
+      - "Version trước/sau được ghi kèm"
+      - "Màn hình audit hiển thị diff đúng"
+
+  - id: BIZ-RELEASE-HOLD
+    title: "Release giữ quỹ khi Xoá/Reject/Cancel"
+    statement: >
+      Khi Xoá hoặc Reject/Cancel LTT (chưa rời khỏi DRAFT/SUBMITTED),
+      nếu trước đó đã đặt giữ quỹ (BIZ-RESERVE-FUND) thì release ngay;
+      ghi audit RELEASE_HOLD.
+    applies_to: [DRAFT, SUBMITTED]
+    enforcement: service_check + audit_log
+    test_scenarios:
+      - "Xoá LTT đã reserve fund → release hold, ghi audit RELEASE_HOLD"
+      - "Reject LTT đã reserve fund → release hold, ghi audit RELEASE_HOLD"
+      - "Cancel LTT đã reserve fund → release hold"
+      - "Xoá LTT chưa reserve fund → không release, không ghi audit RELEASE_HOLD"
