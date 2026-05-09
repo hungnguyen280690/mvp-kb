@@ -1,0 +1,835 @@
+# ============================================================================
+# COA Segments & Reference Data — TT.OUT.MANUAL
+# Module: Lenh thanh toan di NHNN thu cong
+# Source: SRS sheets 5.3.0 – 5.3.5
+# Generated: 2026-05-10
+# ============================================================================
+
+segments:
+
+  # --------------------------------------------------------------------------
+  # DM-CHANNEL — Kenh thanh toan (3 gia tri)
+  # Source: sheet 5.3.1, rows 3-5
+  # Nguon DMHT: DMHT.CHANNEL
+  # --------------------------------------------------------------------------
+  - code: DM-CHANNEL
+    name: "Kenh thanh toan"
+    field_ref: "Kenh"
+    type: "Co dinh"
+    record_count: 3
+    code_pattern: "Ma 3-5 ky tu"
+    dmht_source: "DMHT.CHANNEL"
+    managed_by: "Cuc QLNV"
+    values:
+      - code: LNH
+        name: "Lien ngan hang"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Dinh tuyen qua he thong NHNN/CITAD. Ap dung cho LTT co gia tri cao/thap giua cac ngan hang thanh vien."
+      - code: SP
+        name: "Thanh toan song phuong"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Dinh tuyen qua kenh song phuong truc tiep giua KBNN va NHTM duoc ket noi."
+      - code: LKB
+        name: "Lien kho bac"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Dinh tuyen giua cac don vi KBNN trong he thong Kho bac."
+
+  # --------------------------------------------------------------------------
+  # DM-ORDER-TYPE — Loai lenh thanh toan (12 gia tri)
+  # Source: sheet 5.3.1, rows 9-19
+  # Nguon DMHT: DMHT.ORDER_TYPE
+  # --------------------------------------------------------------------------
+  - code: DM-ORDER-TYPE
+    name: "Loai lenh thanh toan"
+    field_ref: "Loai lenh"
+    type: "Mo rong"
+    record_count: 12
+    code_pattern: "Ma 4-6 ky tu"
+    dmht_source: "DMHT.ORDER_TYPE"
+    managed_by: "Cuc QLNV"
+    values:
+      - code: OT-LNH-LCC
+        name: "Lenh chuyen Co gia tri cao"
+        channel: LNH
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Lenh co > 500 trieu VND, qua he thong Thanh toan gia tri cao cua NHNN."
+      - code: OT-LNH-LCT
+        name: "Lenh chuyen Co gia tri thap"
+        channel: LNH
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Lenh <= 500 trieu VND, qua he thong Bu tru dien tu cua NHNN."
+      - code: OT-LNH-LNC
+        name: "Lenh chuyen No gia tri cao"
+        channel: LNH
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Lenh ghi No > 500 trieu VND."
+      - code: OT-LNH-LNT
+        name: "Lenh chuyen No gia tri thap"
+        channel: LNH
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Lenh ghi No <= 500 trieu VND."
+      - code: OT-LNH-FX
+        name: "Thanh toan bang ngoai te khac"
+        channel: LNH
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Ap dung cho LTT ngoai te (yeu cau Ma ngoai te trich no/TT, Ty gia)."
+      - code: OT-SP-CK
+        name: "Lenh chuyen khoan"
+        channel: SP
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "TTSP chuyen khoan giua hai ben KB-NHTM."
+      - code: OT-SP-CTM
+        name: "Lenh chi tien mat cho KBNN"
+        channel: SP
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Chi tien mat do KBNN nhan."
+      - code: OT-SP-CKH
+        name: "Lenh chi tien mat cho khach hang"
+        channel: SP
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Chi tien mat cho khach hang tai quay NHTM."
+      - code: OT-SP-TPCP
+        name: "Lenh thanh toan Trai phieu Chinh phu"
+        channel: SP
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Bat buoc nhap Ma TPCP (xem VAL-027)."
+      - code: OT-LKB-CK
+        name: "Lenh chuyen khoan LKB"
+        channel: LKB
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Chuyen khoan giua cac don vi KBNN."
+      - code: OT-LKB-DC
+        name: "Lenh dieu chuyen LKB"
+        channel: LKB
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Dieu chuyen von noi bo KBNN."
+
+  # --------------------------------------------------------------------------
+  # DM-TXN-TYPE — Loai giao dich (chi kenh LNH, 6 gia tri)
+  # Source: sheet 5.3.2, rows 3-8
+  # Nguon DMHT: DMHT.TXN_TYPE
+  # --------------------------------------------------------------------------
+  - code: DM-TXN-TYPE
+    name: "Loai giao dich (LNH)"
+    field_ref: "Loai giao dich"
+    type: "Co dinh"
+    record_count: 6
+    code_pattern: "Ma 4 ky tu"
+    dmht_source: "DMHT.TXN_TYPE"
+    managed_by: "NHNN/CITAD"
+    values:
+      - code: TX-LCC
+        name: "Lenh chuyen Co gia tri cao"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Bu tru qua he thong TTGTC NHNN. Cut-off thuong 16h00."
+      - code: TX-LCT
+        name: "Lenh chuyen Co gia tri thap"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Bu tru qua he thong Bu tru dien tu NHNN. Cut-off 17h00."
+      - code: TX-LNC
+        name: "Lenh chuyen No gia tri cao"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Ap dung cho lenh ghi No gia tri cao."
+      - code: TX-LNT
+        name: "Lenh chuyen No gia tri thap"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Ap dung cho lenh ghi No gia tri thap."
+      - code: TX-LCH
+        name: "Lenh hoan/dao"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "But toan dao cho LTT da thanh cong bi sai sot."
+      - code: TX-LTC
+        name: "Lenh tra sat"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Tra sat/khieu nai voi LTT da gui."
+
+  # --------------------------------------------------------------------------
+  # DM-FEE-TYPE — Loai phi (5 gia tri)
+  # Source: sheet 5.3.2, rows 12-16
+  # Nguon DMHT: DMHT.FEE_TYPE
+  # --------------------------------------------------------------------------
+  - code: DM-FEE-TYPE
+    name: "Loai phi"
+    field_ref: "Loai phi"
+    type: "Co dinh"
+    record_count: 5
+    code_pattern: "Ma 4 ky tu"
+    dmht_source: "DMHT.FEE_TYPE"
+    managed_by: "Vu KSC"
+    values:
+      - code: FE-OUR
+        name: "Phi nguoi chuyen chiu (OUR)"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Nguoi chuyen chiu toan bo phi."
+      - code: FE-BEN
+        name: "Phi nguoi nhan chiu (BEN)"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Nguoi nhan chiu toan bo phi."
+      - code: FE-SHA
+        name: "Phi chia se (SHARE)"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Phi duoc chia doi giua nguoi chuyen va nguoi nhan."
+      - code: FE-NONE
+        name: "Mien phi"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Khong thu phi (ap dung cho 1 so loai nghiep vu uu dai/noi bo)."
+      - code: FE-NETOUT
+        name: "Phi duoc tru vao so tien chuyen"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        description: "Phi tru truc tiep vao so tien goc truoc khi gui."
+
+  # --------------------------------------------------------------------------
+  # DM-CURRENCY — Loai tien / Ma ngoai te ISO-4217 (15 gia tri)
+  # Source: sheet 5.3.3, rows 2-16
+  # Nguon DMHT: DMHT.CURRENCY
+  # --------------------------------------------------------------------------
+  - code: DM-CURRENCY
+    name: "Loai tien / Ma ngoai te (ISO-4217)"
+    field_ref: "Loai tien, Ma ngoai te trich no/TT"
+    type: "Mo rong"
+    record_count: 15
+    code_pattern: "ISO-4217 3 ky tu"
+    dmht_source: "DMHT.CURRENCY"
+    managed_by: "So GDNH"
+    values:
+      - code: VND
+        name_vi: "Dong Viet Nam"
+        name_en: "Vietnamese Dong"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        is_default: true
+        decimal_places: 0
+        note: "Loai tien mac dinh, khong co thap phan."
+      - code: USD
+        name_vi: "Do la My"
+        name_en: "US Dollar"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        decimal_places: 2
+        note: "Ty gia lay theo NHNN/So GDNH."
+      - code: EUR
+        name_vi: "Euro"
+        name_en: "Euro"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        decimal_places: 2
+      - code: GBP
+        name_vi: "Bang Anh"
+        name_en: "Pound Sterling"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        decimal_places: 2
+      - code: JPY
+        name_vi: "Yen Nhat"
+        name_en: "Japanese Yen"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        decimal_places: 0
+        note: "Khong co thap phan."
+      - code: CNY
+        name_vi: "Nhan dan te"
+        name_en: "Chinese Yuan"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        decimal_places: 2
+      - code: AUD
+        name_vi: "Do la Uc"
+        name_en: "Australian Dollar"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        decimal_places: 2
+      - code: CAD
+        name_vi: "Do la Canada"
+        name_en: "Canadian Dollar"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        decimal_places: 2
+      - code: CHF
+        name_vi: "Franc Thuy Si"
+        name_en: "Swiss Franc"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        decimal_places: 2
+      - code: SGD
+        name_vi: "Do la Singapore"
+        name_en: "Singapore Dollar"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        decimal_places: 2
+      - code: HKD
+        name_vi: "Do la Hong Kong"
+        name_en: "Hong Kong Dollar"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        decimal_places: 2
+      - code: KRW
+        name_vi: "Won Han Quoc"
+        name_en: "Korean Won"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        decimal_places: 0
+        note: "Khong co thap phan."
+      - code: THB
+        name_vi: "Baht Thai"
+        name_en: "Thai Baht"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        decimal_places: 2
+      - code: RUB
+        name_vi: "Rup Nga"
+        name_en: "Russian Ruble"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        decimal_places: 2
+      - code: XAU
+        name_vi: "Vang (don vi ounce)"
+        name_en: "Gold"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        decimal_places: 2
+        note: "Ap dung neu KBNN co nghiep vu thanh toan bang vang."
+
+  # --------------------------------------------------------------------------
+  # DM-MAQUY — Ma quy (2 ky tu, 7 gia tri)
+  # Source: sheet 5.3.4, rows 3-9
+  # Nguon DMHT: DMHT.COA_FUND
+  # --------------------------------------------------------------------------
+  - code: DM-MAQUY
+    name: "Ma quy"
+    field_ref: "Ma quy"
+    type: "Co dinh"
+    record_count: 7
+    code_pattern: "2 ky tu"
+    dmht_source: "DMHT.COA_FUND"
+    managed_by: "Vu Ngan sach"
+    values:
+      - code: "01"
+        name: "Quy Ngan sach trung uong"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        note: "Mac dinh khi tao LTT cap Trung uong."
+      - code: "02"
+        name: "Quy Ngan sach dia phuong"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        note: "Ap dung don vi KB cap tinh/huyen."
+      - code: "03"
+        name: "Quy Tai chinh khac cua Nha nuoc"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "04"
+        name: "Quy Vay no - vien tro"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "05"
+        name: "Quy Dau tu phat trien"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "06"
+        name: "Quy Bao hiem xa hoi"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "99"
+        name: "Quy khac"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        note: "Su dung theo cau hinh DMHT cu the."
+
+  # --------------------------------------------------------------------------
+  # DM-CAPNS — Cap Ngan sach (1 ky tu, 4 gia tri)
+  # Source: sheet 5.3.4, rows 13-16
+  # Nguon DMHT: DMHT.COA_LEVEL
+  # --------------------------------------------------------------------------
+  - code: DM-CAPNS
+    name: "Cap ngan sach"
+    field_ref: "Cap NS"
+    type: "Co dinh"
+    record_count: 4
+    code_pattern: "1 ky tu"
+    dmht_source: "DMHT.COA_LEVEL"
+    managed_by: "Vu Ngan sach"
+    values:
+      - code: "1"
+        name: "Ngan sach Trung uong"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "2"
+        name: "Ngan sach Tinh/TP truc thuoc TW"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "3"
+        name: "Ngan sach Huyen/Quan"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "4"
+        name: "Ngan sach Xa/Phuong/Thi tran"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+
+  # --------------------------------------------------------------------------
+  # DM-MN — Ma nguon kinh phi (2 ky tu, 10 gia tri)
+  # Source: sheet 5.3.4, rows 20-28
+  # Nguon DMHT: DMHT.COA_FUND_SRC
+  # --------------------------------------------------------------------------
+  - code: DM-MN
+    name: "Ma nguon kinh phi"
+    field_ref: "MN"
+    type: "Co dinh"
+    record_count: 10
+    code_pattern: "2 ky tu"
+    dmht_source: "DMHT.COA_FUND_SRC"
+    managed_by: "Vu Ngan sach"
+    values:
+      - code: "00"
+        name: "Khong xac dinh nguon"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        note: "Mac dinh khi khong bat buoc nhap."
+      - code: "12"
+        name: "Nguon cai cach tien luong"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "13"
+        name: "Nguon chi dau tu"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "14"
+        name: "Nguon chi thuong xuyen"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "15"
+        name: "Nguon vay/vien tro ODA"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "16"
+        name: "Nguon von vay trong nuoc"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "17"
+        name: "Nguon xo so kien thiet"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "18"
+        name: "Nguon thu su nghiep"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "19"
+        name: "Nguon du phong"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+
+  # --------------------------------------------------------------------------
+  # DM-DP — Ma du phong (3 ky tu, 6 gia tri)
+  # Source: sheet 5.3.4, rows 32-37
+  # Nguon DMHT: DMHT.COA_RES
+  # --------------------------------------------------------------------------
+  - code: DM-DP
+    name: "Ma du phong"
+    field_ref: "DP"
+    type: "Co dinh"
+    record_count: 6
+    code_pattern: "3 ky tu"
+    dmht_source: "DMHT.COA_RES"
+    managed_by: "Vu Ngan sach"
+    values:
+      - code: "000"
+        name: "Khong thuoc du phong"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+        note: "Mac dinh."
+      - code: "100"
+        name: "Du phong Ngan sach Trung uong"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "200"
+        name: "Du phong Ngan sach Tinh"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "300"
+        name: "Du phong Ngan sach Huyen"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "400"
+        name: "Du phong Ngan sach Xa"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+      - code: "900"
+        name: "Du phong dac biet khac"
+        status: "Hieu luc"
+        effective_from: "01/01/2020"
+
+  # --------------------------------------------------------------------------
+  # DM-CHUONG — Chuong (3 ky tu so, ~800 ban ghi)
+  # Source: sheet 5.3.5, rows 2-13
+  # Nguon DMHT: DMHT.COA_CHAPTER (dong bo tu Bo Tai chinh)
+  # --------------------------------------------------------------------------
+  - code: DM-CHUONG
+    name: "Chuong"
+    field_ref: "Chuong"
+    type: "Mo rong"
+    record_count: 800
+    code_pattern: "3 ky tu (so)"
+    dmht_source: "DMHT.COA_CHAPTER"
+    managed_by: "Vu Ngan sach"
+    description: "Phan loai doi tuong/co quan/don vi quan ly theo Muc luc NSNN."
+    sample_values:
+      - code: "000"
+        name: "Khong xac dinh"
+      - code: "160"
+        name: "Bo Tai chinh"
+      - code: "164"
+        name: "Tong cuc Thue"
+      - code: "166"
+        name: "Tong cuc Hai quan"
+      - code: "168"
+        name: "Kho bac Nha nuoc"
+      - code: "700"
+        name: "Hoi dong nhan dan cac cap"
+      - code: "750"
+        name: "So Tai chinh cap tinh"
+
+  # --------------------------------------------------------------------------
+  # DM-NGANHKT — Nganh kinh te (3 ky tu so, ~600 ban ghi)
+  # Source: sheet 5.3.5, rows 15-25
+  # Nguon DMHT: DMHT.COA_INDUSTRY (dong bo tu Bo Tai chinh)
+  # --------------------------------------------------------------------------
+  - code: DM-NGANHKT
+    name: "Nganh kinh te"
+    field_ref: "Nganh KT"
+    type: "Mo rong"
+    record_count: 600
+    code_pattern: "3 ky tu (so)"
+    dmht_source: "DMHT.COA_INDUSTRY"
+    managed_by: "Vu Ngan sach"
+    description: "Phan nganh theo VSIC/Muc luc NSNN."
+    sample_values:
+      - code: "000"
+        name: "Khong xac dinh"
+      - code: "010"
+        name: "Quoc phong"
+      - code: "020"
+        name: "An ninh"
+      - code: "070"
+        name: "Su nghiep y te"
+      - code: "080"
+        name: "Su nghiep giao duc"
+      - code: "130"
+        name: "Quan ly hanh chinh"
+
+  # --------------------------------------------------------------------------
+  # DM-NDKT — Noi dung kinh te / Tieu muc (4 ky tu so, ~1.500 ban ghi)
+  # Source: sheet 5.3.5, rows 27-38
+  # Nguon DMHT: DMHT.COA_NDKT (dong bo tu Bo Tai chinh)
+  # --------------------------------------------------------------------------
+  - code: DM-NDKT
+    name: "Noi dung kinh te (Tieu muc)"
+    field_ref: "NDKT"
+    type: "Mo rong"
+    record_count: 1500
+    code_pattern: "4 ky tu (so)"
+    dmht_source: "DMHT.COA_NDKT"
+    managed_by: "Vu Ngan sach"
+    description: "Tieu muc NSNN theo Muc luc NSNN. Moi NDKT thuoc 1 nhom tieu muc."
+    sample_values:
+      - code: "0000"
+        name: "Khong xac dinh"
+      - code: "6000"
+        name: "Tien luong"
+      - code: "6001"
+        name: "Luong theo ngach bac"
+      - code: "6050"
+        name: "Phu cap luong"
+      - code: "6500"
+        name: "Thanh toan dich vu cong cong"
+      - code: "7000"
+        name: "Chi phi thue muon"
+      - code: "7700"
+        name: "Chi mua sam tai san"
+
+  # --------------------------------------------------------------------------
+  # DM-DVQHNS — Don vi quan he ngan sach (7 ky tu so, ~80.000 ban ghi)
+  # Source: sheet 5.3.5, rows 40-48
+  # Nguon DMHT: DMHT.DVQHNS (dong bo tu Co quan Thue va Bo Tai chinh)
+  # --------------------------------------------------------------------------
+  - code: DM-DVQHNS
+    name: "Don vi quan he ngan sach"
+    field_ref: "DVQHNS"
+    type: "Lon"
+    record_count: 80000
+    code_pattern: "7 ky tu (so)"
+    dmht_source: "DMHT.DVQHNS"
+    managed_by: "Vu KSC"
+    description: "Ma DVQHNS do Bo Tai chinh cap; xac dinh don vi thuong hoang/don vi giao dich voi KBNN."
+    sample_values:
+      - code: "1000000"
+        name: "Mac dinh/khong xac dinh"
+      - code: "1054321"
+        name: "Vi du: Truong Dai hoc X"
+      - code: "1098765"
+        name: "Vi du: Benh vien Y"
+      - code: "1112233"
+        name: "Vi du: So Tai chinh Z"
+
+  # --------------------------------------------------------------------------
+  # DM-DIABAN — Dia ban / Ma hanh chinh (5 ky tu so, ~11.000 ban ghi)
+  # Source: sheet 5.3.5, rows 50-58
+  # Nguon DMHT: DMHT.COA_AREA (dong bo tu Tong cuc Thong ke)
+  # --------------------------------------------------------------------------
+  - code: DM-DIABAN
+    name: "Dia ban (ma hanh chinh)"
+    field_ref: "DB"
+    type: "Mo rong"
+    record_count: 11000
+    code_pattern: "5 ky tu (so)"
+    dmht_source: "DMHT.COA_AREA"
+    managed_by: "Vu Ngan sach"
+    description: "Ma hanh chinh theo chuan cua Tong cuc Thong ke (xa/phuong)."
+    sample_values:
+      - code: "00000"
+        name: "Khong xac dinh"
+      - code: "00001"
+        name: "Quan Ba Dinh - Ha Noi"
+      - code: "00076"
+        name: "Quan Hoan Kiem - Ha Noi"
+      - code: "01001"
+        name: "Quan 1 - TP.HCM"
+
+  # --------------------------------------------------------------------------
+  # DM-CTMT — Chuong trinh muc tieu (5 ky tu so, ~200 ban ghi)
+  # Source: sheet 5.3.5, rows 60-68
+  # Nguon DMHT: DMHT.COA_PROG
+  # --------------------------------------------------------------------------
+  - code: DM-CTMT
+    name: "Chuong trinh muc tieu"
+    field_ref: "CTMT"
+    type: "Mo rong"
+    record_count: 200
+    code_pattern: "5 ky tu (so)"
+    dmht_source: "DMHT.COA_PROG"
+    managed_by: "Vu Ngan sach"
+    description: "Ma chuong trinh muc tieu quoc gia/du an."
+    sample_values:
+      - code: "00000"
+        name: "Khong thuoc CTMT"
+      - code: "16001"
+        name: "CTMT phat trien kinh te-xa hoi vung dac biet kho khan"
+      - code: "16002"
+        name: "CTMT giam ngheo ben vung"
+      - code: "16003"
+        name: "CTMT xay dung nong thon moi"
+
+  # --------------------------------------------------------------------------
+  # DM-KB — Kho bac / Ma don vi KBNN (4 ky tu, ~700 ban ghi)
+  # Source: sheet 5.3.5, rows 70-78
+  # Nguon DMHT: DMHT.KB
+  # --------------------------------------------------------------------------
+  - code: DM-KB
+    name: "Kho bac"
+    field_ref: "Kho bac"
+    type: "Mo rong"
+    record_count: 700
+    code_pattern: "4 ky tu"
+    dmht_source: "DMHT.KB"
+    managed_by: "Vu TCKT"
+    description: "Ma don vi KBNN tu cap Trung uong den KB huyen."
+    sample_values:
+      - code: "0001"
+        name: "Kho bac Nha nuoc Trung uong"
+      - code: "0010"
+        name: "KBNN Ha Noi"
+      - code: "0079"
+        name: "KBNN TP.HCM"
+      - code: "0048"
+        name: "KBNN Da Nang"
+
+  # --------------------------------------------------------------------------
+  # DM-TK — Tai khoan tu nhien / GL Natural Account (4 ky tu so, ~400 ban ghi)
+  # Source: sheet 5.3.5, rows 80-89
+  # Nguon DMHT: DMHT.COA_NATURAL (dong bo tu Bo Tai chinh)
+  # --------------------------------------------------------------------------
+  - code: DM-TK
+    name: "Tai khoan tu nhien (GL Natural Account)"
+    field_ref: "TK tu nhien"
+    type: "Mo rong"
+    record_count: 400
+    code_pattern: "4 ky tu (so)"
+    dmht_source: "DMHT.COA_NATURAL"
+    managed_by: "Vu TCKT"
+    description: "He thong tai khoan ke toan nha nuoc theo Thong tu hien hanh."
+    sample_values:
+      - code: "1111"
+        name: "Tien mat VND tai quy"
+      - code: "1121"
+        name: "Tien gui NH bang VND"
+      - code: "3361"
+        name: "Phai tra NSNN cap tren"
+      - code: "7111"
+        name: "Thu NSNN"
+      - code: "8111"
+        name: "Chi NSNN"
+
+  # --------------------------------------------------------------------------
+  # DM-BANK — Ma NH/KB chuyen/nhan (Ma 8 ky tu BIN, ~5.000 ban ghi)
+  # Source: sheet 5.3.5, rows 91-100
+  # Nguon DMHT: DMHT.BANK (dong bo tu NHNN)
+  # --------------------------------------------------------------------------
+  - code: DM-BANK
+    name: "Ma NH/KB chuyen/nhan"
+    field_ref: "NH/KB chuyen, NH/KB nhan"
+    type: "Lon"
+    record_count: 5000
+    code_pattern: "Ma 8 ky tu BIN (theo NHNN)"
+    dmht_source: "DMHT.BANK"
+    managed_by: "Cuc CNTT"
+    description: "Bo ma ngan hang do NHNN cap; ket hop cac kenh ket noi VDBAS."
+    sample_values:
+      - code: "01201001"
+        name: "Vietcombank Hoi so"
+      - code: "01202001"
+        name: "Vietinbank Hoi so"
+      - code: "01203001"
+        name: "BIDV Hoi so"
+      - code: "01204001"
+        name: "Agribank Hoi so"
+      - code: "99999999"
+        name: "Ma NHNN/CITAD"
+
+# ============================================================================
+# Ma tran anh xa Kenh x Loai lenh (Y = ap dung)
+# Source: sheet 5.3.1, rows 22-33
+# ============================================================================
+channel_order_type_matrix:
+  OT-LNH-LCC:
+    name: "Lenh chuyen Co gia tri cao"
+    LNH: Y
+    SP: N
+    LKB: N
+  OT-LNH-LCT:
+    name: "Lenh chuyen Co gia tri thap"
+    LNH: Y
+    SP: N
+    LKB: N
+  OT-LNH-LNC:
+    name: "Lenh chuyen No gia tri cao"
+    LNH: Y
+    SP: N
+    LKB: N
+  OT-LNH-LNT:
+    name: "Lenh chuyen No gia tri thap"
+    LNH: Y
+    SP: N
+    LKB: N
+  OT-LNH-FX:
+    name: "Thanh toan bang ngoai te khac"
+    LNH: Y
+    SP: N
+    LKB: N
+  OT-SP-CK:
+    name: "Lenh chuyen khoan"
+    LNH: N
+    SP: Y
+    LKB: N
+  OT-SP-CTM:
+    name: "Lenh chi tien mat cho KBNN"
+    LNH: N
+    SP: Y
+    LKB: N
+  OT-SP-CKH:
+    name: "Lenh chi tien mat cho khach hang"
+    LNH: N
+    SP: Y
+    LKB: N
+  OT-SP-TPCP:
+    name: "Lenh thanh toan Trai phieu Chinh phu"
+    LNH: N
+    SP: Y
+    LKB: N
+  OT-LKB-CK:
+    name: "Lenh chuyen khoan LKB"
+    LNH: N
+    SP: N
+    LKB: Y
+  OT-LKB-DC:
+    name: "Lenh dieu chuyen LKB"
+    LNH: N
+    SP: N
+    LKB: Y
+
+# ============================================================================
+# COA Composition — Cach ghep COA tu cac segment
+# ============================================================================
+coa_composition:
+  description: >
+    To hop cac segment Mã quy/TK/Cap NS/Chuong/Nganh KT/NDKT/DB/CTMT/MN/Kho bac/DP
+    phai hop le theo bang cau hinh QLT/QLChi (doi chieu voi DMHT.COA-MATRIX).
+    Moi dong khoan muc trong LTT la mot to hop COA day du.
+  segments_order:
+    - DM-MAQUY      # Ma quy (2 ky tu) — vi tri 1
+    - DM-TK         # Tai khoan tu nhien (4 ky tu) — vi tri 2
+    - DM-CAPNS      # Cap ngan sach (1 ky tu) — vi tri 3
+    - DM-CHUONG     # Chuong (3 ky tu) — vi tri 4
+    - DM-NGANHKT    # Nganh kinh te (3 ky tu) — vi tri 5
+    - DM-NDKT       # Noi dung kinh te (4 ky tu) — vi tri 6
+    - DM-DIABAN     # Dia ban (5 ky tu) — vi tri 7
+    - DM-CTMT       # Chuong trinh muc tieu (5 ky tu) — vi tri 8
+    - DM-MN         # Ma nguon kinh phi (2 ky tu) — vi tri 9
+    - DM-KB         # Kho bac (4 ky tu) — vi tri 10
+    - DM-DP         # Ma du phong (3 ky tu) — vi tri 11
+  cross_validation_rules:
+    - rule: BIZ-COA-CROSS
+      description: >
+        To hop cac segment phai hop le theo bang DMHT.COA-MATRIX.
+        Doi chieu voi module QLT/QLChi de xac minh tinh hop le.
+      enforcement: service_check + db_constraint
+    - rule: BIZ-NDND-RULE
+      description: >
+        NDKT phai nam trong tap hop NDKT cho phep theo Loai lenh.
+        Mot so NDKT dac thu chi ap dung cho TT tu Quy NSNN.
+      enforcement: service_check + db_constraint
+    - rule: DM-CAPNS-CHUONG
+      description: >
+        Cap NS va Chuong phai tuong thich (vd. Cap NS=1 thi Chuong thuoc NS Trung uong).
+      enforcement: service_check
+    - rule: DM-MAQUY-CAPNS
+      description: >
+        Ma quy va Cap NS phai tuong thich (vd. Ma quy=01 thi Cap NS=1).
+      enforcement: service_check
+    - rule: DM-DIABAN-KB
+      description: >
+        Dia ban va Kho bac phai tuong thich theo cau truc dia ly hanh chinh.
+      enforcement: service_check
+
+# ============================================================================
+# DM Index summary (18 danh muc)
+# Source: sheet 5.3.0, rows 3-20
+# ============================================================================
+dm_index:
+  total_segments: 18
+  fixed_count: 8    # DM-CHANNEL, DM-TXN-TYPE, DM-FEE-TYPE, DM-MAQUY, DM-CAPNS, DM-MN, DM-DP + DM-CURRENCY
+  extended_count: 7  # DM-ORDER-TYPE, DM-CURRENCY, DM-CHUONG, DM-NGANHKT, DM-NDKT, DM-DIABAN, DM-CTMT
+  large_count: 3    # DM-DVQHNS, DM-BANK, DM-KB
