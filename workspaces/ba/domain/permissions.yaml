@@ -1,0 +1,282 @@
+# ============================================================================
+# Permissions — TT.OUT.MANUAL
+# Nguon: SRS sheet "3-Phan quyen chuc nang" (24 rows)
+# Generated: 2026-05-10 | Stage 1 — BA
+# ============================================================================
+
+roles:
+  - id: MAKER
+    title: "Nguoi lap"
+    description: "Can bo DVS DNS / KBNN — tao, sua, xoa, gui LTT do minh lap"
+    permissions:
+      # --- Truy cap & xem ---
+      - code: TT_OUT_MANUAL_VIEW
+        action: "Xem danh sach LTT"
+        screens: [S01]
+        constraint: "Chi xem LTT cua don vi minh va LTT do minh lap"
+
+      - code: TT_OUT_MANUAL_SEARCH
+        action: "Tim kiem/loc LTT"
+        screens: [S01]
+        constraint: "Theo cac tieu chi: trang thai, kenh, ngay GD, so YCTT, NH nhan"
+
+      - code: TT_OUT_MANUAL_VIEW_DETAIL
+        action: "Xem chi tiet LTT"
+        screens: [S02, S03, S04]
+        constraint: "Xem toan bo thong tin LTT (read-only khi khong o trang thai cho phep sua)"
+
+      # --- Tao & Sua ---
+      - code: TT_OUT_MANUAL_CREATE
+        action: "Tao moi LTT (Lap lenh)"
+        screens: [S02]
+        constraint: "Autofill: NH/KB chuyen, Nguoi lap, Ngay TT, Loai tien (VND), Ma quy"
+
+      - code: TT_OUT_MANUAL_EDIT_DRAFT
+        action: "Sua LTT o trang thai DRAFT"
+        screens: [S02]
+        constraint: "Chi Maker goc; LTT phai o DRAFT hoac RETURNED_TO_MAKER; immutable fields khong doi (BIZ-EDIT-IMMUTABLE)"
+
+      - code: TT_OUT_MANUAL_EDIT_RETURNED
+        action: "Sua LTT bi tra lai tu Checker"
+        screens: [S02]
+        constraint: "Chi Maker goc; LTT phai o RETURNED_TO_MAKER"
+
+      # --- Luu & Gui ---
+      - code: TT_OUT_MANUAL_SAVE_DRAFT
+        action: "Luu nhap LTT"
+        screens: [S02]
+        constraint: "LTT o trang thai DRAFT; auto-save dinh ky hoac bam nut Luu nhap"
+
+      - code: TT_OUT_MANUAL_SUBMIT
+        action: "Gui kiem soat LTT"
+        screens: [S02]
+        constraint: "LTT phai validate thanh cong (VAL-001..VAL-036); dat giu quy (BIZ-RESERVE-FUND)"
+
+      # --- Xoa ---
+      - code: TT_OUT_MANUAL_DELETE_DRAFT
+        action: "Xoa LTT nhap"
+        screens: [S07]
+        constraint: "Chi Maker goc; LTT o DRAFT hoac RETURNED_TO_MAKER; ly do xoa >= 10 ky tu; tick xac nhan (BIZ-DELETE-DRAFT, VAL-035)"
+
+      # --- Sao chep ---
+      - code: TT_OUT_MANUAL_COPY
+        action: "Sao chep tu LTT mau / LTT da co"
+        screens: [S02]
+        constraint: "Tuy chon — he thong tu dien cac truong tu template/LTT da co"
+
+      # --- Dinh kem ---
+      - code: TT_OUT_MANUAL_ATTACH
+        action: "Dinh kem chung tu"
+        screens: [S02]
+        constraint: "File <= 10MB; dinh dang: pdf, jpg, png, docx (VAL-029)"
+
+      # --- In ---
+      - code: TT_OUT_MANUAL_PRINT
+        action: "In LTT / Xuat PDF"
+        screens: [S02, S04]
+        constraint: "In LTT o bat ky trang thai nao"
+
+  - id: CHECKER
+    title: "Nguoi kiem soat"
+    description: "Can bo KBNN duyet cap 1 — phe duyet hoac tu choi sau khi Maker gui"
+    permissions:
+      # --- Xem ---
+      - code: TT_OUT_MANUAL_VIEW
+        action: "Xem danh sach LTT"
+        screens: [S01]
+        constraint: "Xem LTT cho kiem soat cua don vi minh"
+
+      - code: TT_OUT_MANUAL_VIEW_DETAIL
+        action: "Xem chi tiet LTT"
+        screens: [S02, S03]
+        constraint: "Xem toan bo thong tin LTT de kiem soat"
+
+      - code: TT_OUT_MANUAL_SEARCH
+        action: "Tim kiem/loc LTT"
+        screens: [S01]
+
+      # --- Kiem soat ---
+      - code: TT_OUT_MANUAL_APPROVE_CHECK
+        action: "Phe duyet kiem soat LTT"
+        screens: [S03]
+        constraint: "Chi khi LTT o SUBMITTED; Checker != Maker (BIZ-SOD)"
+
+      - code: TT_OUT_MANUAL_REJECT_CHECK
+        action: "Tu choi kiem soat LTT"
+        screens: [S03]
+        constraint: "Chi khi LTT o SUBMITTED; ly do tu choi >= 10 ky tu (BIZ-REJECT-REASON); Checker != Maker"
+
+      # --- Tai tham ---
+      - code: TT_OUT_MANUAL_RESUBMIT_CHECK
+        action: "Tai tham + Gui lai sau khi Approver tu choi"
+        screens: [S03]
+        constraint: "Chi khi LTT o RETURNED_TO_CHECKER; Checker != Maker (BIZ-SOD)"
+
+      # --- In ---
+      - code: TT_OUT_MANUAL_PRINT
+        action: "In LTT"
+        screens: [S03]
+
+  - id: APPROVER
+    title: "Nguoi phe duyet"
+    description: "Can bo KBNN duyet cap 2 — phe duyet cuoi, ky so, gui, huy"
+    permissions:
+      # --- Xem ---
+      - code: TT_OUT_MANUAL_VIEW
+        action: "Xem danh sach LTT"
+        screens: [S01]
+        constraint: "Xem LTT cho phe duyet cua don vi minh"
+
+      - code: TT_OUT_MANUAL_VIEW_DETAIL
+        action: "Xem chi tiet LTT"
+        screens: [S02, S04]
+        constraint: "Xem toan bo thong tin LTT de phe duyet"
+
+      - code: TT_OUT_MANUAL_SEARCH
+        action: "Tim kiem/loc LTT"
+        screens: [S01]
+
+      # --- Phe duyet ---
+      - code: TT_OUT_MANUAL_APPROVE
+        action: "Phe duyet LTT"
+        screens: [S04]
+        constraint: "Chi khi LTT o IN_CONTROL; Approver != Checker != Maker (BIZ-SOD)"
+
+      - code: TT_OUT_MANUAL_REJECT
+        action: "Tu choi phe duyet LTT"
+        screens: [S04]
+        constraint: "Chi khi LTT o IN_CONTROL; ly do tu choi >= 10 ky tu (BIZ-REJECT-REASON)"
+
+      # --- Ky so ---
+      - code: TT_OUT_MANUAL_SIGN
+        action: "Ky so LTT"
+        screens: [S04]
+        constraint: "Chi khi LTT o APPROVED; ky bang chung thu hop le (BIZ-SIGN-TAD-COMM)"
+
+      # --- Gui NH ---
+      - code: TT_OUT_MANUAL_SEND
+        action: "Gui LTT sang NHNN/KB"
+        screens: [S04]
+        constraint: "Chi khi LTT o SIGNED; dinh tuyen kenh (BIZ-CHANNEL-ROUTING)"
+
+      # --- Huy ---
+      - code: TT_OUT_MANUAL_CANCEL
+        action: "Huy LTT"
+        screens: [S04]
+        constraint: "Chi khi LTT o SIGNED; ly do huy >= 10 ky tu; giai phong giu quy"
+
+      # --- Gui lai khi loi ---
+      - code: TT_OUT_MANUAL_RESEND
+        action: "Chinh sua va gui lai sau khi gui loi"
+        screens: [S04]
+        constraint: "Chi khi LTT o SEND_FAILED"
+
+      # --- Dao ---
+      - code: TT_OUT_MANUAL_REVERSE
+        action: "Tao but toan dao"
+        screens: [S04]
+        constraint: "Chi khi LTT o POSTED; trong cung ngay ke toan hoac theo quy dinh"
+
+      # --- In ---
+      - code: TT_OUT_MANUAL_PRINT
+        action: "In LTT"
+        screens: [S04]
+
+  - id: ADMIN
+    title: "Quan tri he thong"
+    description: "Quan tri vien don vi — tra cuu thong tin, khong tham gia tac nghiep LTT"
+    permissions:
+      # --- Chi xem ---
+      - code: TT_OUT_MANUAL_VIEW
+        action: "Xem danh sach LTT (toan don vi)"
+        screens: [S01]
+        constraint: "Xem toan bo LTT trong don vi, tat ca trang thai"
+
+      - code: TT_OUT_MANUAL_VIEW_DETAIL
+        action: "Xem chi tiet LTT"
+        screens: [S02, S03, S04]
+        constraint: "Chi xem (read-only), khong thao tac"
+
+      - code: TT_OUT_MANUAL_SEARCH
+        action: "Tim kiem/loc LTT"
+        screens: [S01]
+
+      # --- Bao cao ---
+      - code: TT_OUT_MANUAL_EXPORT
+        action: "Xuat bao cao LTT"
+        screens: [S01]
+        constraint: "Xuat Excel/PDF danh sach LTT theo bo loc"
+
+      # --- In ---
+      - code: TT_OUT_MANUAL_PRINT
+        action: "In LTT"
+        screens: [S01, S02]
+
+# ============================================================================
+# SoD Rules — Phan tach trach nhiem
+# Nguon: SRS sheet "3-Phan quyen chuc nang" + BIZ-SOD + BIZ-MAKER-CHECKER
+# ============================================================================
+
+sod_rules:
+  - rule: "MAKER != CHECKER"
+    id: SOD-001
+    description: "Nguoi lap khong duoc kiem soat chinh LTT do minh lap. Mot nguoi khong duoc dong thoi la Maker va Checker cho cung mot LTT."
+    enforcement: "db_constraint + service_check"
+    violation_action: "Chan thao tac, ghi audit (BIZ-SOD)"
+
+  - rule: "CHECKER != APPROVER"
+    id: SOD-002
+    description: "Nguoi kiem soat khong duoc phe duyet chinh LTT do minh da kiem soat. Mot nguoi khong duoc dong thoi la Checker va Approver cho cung mot LTT."
+    enforcement: "db_constraint + service_check"
+    violation_action: "Chan thao tac, ghi audit (BIZ-SOD)"
+
+  - rule: "MAKER != APPROVER"
+    id: SOD-003
+    description: "Nguoi lap khong duoc phe duyet chinh LTT do minh lap. Mot nguoi khong duoc dong thoi la Maker va Approver cho cung mot LTT."
+    enforcement: "db_constraint + service_check"
+    violation_action: "Chan thao tac, ghi audit (BIZ-SOD)"
+
+  - rule: "MAKER.unique_per_ltt"
+    id: SOD-004
+    description: "Chi Maker goc moi duoc sua/xoa LTT. User khac (ke ca co vai tro Maker) khong duoc sua LTT cua nguoi khac (BIZ-EDIT-OWN, VAL-032)."
+    enforcement: "service_check"
+    violation_action: "Chan thao tac, thong bao VAL-032"
+
+  - rule: "REVERSE.approver_higher"
+    id: SOD-005
+    description: "Cap phe duyet cho thao tac dao (Reverse) thuong cao hon 1 cap so voi cay phe duyet LTT goc. Approver dao phai khac Approver goc."
+    enforcement: "service_check + APPROVAL_TREE"
+    violation_action: "Chan thao tac, ghi audit"
+
+# ============================================================================
+# Permission Matrix — Bang tong hop Vai tro x Hanh dong
+# ============================================================================
+
+permission_matrix:
+  # Hang dong (rows) x Vai tro (columns)
+  # [X] = Cho phep, [O] = Chi xem, [ ] = Khong cho phep
+  #
+  # Hanh dong                    | MAKER | CHECKER | APPROVER | ADMIN |
+  # -----------------------------|-------|---------|----------|-------|
+  # Xem danh sach LTT            |  [X]  |   [X]   |   [X]    |  [X]  |
+  # Tim kiem/loc                 |  [X]  |   [X]   |   [X]    |  [X]  |
+  # Xem chi tiet LTT             |  [X]  |   [X]   |   [X]    |  [O]  |
+  # Tao moi LTT                  |  [X]  |   [ ]   |   [ ]    |  [ ]  |
+  # Sua LTT (DRAFT/RETURNED)     |  [X]  |   [ ]   |   [ ]    |  [ ]  |
+  # Luu nhap                     |  [X]  |   [ ]   |   [ ]    |  [ ]  |
+  # Gui kiem soat                |  [X]  |   [ ]   |   [ ]    |  [ ]  |
+  # Xoa LTT (DRAFT/RETURNED)     |  [X]  |   [ ]   |   [ ]    |  [ ]  |
+  # Sao chep tu LTT cu           |  [X]  |   [ ]   |   [ ]    |  [ ]  |
+  # Dinh kem chung tu            |  [X]  |   [ ]   |   [ ]    |  [ ]  |
+  # Phe duyet kiem soat          |  [ ]  |   [X]   |   [ ]    |  [ ]  |
+  # Tu choi kiem soat            |  [ ]  |   [X]   |   [ ]    |  [ ]  |
+  # Tai tham (RETURNED_TO_CHK)   |  [ ]  |   [X]   |   [ ]    |  [ ]  |
+  # Phe duyet LTT                |  [ ]  |   [ ]   |   [X]    |  [ ]  |
+  # Tu choi phe duyet            |  [ ]  |   [ ]   |   [X]    |  [ ]  |
+  # Ky so                        |  [ ]  |   [ ]   |   [X]    |  [ ]  |
+  # Gui NHNN/KB                  |  [ ]  |   [ ]   |   [X]    |  [ ]  |
+  # Huy LTT                      |  [ ]  |   [ ]   |   [X]    |  [ ]  |
+  # Gui lai (SEND_FAILED)        |  [ ]  |   [ ]   |   [X]    |  [ ]  |
+  # Dao but toan (POSTED)        |  [ ]  |   [ ]   |   [X]    |  [ ]  |
+  # Xuat bao cao                 |  [ ]  |   [ ]   |   [ ]    |  [X]  |
+  # In LTT                       |  [X]  |   [X]   |   [X]    |  [X]  |

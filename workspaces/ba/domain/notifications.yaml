@@ -1,0 +1,209 @@
+# ============================================================================
+# Notification Catalog — TT.OUT.MANUAL
+# Module: Lenh thanh toan di NHNN thu cong
+# Source: SRS sheet "Chung-Danh sach thong bao"
+# Generated: 2026-05-10
+# ============================================================================
+
+notifications:
+
+  # --------------------------------------------------------------------------
+  # Thong bao co ban (co noi dung tu SRS)
+  # --------------------------------------------------------------------------
+
+  - id: N001
+    app: "Chung"
+    type: "Message"
+    code: "E1"
+    content: "Gia tri khong nam trong danh muc"
+    description: "Thong bao duoc hien thi va qua trinh xu ly tiep tuc."
+    ui_behavior: "Hien thi message, cho phep tiep tuc"
+
+  - id: N002
+    app: "Chung"
+    type: "Warning"
+    code: "E2"
+    content: "Loi dinh dang"
+    description: "Thong bao duoc hien thi va duoc hieu la canh bao."
+    ui_behavior: "Hien thi warning, cho phep tiep tuc"
+
+  - id: N003
+    app: "TT"
+    type: "Error"
+    code: "E3"
+    content: "So du kha dung khong du"
+    description: "Thong bao duoc hien thi va duoc hieu la loi."
+    ui_behavior: "Hien thi error, chan thao tac"
+
+  - id: N004
+    app: "TT"
+    type: "Cancel"
+    code: "E4"
+    content: "Thao tac bi huy"
+    description: "Thong bao duoc hien thi va buoc phai Huy."
+    ui_behavior: "Hien thi cancel, bat buoc huy thao tac"
+
+  # --------------------------------------------------------------------------
+  # Thong bao nghiep vu (dan tu cac BIZ rules va workflow events)
+  # SRS sheet "Chung-Danh sach thong bao" chi co 4 dong noi dung,
+  # cac thong bao sau duoc dan xuat tu BIZ-NOTIFY + workflow transitions
+  # --------------------------------------------------------------------------
+
+  - id: N005
+    app: "TT"
+    type: "Info"
+    code: "NTF-SUBMIT"
+    content: "LTT {soYCTT} da duoc gui kiem soat. Vui long kiem tra."
+    description: "Thong bao gui cho Checker khi Maker Submit LTT."
+    triggered_by: "EVT004-Submit"
+    recipient: "Checker"
+    channel: [in_app, email]
+
+  - id: N006
+    app: "TT"
+    type: "Info"
+    code: "NTF-REJECT-MAKER"
+    content: "LTT {soYCTT} da bi tu choi. Ly do: {lyDo}. Vui long kiem tra va chinh sua."
+    description: "Thong bao gui cho Maker khi Checker/Approver Reject LTT."
+    triggered_by: "EVT007-Reject"
+    recipient: "Maker"
+    channel: [in_app, email]
+
+  - id: N007
+    app: "TT"
+    type: "Info"
+    code: "NTF-APPROVE-CHECKER"
+    content: "LTT {soYCTT} da duoc kiem soat. Cho phe duyet."
+    description: "Thong bao gui cho Approver khi Checker phe duyet kiem soat."
+    triggered_by: "EVT005-ControlAppr"
+    recipient: "Approver"
+    channel: [in_app, email]
+
+  - id: N008
+    app: "TT"
+    type: "Info"
+    code: "NTF-APPROVE-FINAL"
+    content: "LTT {soYCTT} da duoc phe duyet. Cho ky so va gui NH/KB."
+    description: "Thong bao gui cho Approver khi phe duyet cuoi thanh cong."
+    triggered_by: "EVT006-Approve"
+    recipient: "Approver"
+    channel: [in_app]
+
+  - id: N009
+    app: "TT"
+    type: "Info"
+    code: "NTF-SENT"
+    content: "LTT {soYCTT} da duoc gui NH/KB thanh cong. Cho ket qua callback."
+    description: "Thong bao gui cho Maker khi LTT da gui thanh cong qua gateway."
+    triggered_by: "EVT010-Send"
+    recipient: "Maker"
+    channel: [in_app]
+
+  - id: N010
+    app: "TT"
+    type: "Info"
+    code: "NTF-CONFIRMED"
+    content: "LTT {soYCTT} da duoc NH/KB xac nhan thanh cong. Cho hach toan GL."
+    description: "Thong bao gui cho Maker khi nhan callback success tu NH/KB."
+    triggered_by: "CALLBACK_SUCCESS"
+    recipient: "Maker"
+    channel: [in_app]
+
+  - id: N011
+    app: "TT"
+    type: "Error"
+    code: "NTF-SEND-FAILED"
+    content: "LTT {soYCTT} gui NH/KB that bai sau {soLanRetry} lan retry. Vui long kiem tra."
+    description: "Thong bao gui cho Approver khi gui that bai sau khi da het retry."
+    triggered_by: "CALLBACK_FAIL"
+    recipient: "Approver"
+    channel: [in_app, email]
+
+  - id: N012
+    app: "TT"
+    type: "Warning"
+    code: "NTF-DUPLICATE"
+    content: "Canh bao: Phat hien LTT trung (cung Don vi, NH nhan, So tien, So CT goc) trong {phut} phut gan day. Ban co chac chan tiep tuc?"
+    description: "Canh bao trung lap LTT, can confirm truoc khi gui."
+    triggered_by: "BIZ-DUPLICATE"
+    recipient: "Maker"
+    channel: [in_app]
+
+  - id: N013
+    app: "TT"
+    type: "Info"
+    code: "NTF-CANCEL"
+    content: "LTT {soYCTT} da bi huy. Ly do: {lyDo}."
+    description: "Thong bao gui cho Maker khi LTT bi huy boi Approver."
+    triggered_by: "EVT008-Cancel"
+    recipient: "Maker"
+    channel: [in_app, email]
+
+  - id: N014
+    app: "TT"
+    type: "Warning"
+    code: "NTF-FX-RATE"
+    content: "Canh bao: Ty gia ngoai te vuot bien do +/-2% so voi ty gia tham chieu. Vui long kiem tra."
+    description: "Canh bao cho Approver khi ty gia ngoai te vuot bien do."
+    triggered_by: "BIZ-FX-RATE"
+    recipient: "Approver"
+    channel: [in_app]
+
+  - id: N015
+    app: "TT"
+    type: "Error"
+    code: "NTF-GL-FAIL"
+    content: "LTT {soYCTT}: Hach toan GL that bai. LTT bi chan. Canh bao van hanh."
+    description: "Canh bao cho van hanh khi GL post that bai."
+    triggered_by: "GL_FAIL"
+    recipient: "Ops"
+    channel: [in_app, email, alert]
+
+  - id: N016
+    app: "TT"
+    type: "Info"
+    code: "NTF-REVERSE"
+    content: "LTT {soYCTT} da tao but toan dao. LTT goc {soYCTTGoc} bi khoa."
+    description: "Thong bao khi tao but toan dao thanh cong."
+    triggered_by: "EVT011-Reverse"
+    recipient: "Maker"
+    channel: [in_app]
+
+  - id: N017
+    app: "TT"
+    type: "Warning"
+    code: "NTF-LIMIT"
+    content: "So tien LTT vuot han muc theo Kenh x Loai lenh x Vai tro x Don vi. Can phe duyet cap cao hon."
+    description: "Canh bao khi so tien LTT vuot han muc."
+    triggered_by: "BIZ-LIMIT"
+    recipient: "Approver"
+    channel: [in_app]
+
+  - id: N018
+    app: "TT"
+    type: "Error"
+    code: "NTF-SOD-VIOLATION"
+    content: "Vi pham phan tach trach nhiem (SoD). Thao tac bi chan va ghi audit."
+    description: "Thong bao khi he thong phat hien vi pham SoD."
+    triggered_by: "BIZ-SOD"
+    recipient: "Ops"
+    channel: [in_app, alert]
+
+# ============================================================================
+# Notification summary
+# ============================================================================
+notification_summary:
+  total: 18
+  from_srs: 4          # N001-N004 (co noi dung goc trong SRS)
+  derived_from_biz: 14  # N005-N018 (dan xuat tu BIZ-NOTIFY va workflow)
+  by_type:
+    Message: 1
+    Warning: 3
+    Error: 3
+    Info: 8
+    Cancel: 1
+    alert: 2
+  by_channel:
+    in_app: 18
+    email: 6
+    alert: 2
