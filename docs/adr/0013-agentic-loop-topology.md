@@ -1,52 +1,52 @@
-# ADR-0013: Agentic loop topology — nested layers with explicit termination
+# ADR-0013: Cấu trúc liên kết vòng lặp agent — các lớp lồng nhau với cơ chế kết thúc tường minh
 
-- **Status:** Accepted
-- **Date:** 2026-05-08
-- **Deciders:** SA (lead), DevOps, Security
-- **Tags:** agents, loop, convergence, foundation
-- **Supersedes:** —
-- **Superseded by:** —
+- **Trạng thái:** Đã phê duyệt
+- **Ngày:** 08-05-2026
+- **Người quyết định:** SA (chủ trì), DevOps, Bảo mật
+- **Thẻ:** agents, vòng lặp, hội tụ, nền tảng
+- **Thay thế cho:** —
+- **Được thay thế bởi:** —
 
-## Context
+## Ngữ cảnh
 
-ADRs 0001-0012 produce a system where each artifact has a status state machine (`Draft → In Review → Approved`) — already an implicit per-artifact loop. The first TT.OUT.MANUAL MVP run exposed gaps: 3 of 6 agents stalled at the 600s watchdog, requiring manual gap-fill. Naïve "retry on failure" loops without termination guarantees produce **cost runaways** (ADR-0009) and **divergent agents that never converge**.
+Các ADR 0001-0012 tạo ra một hệ thống mà mỗi sản phẩm bàn giao có máy trạng thái (`Draft → In Review → Approved`) — vốn đã là một vòng lặp ngầm theo từng sản phẩm. Lần chạy MVP TT.OUT.MANUAL đầu tiên đã bộc lộ khoảng trống: 3 trong số 6 agent bị đình trệ ở mốc watchdog 600 giây, cần can thiệp thủ công để lấp khoảng trống. Vòng lặp "thử lại khi lỗi" ngây thơ mà không có đảm bảo kết thúc sẽ gây ra **chi phí tăng vượt mức** (ADR-0009) và **agent phân kỳ không bao giờ hội tụ**.
 
-Three loop scopes exist; using only one fails:
+Ba phạm vi vòng lặp tồn tại; chỉ dùng một sẽ thất bại:
 
-- **Per-artifact only**: cross-cutting issues (schema vs design drift) slip through
-- **Per-batch only**: one bad artifact triggers full re-runs (waste)
-- **Per-feature only**: agents iterate on already-Approved upstream artifacts trying to fix downstream symptoms
+- **Chỉ theo sản phẩm bàn giao**: các vấn đề liên tính năng (trượt giữa schema và thiết kế) lọt qua
+- **Chỉ theo lô**: một sản phẩm lỗi kích hoạt chạy lại toàn bộ lô (lãng phí)
+- **Chỉ theo tính năng**: agent lặp lại trên các sản phẩm upstream đã Approved, cố sửa các triệu chứng downstream
 
-## Decision
+## Quyết định
 
-Adopt **nested loops at three layers** with an explicit termination contract per layer:
+Áp dụng **vòng lặp lồng nhau ở ba lớp** với hợp đồng kết thúc tường minh cho từng lớp:
 
 ```
-Per-feature loop (outer):
-  termination: 04-test-plan release-readiness criteria met
-  budget:      OWNERS.md monthly_token_cost (per ADR-0012)
-  max iters:   3 → human escalation per ADR-0009
-  wall clock:  7 days → ADR-0012 graduated approval
+Vòng lặp theo tính năng (ngoài):
+  kết thúc: tiêu chí sẵn sàng phát hành của 04-test-plan được đáp ứng
+  ngân sách:  OWNERS.md monthly_token_cost (theo ADR-0012)
+  số lần lặp tối đa:   3 → leo thang lên con người theo ADR-0009
+  thời gian thực:  7 ngày → phê duyệt phân cấp ADR-0012
 
-  Per-batch loop (middle):
-    termination: integration tests + cross-cutting review pass
-    budget:      30% of feature budget per batch
-    max iters:   2
+  Vòng lặp theo lô (giữa):
+    kết thúc: kiểm thử tích hợp + soát xét liên tính năng đạt
+    ngân sách:      30% ngân sách tính năng mỗi lô
+    số lần lặp tối đa:   2
 
-    Per-artifact loop (inner):
-      termination: artifact reviewer reports zero error-severity findings
-      budget:      prompt template's estimated_cost_usd × 3
-      max iters:   3
-      reassignment: per ADR-0013 ladder (companion section below)
+    Vòng lặp theo sản phẩm bàn giao (trong):
+      kết thúc: người soát xét sản phẩm báo cáo 0 phát hiện mức error
+      ngân sách:      estimated_cost_usd của prompt template × 3
+      số lần lặp tối đa:   3
+      phân công lại: theo thang ADR-0013 (phần bổ sung bên dưới)
 ```
 
-**Three termination paths every loop must declare:**
+**Ba đường kết thúc mà mọi vòng lặp phải khai báo:**
 
-1. **Success** — convergence criteria met → exit cleanly
-2. **Budget** — cost or iteration cap hit → escalate via `escalations/runaway-prevented.md`
-3. **Divergence** — same finding fingerprints recur (Jaccard >50%) → escalate via `escalations/divergence-detected.md` (new 7th escalation enum)
+1. **Thành công** — tiêu chí hội tụ được đáp ứng → thoát sạch
+2. **Ngân sách** — đạt giới hạn chi phí hoặc số lần lặp → leo thang qua `escalations/runaway-prevented.md`
+3. **Phân kỳ** — các fingerprint phát hiện lặp lại (Jaccard >50%) → leo thang qua `escalations/divergence-detected.md` (enum leo thang thứ 7 mới)
 
-**Divergence detection algorithm (locked):**
+**Thuật toán phát hiện phân kỳ (đã khóa):**
 
 ```
 fingerprint = rule_id + ':' + path_relative_to_feature_folder + ':' + bucketed_line_range_to_10 + ':' + category_enum
@@ -54,49 +54,49 @@ fingerprint = rule_id + ':' + path_relative_to_feature_folder + ':' + bucketed_l
 prev = set(iter_N_minus_1.findings_fingerprints)
 curr = set(iter_N.findings_fingerprints)
 jaccard = |prev ∩ curr| / |prev ∪ curr|
-diverged = jaccard > 0.50  # tunable; emits warning at 0.30
+diverged = jaccard > 0.50  # có thể tinh chỉnh; phát cảnh báo ở 0.30
 ```
 
-## Consequences
+## Hệ quả
 
-### Positive
+### Tích cực
 
-- Cost-bounded: every layer has explicit caps; runaway prevented at the layer that detects it.
-- Divergence-detectable: the loop knows when to stop, even when the agent thinks it's progressing.
-- Reuses existing machinery (status state machine, ripple detection, severity tiers).
-- Cross-layer composability: per-artifact convergence feeds per-batch review; per-batch feeds per-feature.
+- Chi phí có giới hạn: mọi lớp có giới hạn tường minh; tăng vượt mức được phòng ngừa ở lớp phát hiện.
+- Phân kỳ có thể phát hiện: vòng lặp biết khi nào nên dừng, ngay cả khi agent nghĩ rằng nó đang tiến triển.
+- Tái sử dụng cơ chế hiện có (máy trạng thái, phát hiện lan truyền, phân cấp mức độ nghiêm trọng).
+- Khả năng kết hợp liên lớp: hội tụ theo sản phẩm bàn giao nuôi soát xét theo lô; theo lô nuôi theo tính năng.
 
-### Negative / Costs
+### Tiêu cực / Chi phí
 
-- Bookkeeping overhead at three layers (loop-iteration records per ADR-0013 §Records).
-- Divergence threshold (0.50 Jaccard) is heuristic; will need tuning from observed data.
-- Wall-clock 7-day cap on outer loop forces decisions that humans might prefer to defer; intentional.
+- Phát sinh ghi chép ở ba lớp (bản ghi lần lặp theo ADR-0013 §Bản ghi).
+- Ngưỡng phân kỳ (Jaccard 0.50) là kinh nghiệm; cần tinh chỉnh từ dữ liệu thực tế.
+- Giới hạn thời gian thực 7 ngày trên vòng ngoài buộc các quyết định mà con người có thể muốn trì hoãn; đây là chủ ý.
 
-### Neutral
+### Trung tính
 
-- Aligns with the "selective review" / "risk-based deep review" pattern from ADR-0008 — high-risk artifacts get more iterations; routine ones converge fast.
+- Phù hợp với pattern "soát xét chọn lọc" / "soát xét sâu theo rủi ro" từ ADR-0008 — sản phẩm bàn giao rủi ro cao được nhiều lần lặp hơn; sản phẩm thường quy hội tụ nhanh.
 
-## Reassignment ladder (companion to topology)
+## Thang phân công lại (bổ sung cho cấu trúc liên kết)
 
-When inner-loop iteration fails, the orchestrator walks a **trigger-specific ladder** (cheap-first):
+Khi lần lặp vòng trong thất bại, bộ điều phối đi theo **thang kích hoạt cụ thể** (ưu tiên rẻ trước):
 
-| Trigger         | 1st action                         | 2nd                    | 3rd                | Hard stop                   |
-| --------------- | ---------------------------------- | ---------------------- | ------------------ | --------------------------- |
-| Timeout         | Same-agent retry (transient)       | Cross-provider switch  | Premium escalation | Human after 4               |
-| Iteration cap   | Cross-provider switch              | Premium + scope-reduce | —                  | Human after 3               |
-| Divergence      | Premium escalation OR scope-reduce | —                      | —                  | Human after 2               |
-| Cost cap        | NO auto-reassign                   | —                      | —                  | ADR-0012 graduated approval |
-| Self-escalation | Per escalation enum routing        | Human                  | —                  | Human always                |
+| Kích hoạt       | Hành động 1                       | Hành động 2            | Hành động 3        | Điểm dừng cứng             |
+| --------------- | ---------------------------------- | ---------------------- | ------------------- | --------------------------- |
+| Timeout         | Thử lại cùng agent (tạm thời)      | Chuyển nhà cung cấp khác | Nâng cấp premium    | Con người sau lần thứ 4     |
+| Giới hạn lặp   | Chuyển nhà cung cấp khác           | Premium + giảm phạm vi  | —                   | Con người sau lần thứ 3     |
+| Phân kỳ        | Nâng cấp premium HOẶC giảm phạm vi | —                       | —                   | Con người sau lần thứ 2     |
+| Giới hạn chi phí | KHÔNG tự phân công lại             | —                       | —                   | Phê duyệt phân cấp ADR-0012 |
+| Tự leo thang    | Theo định tuyến enum leo thang     | Con người               | —                   | Luôn là con người           |
 
-Hard rules:
+Quy tắc cứng:
 
-- Never re-use a path that already failed (anti-loop, extends ADR-0008 Rule 2)
-- Each reassignment logged in `loop-reassignment-record.md` per the schema in `templates/collaboration/`
-- Cross-provider preferred over premium when both viable (cheaper + uncorrelated)
+- Không bao giờ tái sử dụng đường dẫn đã thất bại (chống vòng lặp, mở rộng Quy tắc 2 ADR-0008)
+- Mỗi lần phân công lại được ghi log trong `loop-reassignment-record.md` theo schema trong `templates/collaboration/`
+- Ưu tiên chuyển nhà cung cấp khác hơn nâng cấp premium khi cả hai khả thi (rẻ hơn + không tương quan)
 
-## Records (audit trail per ADR-0007)
+## Bản ghi (dấu vết kiểm toán theo ADR-0007)
 
-Every loop iteration produces a markdown record under the feature folder:
+Mỗi lần lặp vòng tạo ra một bản ghi markdown trong thư mục tính năng:
 
 ```
 docs/features/<feature>/loop-iterations/
@@ -104,21 +104,21 @@ docs/features/<feature>/loop-iterations/
 ├── iter-001-fix-attempt-by-<author-handle>.md
 ├── iter-002-review-by-<reviewer-handle>.md
 ├── divergence-check-iter-002-vs-001.md
-└── reassignment-iter-002.md   (when applicable)
+└── reassignment-iter-002.md   (khi áp dụng)
 ```
 
-Append-only (per ADR-0004 immutability discipline). Schema defined in `templates/collaboration/loop-iteration-record.md`.
+Chỉ thêm vào (theo kỷ luật bất biến ADR-0004). Schema được định nghĩa trong `templates/collaboration/loop-iteration-record.md`.
 
-## Health-check protocol (replaces ad-hoc 600s watchdog)
+## Giao thức kiểm tra sức khỏe (thay thế watchdog 600 giây ad-hoc)
 
 ```
-Every 60s during agent execution:
-  - Heartbeat ping
-  - If no heartbeat for 120s: send intervention prompt
-  - If no response for 180s: kill agent → trigger timeout reassignment
+Cứ mỗi 60 giây trong khi agent thực thi:
+  - Ping heartbeat
+  - Nếu không có heartbeat trong 120 giây: gửi prompt can thiệp
+  - Nếu không phản hồi trong 180 giây: kết thúc agent → kích hoạt phân công lại do timeout
 ```
 
-Per-agent timeouts in `agent-roster.md`:
+Timeout theo từng agent trong `agent-roster.md`:
 
 ```yaml
 <agent-handle>:
@@ -131,39 +131,39 @@ Per-agent timeouts in `agent-roster.md`:
     total_reassignments_max: 3
 ```
 
-## Quarantine (long-term, links to ADR-0011)
+## Cách ly (dài hạn, liên kết đến ADR-0011)
 
-Agent failing ≥5 times in 7-day rolling window across features → DevOps roster-quarantine PR auto-opened (Active → Quarantined per ADR-0011 lifecycle).
+Agent thất bại >= 5 lần trong cửa sổ trượt 7 ngày trên các tính năng → DevOps tự động mở PR cách ly danh sách (Active → Quarantined theo vòng đời ADR-0011).
 
-## Alternatives Considered
+## Các phương án thay thế đã xem xét
 
-### A. Per-artifact only — Rejected
+### A. Chỉ theo sản phẩm bàn giao — Bị loại bỏ
 
-Cross-cutting issues slip through.
+Các vấn đề liên tính năng lọt qua.
 
-### B. Per-batch only — Rejected
+### B. Chỉ theo lô — Bị loại bỏ
 
-Waste from full-batch re-runs on single artifact failures.
+Lãng phí do chạy lại toàn bộ lô khi chỉ một sản phẩm lỗi.
 
-### C. Per-feature only — Rejected
+### C. Chỉ theo tính năng — Bị loại bỏ
 
-Too coarse; agents iterate on Approved upstream content.
+Quá thô; agent lặp lại trên nội dung upstream đã Approved.
 
-### D. No explicit divergence detection — Rejected
+### D. Không phát hiện phân kỳ tường minh — Bị loại bỏ
 
-The actual failure mode for naïve loops; without this, "agentic loop" is just "infinite retry."
+Đây chính là chế độ thất bại thực tế của vòng lặp ngây thơ; không có cơ chế này, "vòng lặp agent" chỉ là "thử lại vô hạn."
 
-## Related
+## Liên quan
 
-- ADR-0006 — A-is-human-only (loop "approval" still requires human; advisory PR comments suffice for inner-loop convergence)
-- ADR-0008 — Tiered approval matrix (anti-loop guard extended to reassignment chain)
-- ADR-0009 — Defense-in-depth (R1NNN family extended; new R3NNN for loop records)
-- ADR-0011 — Hybrid agent identity (quarantine integration)
-- ADR-0012 — FinOps governance (budget caps drive termination)
-- Cross-role workflow: `workflows/agentic-loop.md`
+- ADR-0006 — A-là-chỉ-con-người (vòng lặp "phê duyệt" vẫn cần con người; bình luận PR tư vấn đủ cho hội tụ vòng trong)
+- ADR-0008 — Ma trận phê duyệt phân cấp (bảo vệ chống vòng lặp mở rộng đến chuỗi phân công lại)
+- ADR-0009 — Phòng thủ đa tầng (họ R1NNN mở rộng; mới R3NNN cho bản ghi vòng lặp)
+- ADR-0011 — Danh tính agent hỗn hợp (tích hợp cách ly)
+- ADR-0012 — Quản trị FinOps (giới hạn ngân sách thúc đẩy kết thúc)
+- Quy trình làm việc liên vai trò: `workflows/agentic-loop.md`
 
-## Notes for future revision
+## Ghi chú cho lần rà soát tới
 
-- **Jaccard threshold** is tunable; observe in first quarter of operation, adjust if false-positive rate >5% or false-negative rate >10%.
-- **7-day outer wall-clock** assumes feature-team workdays; adjust for org rhythms (e.g., orgs with 2-week sprints might pick 10).
-- **Quarantine threshold (5/7d)** is starting point; tighten if an agent persistently underperforms.
+- **Ngưỡng Jaccard** có thể tinh chỉnh; quan sát trong quý hoạt động đầu tiên, điều chỉnh nếu tỷ lệ dương tính giả >5% hoặc tỷ lệ âm tính giả >10%.
+- **Giới hạn thời gian thực ngoài 7 ngày** giả định ngày làm việc của nhóm tính năng; điều chỉnh theo nhịp tổ chức (ví dụ: tổ chức dùng sprint 2 tuần có thể chọn 10).
+- **Ngưỡng cách ly (5/7 ngày)** là điểm khởi đầu; siết chặt nếu agent liên tục hoạt động kém.
