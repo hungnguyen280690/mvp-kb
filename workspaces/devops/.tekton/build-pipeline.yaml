@@ -1,0 +1,337 @@
+# generated_by: Claude Opus 4.7 (DevOps/SRE)
+# applies_adrs: [ADR-0007]
+# classification: Public
+#
+# Tekton Build Pipeline — VDBAS TT.OUT.MANUAL
+# Stages: Git clone -> Maven build (BE) -> npm build (FE) -> Docker build -> Trivy scan -> Cosign sign
+# Services: bff, ltt-service, gateway-service, audit-service, frontend
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: vdbas-build
+  namespace: vdbas-ci
+  labels:
+    app.kubernetes.io/part-of: vdbas
+    pipeline-type: build
+spec:
+  description: >
+    Full build pipeline for VDBAS TT.OUT.MANUAL.
+    Clones source, builds backend (Maven) and frontend (npm),
+    containerises each service, scans with Trivy, signs with Cosign.
+
+  params:
+    - name: git-url
+      type: string
+      description: Git repository URL
+      default: "https://github.com/kbnn/vdbas-tt-out-manual.git"
+    - name: git-revision
+      type: string
+      description: Git branch or tag
+      default: "main"
+    - name: image-tag
+      type: string
+      description: Container image tag (e.g. v1.2.3-rc1)
+    - name: registry
+      type: string
+      description: Container registry host
+      default: "image-registry.openshift-image-registry.svc:5000"
+    - name: maven-goals
+      type: string
+      description: Maven goals
+      default: "clean package -DskipTests"
+    - name: trivy-severity
+      type: string
+      description: Minimum severity to fail on (CRITICAL,HIGH)
+      default: "CRITICAL,HIGH"
+    - name: cosign-key
+      type: string
+      description: KMS reference or path for Cosign signing key
+      default: ""
+
+  workspaces:
+    - name: source
+      description: Shared source code workspace
+    - name: maven-cache
+      description: Persistent Maven .m2 cache
+    - name: dockerconfig
+      description: Docker/config.json for registry auth
+
+  results:
+    - name: bff-image-digest
+      value: $(tasks.docker-build-bff.results.image-digest)
+    - name: ltt-service-image-digest
+      value: $(tasks.docker-build-ltt-service.results.image-digest)
+    - name: gateway-service-image-digest
+      value: $(tasks.docker-build-gateway-service.results.image-digest)
+    - name: audit-service-image-digest
+      value: $(tasks.docker-build-audit-service.results.image-digest)
+    - name: frontend-image-digest
+      value: $(tasks.docker-build-frontend.results.image-digest)
+
+  tasks:
+
+    # ------------------------------------------------------------------
+    # Stage 1: Git Clone
+    # ------------------------------------------------------------------
+    - name: git-clone
+      taskRef:
+        name: git-clone
+        kind: ClusterTask
+      params:
+        - name: url
+          value: $(params.git-url)
+        - name: revision
+          value: $(params.git-revision)
+        - name: deleteExisting
+          value: "true"
+      workspaces:
+        - name: output
+          workspace: source
+
+    # ------------------------------------------------------------------
+    # Stage 2a: Maven Build (Backend)
+    # ------------------------------------------------------------------
+    - name: maven-build
+      runAfter: [git-clone]
+      taskRef:
+        name: maven
+        kind: ClusterTask
+      params:
+        - name: GOALS
+          value: $(params.maven-goals)
+        - name: CONTEXT_DIR
+          value: "services"
+      workspaces:
+        - name: source
+          workspace: source
+        - name: maven-settings
+          workspace: maven-cache
+
+    # ------------------------------------------------------------------
+    # Stage 2b: npm Build (Frontend)
+    # ------------------------------------------------------------------
+    - name: npm-build
+      runAfter: [git-clone]
+      taskRef:
+        name: npm
+        kind: Task
+      params:
+        - name: CONTEXT_DIR
+          value: "frontend"
+        - name: ARGS
+          value: "run build"
+      workspaces:
+        - name: source
+          workspace: source
+
+    # ------------------------------------------------------------------
+    # Stage 3: Docker Build — BFF
+    # ------------------------------------------------------------------
+    - name: docker-build-bff
+      runAfter: [maven-build]
+      taskRef:
+        name: buildah
+        kind: ClusterTask
+      params:
+        - name: IMAGE
+          value: "$(params.registry)/vdbas/bff:$(params.image-tag)"
+        - name: DOCKERFILE
+          value: "services/bff/Dockerfile"
+        - name: CONTEXT
+          value: "services/bff"
+      workspaces:
+        - name: source
+          workspace: source
+
+    # ------------------------------------------------------------------
+    # Stage 3: Docker Build — LTT Service
+    # ------------------------------------------------------------------
+    - name: docker-build-ltt-service
+      runAfter: [maven-build]
+      taskRef:
+        name: buildah
+        kind: ClusterTask
+      params:
+        - name: IMAGE
+          value: "$(params.registry)/vdbas/ltt-service:$(params.image-tag)"
+        - name: DOCKERFILE
+          value: "services/ltt-service/Dockerfile"
+        - name: CONTEXT
+          value: "services/ltt-service"
+      workspaces:
+        - name: source
+          workspace: source
+
+    # ------------------------------------------------------------------
+    # Stage 3: Docker Build — Gateway Service
+    # ------------------------------------------------------------------
+    - name: docker-build-gateway-service
+      runAfter: [maven-build]
+      taskRef:
+        name: buildah
+        kind: ClusterTask
+      params:
+        - name: IMAGE
+          value: "$(params.registry)/vdbas/gateway-service:$(params.image-tag)"
+        - name: DOCKERFILE
+          value: "services/gateway-service/Dockerfile"
+        - name: CONTEXT
+          value: "services/gateway-service"
+      workspaces:
+        - name: source
+          workspace: source
+
+    # ------------------------------------------------------------------
+    # Stage 3: Docker Build — Audit Service
+    # ------------------------------------------------------------------
+    - name: docker-build-audit-service
+      runAfter: [maven-build]
+      taskRef:
+        name: buildah
+        kind: ClusterTask
+      params:
+        - name: IMAGE
+          value: "$(params.registry)/vdbas/audit-service:$(params.image-tag)"
+        - name: DOCKERFILE
+          value: "services/audit-service/Dockerfile"
+        - name: CONTEXT
+          value: "services/audit-service"
+      workspaces:
+        - name: source
+          workspace: source
+
+    # ------------------------------------------------------------------
+    # Stage 3: Docker Build — Frontend
+    # ------------------------------------------------------------------
+    - name: docker-build-frontend
+      runAfter: [npm-build]
+      taskRef:
+        name: buildah
+        kind: ClusterTask
+      params:
+        - name: IMAGE
+          value: "$(params.registry)/vdbas/frontend:$(params.image-tag)"
+        - name: DOCKERFILE
+          value: "frontend/Dockerfile"
+        - name: CONTEXT
+          value: "frontend"
+      workspaces:
+        - name: source
+          workspace: source
+
+    # ------------------------------------------------------------------
+    # Stage 4: Trivy Vulnerability Scan — all images
+    # ------------------------------------------------------------------
+    - name: trivy-scan-bff
+      runAfter: [docker-build-bff]
+      taskRef:
+        name: trivy-scanner
+        kind: Task
+      params:
+        - name: IMAGE
+          value: "$(params.registry)/vdbas/bff:$(params.image-tag)"
+        - name: SEVERITY
+          value: $(params.trivy-severity)
+
+    - name: trivy-scan-ltt-service
+      runAfter: [docker-build-ltt-service]
+      taskRef:
+        name: trivy-scanner
+        kind: Task
+      params:
+        - name: IMAGE
+          value: "$(params.registry)/vdbas/ltt-service:$(params.image-tag)"
+        - name: SEVERITY
+          value: $(params.trivy-severity)
+
+    - name: trivy-scan-gateway-service
+      runAfter: [docker-build-gateway-service]
+      taskRef:
+        name: trivy-scanner
+        kind: Task
+      params:
+        - name: IMAGE
+          value: "$(params.registry)/vdbas/gateway-service:$(params.image-tag)"
+        - name: SEVERITY
+          value: $(params.trivy-severity)
+
+    - name: trivy-scan-audit-service
+      runAfter: [docker-build-audit-service]
+      taskRef:
+        name: trivy-scanner
+        kind: Task
+      params:
+        - name: IMAGE
+          value: "$(params.registry)/vdbas/audit-service:$(params.image-tag)"
+        - name: SEVERITY
+          value: $(params.trivy-severity)
+
+    - name: trivy-scan-frontend
+      runAfter: [docker-build-frontend]
+      taskRef:
+        name: trivy-scanner
+        kind: Task
+      params:
+        - name: IMAGE
+          value: "$(params.registry)/vdbas/frontend:$(params.image-tag)"
+        - name: SEVERITY
+          value: $(params.trivy-severity)
+
+    # ------------------------------------------------------------------
+    # Stage 5: Cosign Sign — all images
+    # ------------------------------------------------------------------
+    - name: cosign-sign-bff
+      runAfter: [trivy-scan-bff]
+      taskRef:
+        name: cosign-sign
+        kind: Task
+      params:
+        - name: IMAGE
+          value: "$(params.registry)/vdbas/bff:$(params.image-tag)"
+        - name: COSIGN_KEY
+          value: $(params.cosign-key)
+
+    - name: cosign-sign-ltt-service
+      runAfter: [trivy-scan-ltt-service]
+      taskRef:
+        name: cosign-sign
+        kind: Task
+      params:
+        - name: IMAGE
+          value: "$(params.registry)/vdbas/ltt-service:$(params.image-tag)"
+        - name: COSIGN_KEY
+          value: $(params.cosign-key)
+
+    - name: cosign-sign-gateway-service
+      runAfter: [trivy-scan-gateway-service]
+      taskRef:
+        name: cosign-sign
+        kind: Task
+      params:
+        - name: IMAGE
+          value: "$(params.registry)/vdbas/gateway-service:$(params.image-tag)"
+        - name: COSIGN_KEY
+          value: $(params.cosign-key)
+
+    - name: cosign-sign-audit-service
+      runAfter: [trivy-scan-audit-service]
+      taskRef:
+        name: cosign-sign
+        kind: Task
+      params:
+        - name: IMAGE
+          value: "$(params.registry)/vdbas/audit-service:$(params.image-tag)"
+        - name: COSIGN_KEY
+          value: $(params.cosign-key)
+
+    - name: cosign-sign-frontend
+      runAfter: [trivy-scan-frontend]
+      taskRef:
+        name: cosign-sign
+        kind: Task
+      params:
+        - name: IMAGE
+          value: "$(params.registry)/vdbas/frontend:$(params.image-tag)"
+        - name: COSIGN_KEY
+          value: $(params.cosign-key)

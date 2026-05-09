@@ -1,0 +1,198 @@
+# generated_by: Claude Opus 7 (DevOps/SRE)
+# applies_adrs: [ADR-0007]
+# classification: Public
+#
+# Tekton Promote Pipeline — VDBAS TT.OUT.MANUAL
+# Flow: dev -> uat -> prod
+# Prod requires manual approval (approve task)
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: vdbas-promote
+  namespace: vdbas-ci
+  labels:
+    app.kubernetes.io/part-of: vdbas
+    pipeline-type: promote
+spec:
+  description: >
+    Promote pipeline for VDBAS TT.OUT.MANUAL.
+    Verifies dev smoke tests passed, tags images, updates Helm values,
+    and syncs via ArgoCD. Production promotion requires manual approval.
+
+  params:
+    - name: image-tag
+      type: string
+      description: Container image tag to promote
+    - name: source-environment
+      type: string
+      description: Source environment (dev or uat)
+      default: "dev"
+    - name: target-environment
+      type: string
+      description: Target environment (uat or prod)
+    - name: registry
+      type: string
+      description: Container registry host
+      default: "image-registry.openshift-image-registry.svc:5000"
+    - name: services
+      type: string
+      description: Comma-separated list of services to promote
+      default: "bff,ltt-service,gateway-service,audit-service,frontend"
+    - name: helm-chart-path
+      type: string
+      description: Base path to Helm charts in the repo
+      default: "workspaces/devops/deploy/helm"
+    - name: git-url
+      type: string
+      description: Git repository URL for Helm values update
+      default: "https://github.com/kbnn/vdbas-tt-out-manual.git"
+    - name: git-revision
+      type: string
+      description: Git branch for Helm values
+      default: "main"
+
+  workspaces:
+    - name: source
+      description: Shared source code workspace
+
+  tasks:
+
+    # ------------------------------------------------------------------
+    # Stage 1: Verify source environment smoke tests passed
+    # ------------------------------------------------------------------
+    - name: verify-smoke-tests
+      taskRef:
+        name: verify-pipeline-status
+        kind: Task
+      params:
+        - name: pipeline-name
+          value: "vdbas-deploy"
+        - name: namespace
+          value: "vdbas-ci"
+        - name: environment
+          value: "$(params.source-environment)"
+        - name: image-tag
+          value: "$(params.image-tag)"
+
+    # ------------------------------------------------------------------
+    # Stage 2: Tag container images for target environment
+    # ------------------------------------------------------------------
+    - name: tag-images
+      runAfter: [verify-smoke-tests]
+      taskRef:
+        name: tag-images
+        kind: Task
+      params:
+        - name: registry
+          value: "$(params.registry)"
+        - name: services
+          value: "$(params.services)"
+        - name: source-tag
+          value: "$(params.image-tag)"
+        - name: target-tag
+          value: "$(params.target-environment)-$(params.image-tag)"
+
+    # ------------------------------------------------------------------
+    # Stage 3: Update Helm values for target environment
+    # ------------------------------------------------------------------
+    - name: update-helm-values
+      runAfter: [tag-images]
+      taskRef:
+        name: git-update-helm-values
+        kind: Task
+      params:
+        - name: git-url
+          value: "$(params.git-url)"
+        - name: git-revision
+          value: "$(params.git-revision)"
+        - name: chart-path
+          value: "$(params.helm-chart-path)"
+        - name: environment
+          value: "$(params.target-environment)"
+        - name: image-tag
+          value: "$(params.image-tag)"
+        - name: services
+          value: "$(params.services)"
+      workspaces:
+        - name: source
+          workspace: source
+
+    # ------------------------------------------------------------------
+    # Stage 4 (PROD only): Manual approval gate
+    # ------------------------------------------------------------------
+    - name: approve-production
+      runAfter: [update-helm-values]
+      when:
+        - input: "$(params.target-environment)"
+          operator: in
+          values: ["prod"]
+      taskRef:
+        name: approve
+        kind: Task
+      params:
+        - name: message
+          value: >
+            Approve promotion of VDBAS image-tag $(params.image-tag)
+            from $(params.source-environment) to PRODUCTION.
+            Verify: smoke tests passed, Trivy scan clean, Cosign signatures verified.
+
+    # ------------------------------------------------------------------
+    # Stage 5: ArgoCD sync target environment
+    # ------------------------------------------------------------------
+    - name: argocd-sync-target
+      runAfter: [update-helm-values]
+      taskRef:
+        name: argocd-sync-and-wait
+        kind: Task
+      params:
+        - name: application-name
+          value: "vdbas-$(params.target-environment)"
+        - name: flags
+          value: "--timeout 300"
+
+    # ------------------------------------------------------------------
+    # Stage 6: Health check on target environment
+    # ------------------------------------------------------------------
+    - name: health-check-target
+      runAfter: [argocd-sync-target]
+      taskRef:
+        name: health-check
+        kind: Task
+      params:
+        - name: namespace
+          value: "vdbas-$(params.target-environment)"
+        - name: services
+          value: "$(params.services)"
+        - name: timeout
+          value: "180"
+
+    # ------------------------------------------------------------------
+    # Stage 7: Smoke test on target environment
+    # ------------------------------------------------------------------
+    - name: smoke-test-target
+      runAfter: [health-check-target]
+      taskRef:
+        name: smoke-test
+        kind: Task
+      params:
+        - name: base-url
+          value: "http://bff:8080"
+        - name: environment
+          value: "$(params.target-environment)"
+
+    # ------------------------------------------------------------------
+    # Stage 8: Verify Cosign signatures on target images
+    # ------------------------------------------------------------------
+    - name: verify-signatures
+      runAfter: [tag-images]
+      taskRef:
+        name: cosign-verify
+        kind: Task
+      params:
+        - name: registry
+          value: "$(params.registry)"
+        - name: services
+          value: "$(params.services)"
+        - name: image-tag
+          value: "$(params.image-tag)"

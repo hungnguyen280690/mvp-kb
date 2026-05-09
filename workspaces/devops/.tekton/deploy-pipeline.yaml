@@ -1,0 +1,208 @@
+# generated_by: Claude Opus 4.7 (DevOps/SRE)
+# applies_adrs: [ADR-0007]
+# classification: Public
+#
+# Tekton Deploy Pipeline — VDBAS TT.OUT.MANUAL
+# Stages: Helm upgrade -> ArgoCD sync -> Health check -> Smoke test
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: vdbas-deploy
+  namespace: vdbas-ci
+  labels:
+    app.kubernetes.io/part-of: vdbas
+    pipeline-type: deploy
+spec:
+  description: >
+    Deploy pipeline for VDBAS TT.OUT.MANUAL.
+    Upgrades Helm releases, triggers ArgoCD sync, verifies health,
+    and runs smoke tests against the deployed services.
+
+  params:
+    - name: environment
+      type: string
+      description: Target environment (dev, uat, prod)
+      default: "dev"
+    - name: image-tag
+      type: string
+      description: Container image tag to deploy
+    - name: argocd-app-prefix
+      type: string
+      description: ArgoCD application name prefix
+      default: "vdbas"
+    - name: helm-chart-path
+      type: string
+      description: Base path to Helm charts in the repo
+      default: "workspaces/devops/deploy/helm"
+    - name: smoke-test-url
+      type: string
+      description: Base URL for smoke tests
+      default: "http://bff:8080"
+    - name: health-timeout-seconds
+      type: string
+      description: Max seconds to wait for health checks
+      default: "120"
+
+  workspaces:
+    - name: source
+      description: Shared source code workspace with Helm charts
+
+  tasks:
+
+    # ------------------------------------------------------------------
+    # Stage 1: Helm upgrade for each service
+    # ------------------------------------------------------------------
+    - name: helm-upgrade-bff
+      taskRef:
+        name: helm-upgrade-from-source
+        kind: Task
+      params:
+        - name: chart_path
+          value: "$(params.helm-chart-path)/bff"
+        - name: release_version
+          value: "$(params.image-tag)"
+        - name: release_name
+          value: "vdbas-bff"
+        - name: namespace
+          value: "vdbas-$(params.environment)"
+        - name: values_files
+          value: "$(params.helm-chart-path)/_shared/values-$(params.environment).yaml,$(params.helm-chart-path)/bff/values.yaml"
+        - name: overwrite_values
+          value: "image.tag=$(params.image-tag)"
+      workspaces:
+        - name: source
+          workspace: source
+
+    - name: helm-upgrade-ltt-service
+      taskRef:
+        name: helm-upgrade-from-source
+        kind: Task
+      params:
+        - name: chart_path
+          value: "$(params.helm-chart-path)/ltt-service"
+        - name: release_version
+          value: "$(params.image-tag)"
+        - name: release_name
+          value: "vdbas-ltt-service"
+        - name: namespace
+          value: "vdbas-$(params.environment)"
+        - name: values_files
+          value: "$(params.helm-chart-path)/_shared/values-$(params.environment).yaml,$(params.helm-chart-path)/ltt-service/values.yaml"
+        - name: overwrite_values
+          value: "image.tag=$(params.image-tag)"
+      workspaces:
+        - name: source
+          workspace: source
+
+    - name: helm-upgrade-gateway-service
+      taskRef:
+        name: helm-upgrade-from-source
+        kind: Task
+      params:
+        - name: chart_path
+          value: "$(params.helm-chart-path)/gateway-service"
+        - name: release_version
+          value: "$(params.image-tag)"
+        - name: release_name
+          value: "vdbas-gateway-service"
+        - name: namespace
+          value: "vdbas-$(params.environment)"
+        - name: values_files
+          value: "$(params.helm-chart-path)/_shared/values-$(params.environment).yaml,$(params.helm-chart-path)/gateway-service/values.yaml"
+        - name: overwrite_values
+          value: "image.tag=$(params.image-tag)"
+      workspaces:
+        - name: source
+          workspace: source
+
+    - name: helm-upgrade-audit-service
+      taskRef:
+        name: helm-upgrade-from-source
+        kind: Task
+      params:
+        - name: chart_path
+          value: "$(params.helm-chart-path)/audit-service"
+        - name: release_version
+          value: "$(params.image-tag)"
+        - name: release_name
+          value: "vdbas-audit-service"
+        - name: namespace
+          value: "vdbas-$(params.environment)"
+        - name: values_files
+          value: "$(params.helm-chart-path)/_shared/values-$(params.environment).yaml,$(params.helm-chart-path)/audit-service/values.yaml"
+        - name: overwrite_values
+          value: "image.tag=$(params.image-tag)"
+      workspaces:
+        - name: source
+          workspace: source
+
+    - name: helm-upgrade-frontend
+      taskRef:
+        name: helm-upgrade-from-source
+        kind: Task
+      params:
+        - name: chart_path
+          value: "$(params.helm-chart-path)/frontend"
+        - name: release_version
+          value: "$(params.image-tag)"
+        - name: release_name
+          value: "vdbas-frontend"
+        - name: namespace
+          value: "vdbas-$(params.environment)"
+        - name: values_files
+          value: "$(params.helm-chart-path)/_shared/values-$(params.environment).yaml,$(params.helm-chart-path)/frontend/values.yaml"
+        - name: overwrite_values
+          value: "image.tag=$(params.image-tag)"
+      workspaces:
+        - name: source
+          workspace: source
+
+    # ------------------------------------------------------------------
+    # Stage 2: ArgoCD Sync
+    # ------------------------------------------------------------------
+    - name: argocd-sync
+      runAfter:
+        - helm-upgrade-bff
+        - helm-upgrade-ltt-service
+        - helm-upgrade-gateway-service
+        - helm-upgrade-audit-service
+        - helm-upgrade-frontend
+      taskRef:
+        name: argocd-sync-and-wait
+        kind: Task
+      params:
+        - name: application-name
+          value: "$(params.argocd-app-prefix)-$(params.environment)"
+        - name: flags
+          value: "--timeout $(params.health-timeout-seconds)"
+
+    # ------------------------------------------------------------------
+    # Stage 3: Health Check — verify each service responds
+    # ------------------------------------------------------------------
+    - name: health-check
+      runAfter: [argocd-sync]
+      taskRef:
+        name: health-check
+        kind: Task
+      params:
+        - name: namespace
+          value: "vdbas-$(params.environment)"
+        - name: services
+          value: "bff,ltt-service,gateway-service,audit-service,frontend"
+        - name: timeout
+          value: "$(params.health-timeout-seconds)"
+
+    # ------------------------------------------------------------------
+    # Stage 4: Smoke Test — basic functional verification
+    # ------------------------------------------------------------------
+    - name: smoke-test
+      runAfter: [health-check]
+      taskRef:
+        name: smoke-test
+        kind: Task
+      params:
+        - name: base-url
+          value: "$(params.smoke-test-url)"
+        - name: environment
+          value: "$(params.environment)"
