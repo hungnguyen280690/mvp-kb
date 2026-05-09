@@ -1,0 +1,220 @@
+package vn.gov.kbnn.vdbas.ltt.controller;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import vn.gov.kbnn.vdbas.ltt.domain.entity.Ltt;
+import vn.gov.kbnn.vdbas.ltt.domain.entity.LttAudit;
+import vn.gov.kbnn.vdbas.ltt.service.LttService;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Internal API controller — duoc goi boi BFF.
+ * Mapping tu OpenAPI api-internal-v1.yaml.
+ */
+@Slf4j
+@RestController
+@RequestMapping("/api/internal/v1")
+@RequiredArgsConstructor
+public class LttInternalController {
+
+    private final LttService lttService;
+
+    @GetMapping("/payment-orders")
+    public ResponseEntity<Page<Ltt>> listPaymentOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "paymentDate,desc") String sort,
+            @RequestParam(required = false) String channel,
+            @RequestParam(required = false) String orderType,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String unitCode,
+            @RequestParam(required = false) String paymentDateFrom,
+            @RequestParam(required = false) String paymentDateTo,
+            @RequestParam(required = false) String requestNumber,
+            @RequestParam(required = false) String senderBankCode,
+            @RequestParam(required = false) String receiverBankCode,
+            @RequestParam(required = false) BigDecimal amountFrom,
+            @RequestParam(required = false) BigDecimal amountTo,
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String userRole) {
+
+        Page<Ltt> result = lttService.search(
+                channel, orderType, status, unitCode,
+                paymentDateFrom != null ? LocalDate.parse(paymentDateFrom) : null,
+                paymentDateTo != null ? LocalDate.parse(paymentDateTo) : null,
+                requestNumber, senderBankCode, receiverBankCode, amountFrom, amountTo,
+                page, size);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/payment-orders")
+    public ResponseEntity<Ltt> createPaymentOrder(
+            @RequestHeader("Idempotency-Key") UUID idempotencyKey,
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String userRole,
+            @RequestBody Ltt ltt) {
+
+        Ltt created = lttService.create(ltt, idempotencyKey.toString(), userId, userRole);
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/payment-orders/{id}")
+    public ResponseEntity<Ltt> getPaymentOrder(@PathVariable UUID id) {
+        // Convert UUID to Long (simplified — in production, UUID would be the actual PK)
+        Ltt ltt = lttService.getById(Long.parseLong(id.toString().substring(0, 8), 16));
+        return ResponseEntity.ok(ltt);
+    }
+
+    @PutMapping("/payment-orders/{id}")
+    public ResponseEntity<Ltt> updatePaymentOrder(
+            @PathVariable UUID id,
+            @RequestHeader("If-Match") String ifMatch,
+            @RequestHeader("X-User-Id") String userId,
+            @RequestBody Ltt updated) {
+
+        long version = Long.parseLong(ifMatch.replace("\"", ""));
+        Ltt result = lttService.update(Long.parseLong(id.toString().substring(0, 8), 16), version, userId, updated);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/payment-orders/{id}/submit")
+    public ResponseEntity<Ltt> submitPaymentOrder(
+            @PathVariable UUID id,
+            @RequestHeader("Idempotency-Key") UUID idempotencyKey,
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String userRole) {
+
+        Ltt result = lttService.submit(Long.parseLong(id.toString().substring(0, 8), 16), userId, userRole);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/payment-orders/{id}/approve")
+    public ResponseEntity<Ltt> approvePaymentOrder(
+            @PathVariable UUID id,
+            @RequestHeader("Idempotency-Key") UUID idempotencyKey,
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String userRole) {
+
+        Ltt result = lttService.approve(Long.parseLong(id.toString().substring(0, 8), 16), userId, userRole);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/payment-orders/{id}/reject")
+    public ResponseEntity<Ltt> rejectPaymentOrder(
+            @PathVariable UUID id,
+            @RequestHeader("Idempotency-Key") UUID idempotencyKey,
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String userRole,
+            @RequestBody RejectBody body) {
+
+        Ltt result = lttService.reject(Long.parseLong(id.toString().substring(0, 8), 16), userId, userRole, body.reason());
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/payment-orders/{id}/sign")
+    public ResponseEntity<Ltt> signPaymentOrder(
+            @PathVariable UUID id,
+            @RequestHeader("Idempotency-Key") UUID idempotencyKey,
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String userRole,
+            @RequestBody SignBody body) {
+
+        Ltt result = lttService.sign(Long.parseLong(id.toString().substring(0, 8), 16), userId, userRole,
+                body.signatureData(), body.signerCert());
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/payment-orders/{id}/send")
+    public ResponseEntity<Ltt> sendPaymentOrder(
+            @PathVariable UUID id,
+            @RequestHeader("Idempotency-Key") UUID idempotencyKey,
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String userRole) {
+
+        Ltt result = lttService.send(Long.parseLong(id.toString().substring(0, 8), 16), userId, userRole);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/payment-orders/{id}/cancel")
+    public ResponseEntity<Ltt> cancelPaymentOrder(
+            @PathVariable UUID id,
+            @RequestHeader("Idempotency-Key") UUID idempotencyKey,
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String userRole,
+            @RequestBody CancelBody body) {
+
+        Ltt result = lttService.cancel(Long.parseLong(id.toString().substring(0, 8), 16), userId, userRole, body.reason());
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/payment-orders/{id}/reverse")
+    public ResponseEntity<Ltt> reversePaymentOrder(
+            @PathVariable UUID id,
+            @RequestHeader("Idempotency-Key") UUID idempotencyKey,
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String userRole,
+            @RequestBody ReverseBody body) {
+
+        Ltt result = lttService.reverse(Long.parseLong(id.toString().substring(0, 8), 16), userId, userRole, body.reason());
+        return new ResponseEntity<>(result, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/payment-orders/{id}/audit-trail")
+    public ResponseEntity<Page<LttAudit>> getAuditTrail(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+
+        Page<LttAudit> result = lttService.getAuditTrail(Long.parseLong(id.toString().substring(0, 8), 16), page, size);
+        return ResponseEntity.ok(result);
+    }
+
+    // Callback endpoint
+    @PostMapping("/callback/payment-status")
+    public ResponseEntity<CallbackResponse> processCallback(
+            @RequestHeader("X-Correlation-Id") UUID correlationId,
+            @RequestBody CallbackBody body) {
+
+        Ltt result = lttService.processCallback(
+                correlationId.toString(), body.status(), body.errorCode(),
+                body.errorMessage(), body.providerRefId());
+
+        CallbackResponse response = new CallbackResponse("00", "Acknowledged");
+        return ResponseEntity.ok(response);
+    }
+
+    // Reference data stubs
+    @GetMapping("/dm/channels")
+    public ResponseEntity<List<RefDataItem>> getChannels() {
+        return ResponseEntity.ok(List.of(
+                new RefDataItem("LNH", "Lien ngan hang", "NHNN/CITAD", "ACTIVE"),
+                new RefDataItem("SP", "Song phuong", "NHTM", "ACTIVE"),
+                new RefDataItem("LKB", "Lien kho bac", "KBNN", "ACTIVE")
+        ));
+    }
+
+    @GetMapping("/dm/coa-segments")
+    public ResponseEntity<Object> getCoaSegments(
+            @RequestParam(required = false) String segmentType,
+            @RequestParam(required = false) String keyword) {
+        // TODO: Lookup from DMHT tables
+        return ResponseEntity.ok().build();
+    }
+
+    // Inner records for request bodies
+    record RejectBody(String reason) {}
+    record SignBody(String signatureData, String signerCert) {}
+    record CancelBody(String reason) {}
+    record ReverseBody(String reason) {}
+    record CallbackBody(String status, String errorCode, String errorMessage, String providerRefId) {}
+    record CallbackResponse(String responseCode, String responseMessage) {}
+    record RefDataItem(String code, String name, String description, String status) {}
+}
