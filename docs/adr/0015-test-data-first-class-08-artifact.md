@@ -1,148 +1,148 @@
-# ADR-0015: Test data as first-class artifact (`08-test-data.md`)
+# ADR-0015: Dữ liệu kiểm thử là sản phẩm bàn giao hạng nhất (`08-test-data.md`)
 
-- **Status:** Accepted
-- **Date:** 2026-05-08
-- **Deciders:** QA (lead), DBA (co-owner), UI/UX, Security (PII compliance)
-- **Tags:** testing, data, qa-discipline
-- **Supersedes:** —
-- **Superseded by:** —
+- **Trạng thái:** Đã phê duyệt
+- **Ngày:** 08-05-2026
+- **Người quyết định:** QA (dẫn dắt), DBA (đồng sở hữu), UI/UX, Bảo mật (tuân thủ PII)
+- **Thẻ:** kiểm-thử, dữ-liệu, kỷ-luật-qa
+- **Thay thế cho:** —
+- **Được thay thế bởi:** —
 
-## Context
+## Ngữ cảnh
 
-The current TT.OUT.MANUAL MVP has test data scattered across three places:
+MVP TT.OUT.MANUAL hiện tại có dữ liệu kiểm thử rải rác ở ba nơi:
 
-1. `migrations/forward/0002_seed.sql` — minimal seed (2 plans + 1 customer)
-2. Inline factories in `tests/integration/main_test.go` — only available to integration tests
-3. Ad-hoc test bodies — duplicated, non-determined
+1. `migrations/forward/0002_seed.sql` — dữ liệu gieo tối thiểu (2 gói cước + 1 khách hàng)
+2. Factory nội tuyến trong `tests/integration/main_test.go` — chỉ khả dụng cho kiểm thử tích hợp
+3. Thân bài kiểm thử tạm thời — bị trùng lặp, không xác định
 
-Consequences:
+Hệ quả:
 
-- T-PERF-001 ("10K subs in <30 min") in test plan but **unrunnable** — no volume data
-- Frontend (added in ADR-0014) has nothing to render — no UI demo data
-- Property-based / fuzz testing absent — state-machine totality only spot-checked
-- PII safety is a comment, not enforced — risk of real-shaped data leaking into fixtures
+- T-PERF-001 ("10K gói cước trong <30 phút") có trong kế hoạch kiểm thử nhưng **không thể chạy** — không có dữ liệu khối lượng lớn
+- Frontend (được thêm trong ADR-0014) không có gì để render — không có dữ liệu demo UI
+- Kiểm thử dựa trên thuộc tính / fuzz vắng mặt — tính toàn vẹn state-machine chỉ được kiểm tra điểm
+- An toàn PII chỉ là nhận xét, không được ép buộc — nguy cơ dữ liệu có hình dạng thật rò rỉ vào fixtures
 
-Five distinct data classes serve different test purposes:
+Năm lớp dữ liệu riêng biệt phục vụ các mục đích kiểm thử khác nhau:
 
-| #   | Class                     | Used for                                                                  |
-| --- | ------------------------- | ------------------------------------------------------------------------- |
-| 1   | Reference fixtures        | Golden tests, screenshot diffs, docs                                      |
-| 2   | Factories                 | Unit + integration tests                                                  |
-| 3   | Property-based generators | Invariant tests (state-machine totality, idempotency, audit-immutability) |
-| 4   | Synthetic volume data     | Performance tests                                                         |
-| 5   | UI demo data              | Screenshots, design reviews, manual QA, sales demos                       |
+| #   | Lớp                         | Mục đích sử dụng                                                      |
+| --- | --------------------------- | --------------------------------------------------------------------- |
+| 1   | Fixtures tham chiếu         | Golden tests, so sánh ảnh chụp, tài liệu                              |
+| 2   | Factory                     | Kiểm thử đơn vị + tích hợp                                            |
+| 3   | Bộ sinh dựa trên thuộc tính | Kiểm thử bất biến (tính toàn vẹn state-machine, lũy đẳng, bất biến audit) |
+| 4   | Dữ liệu khối lượng tổng hợp | Kiểm thử hiệu năng                                                    |
+| 5   | Dữ liệu demo UI             | Ảnh chụp, soát xét thiết kế, QA thủ công, demo bán hàng               |
 
-(A 6th class — production-anonymized snapshot — is out of scope until production exists.)
+(Lớp thứ 6 — ảnh chụp ẩn danh từ sản xuất — nằm ngoài phạm vi cho đến khi có môi trường sản xuất.)
 
-## Decision
+## Quyết định
 
-Adopt **`08-test-data.md` as the 8th-or-9th lifecycle artifact** (after `07-ui-spec` per ADR-0014). Joint QA+DBA RACI; conditional inclusion (skip with `Not Applicable` when feature has no schema impact).
+Áp dụng **`08-test-data.md` là sản phẩm bàn giao thứ 8 hoặc thứ 9 trong vòng đời** (sau `07-ui-spec` theo ADR-0014). RACI chung QA+DBA; đưa vào có điều kiện (bỏ qua với `Not Applicable` khi tính năng không ảnh hưởng đến schema).
 
-### Section ownership in `08-test-data.md`
+### Quyền sở hữu các mục trong `08-test-data.md`
 
-| Section                      | R-owner             | Reviewer |
-| ---------------------------- | ------------------- | -------- |
-| Reference fixtures           | DBA                 | QA       |
-| Factories                    | QA                  | DBA      |
-| Property-based generators    | QA                  | DBA      |
-| Synthetic volume data        | DBA                 | QA       |
-| UI demo data                 | UI/UX               | QA + DBA |
-| PII safety + linter contract | Security (advisory) | QA (R)   |
+| Mục                              | Chủ sở hữu (R)        | Người soát xét     |
+| -------------------------------- | --------------------- | ------------------ |
+| Fixtures tham chiếu              | DBA                   | QA                 |
+| Factory                          | QA                    | DBA                |
+| Bộ sinh dựa trên thuộc tính      | QA                    | DBA                |
+| Dữ liệu khối lượng tổng hợp      | DBA                   | QA                 |
+| Dữ liệu demo UI                  | UI/UX                 | QA + DBA           |
+| An toàn PII + hợp đồng linter    | Bảo mật (tư vấn)      | QA (R)             |
 
-### Tooling commitments (Java ecosystem)
+### Cam kết công cụ (hệ sinh thái Java)
 
-| Concern                   | Choice                                           |
-| ------------------------- | ------------------------------------------------ |
-| Fake data                 | **gofakeit** (Java-native, deterministic seeded) |
-| Property-based            | **JUnit 5** (mature; Java's most-used)           |
-| Volume generation         | **psql `COPY FROM stdin`** for raw speed         |
-| UI demo (E2E)             | DB seed via `scripts/seed-demo.sh`               |
-| UI demo (component-level) | **MSW (Mock Service Worker)** in frontend        |
+| Mối quan tâm             | Lựa chọn                                          |
+| ------------------------ | ------------------------------------------------- |
+| Dữ liệu giả              | **gofakeit** (Java gốc, xác định bằng seed)       |
+| Dựa trên thuộc tính      | **JUnit 5** (trưởng thành; được sử dụng nhiều nhất trong Java) |
+| Sinh khối lượng          | **psql `COPY FROM stdin`** cho tốc độ thô         |
+| Demo UI (E2E)            | Gieo DB qua `scripts/seed-demo.sh`                |
+| Demo UI (mức component)  | **MSW (Mock Service Worker)** trong frontend      |
 
-### File layout (in code repo)
+### Bố cục file (trong kho mã nguồn)
 
 ```
 internal/testdata/
-├── fixtures/        # Class 1: stable UUIDs, golden instances
-├── factory/         # Class 2: parametric, seedable
-└── property/        # Class 3: JUnit 5 generators
+├── fixtures/        # Lớp 1: UUID ổn định, instance vàng
+├── factory/         # Lớp 2: tham số hóa, có thể gieo seed
+└── property/        # Lớp 3: bộ sinh JUnit 5
 
 scripts/
-├── seed.sh          # Class 1 + dev seed
-├── seed-volume.sh   # Class 4: 10K subs (NFR-3.2.2)
-└── seed-demo.sh     # Class 5: 50/200/500/1000 (frontend-friendly)
+├── seed.sh          # Lớp 1 + gieo phát triển
+├── seed-volume.sh   # Lớp 4: 10K gói cước (NFR-3.2.2)
+└── seed-demo.sh     # Lớp 5: 50/200/500/1000 (thân thiện frontend)
 
-frontend/src/mocks/  # Class 5 (component-level): MSW handlers
+frontend/src/mocks/  # Lớp 5 (mức component): handler MSW
 ```
 
-### Determinism contract
+### Hợp đồng tính xác định
 
-All factory + property + volume generators take a seed (defaulted to test-name hash). Same seed → same output. Critical for:
+Tất cả bộ sinh factory + property + khối lượng đều nhận một seed (mặc định là hash tên kiểm thử). Cùng seed ra cùng kết quả. Quan trọng cho:
 
-- Reproducible test failures
-- Two-run consistency (ADR-0009 R1005)
-- Loop divergence detection (ADR-0013) — random regeneration would create false-positive divergence
+- Khả năng tái hiện lỗi kiểm thử
+- Tính nhất quán hai lần chạy (ADR-0009 R1005)
+- Phát hiện phân kỳ vòng lặp (ADR-0013) — sinh ngẫu nhiên lại sẽ tạo phân dương tính giả
 
-### PII safety enforcement (new linter rule)
+### Ép buộc an toàn PII (quy tắc linter mới)
 
-**`R0210` — Test-path PII safety**:
+**`R0210` — An toàn PII trên đường dẫn kiểm thử**:
 
-- Files matching `**/testdata/**`, `**/fixtures/**`, `**/seeds/*`, `**/mocks/*` cannot contain:
-  - Email patterns outside `*.example` / `*.test` TLDs
-  - Phone-shaped strings (regex)
-  - SSN-shaped strings (regex)
-  - Credit-card-shaped strings (Luhn-positive)
-- Severity: **error from Phase 0** (compliance risk; no soft-launch needed)
-- Bypass: explicit waiver per ADR-0005 lifecycle (`linter_waivers:` in front-matter with reason + expiry)
+- Các file khớp `**/testdata/**`, `**/fixtures/**`, `**/seeds/*`, `**/mocks/*` không được chứa:
+  - Mẫu email ngoài TLD `*.example` / `*.test`
+  - Chuỗi có dạng số điện thoại (regex)
+  - Chuỗi có dạng SSN (regex)
+  - Chuỗi có dạng thẻ tín dụng (Luhn-dương)
+- Mức nghiêm trọng: **error từ Phase 0** (rủi ro tuân thủ; không cần giai đoạn mềm)
+- Bỏ qua: miễn trừ rõ ràng theo vòng đời ADR-0005 (`linter_waivers:` trong front-matter kèm lý do + hạn sử dụng)
 
-`R0207` (existing) covers production paths; `R0210` covers test paths.
+`R0207` (hiện có) bao phủ đường dẫn sản xuất; `R0210` bao phủ đường dẫn kiểm thử.
 
-## Consequences
+## Hệ quả
 
-### Positive
+### Tích cực
 
-- Reproducibility: seeded determinism makes test failures debuggable.
-- T-PERF-001 becomes runnable (10K subs via `seed-volume.sh`).
-- Frontend has populated demo data → screenshots possible.
-- Property-based tests find edge cases human-written tests miss.
-- PII enforcement prevents real-shaped data leaking into fixtures.
+- Khả năng tái hiện: tính xác định có seed giúp lỗi kiểm thử có thể gỡ lỗi.
+- T-PERF-001 trở nên có thể chạy (10K gói cước qua `seed-volume.sh`).
+- Frontend có dữ liệu demo đầy đủ -> có thể chụp ảnh màn hình.
+- Kiểm thử dựa trên thuộc tính tìm ra các trường hợp biên mà kiểm thử do con người viết bỏ sót.
+- Ép buộc PII ngăn dữ liệu có hình dạng thật rò rỉ vào fixtures.
 
-### Negative / Costs
+### Hạn chế / Chi phí
 
-- Per-feature ~$30-80 in agent costs for factories + fixtures + property generators.
-- JUnit 5 learning curve mid-effort for QA team (mitigated by sample template `prompts/qa-author-property-tests.md`).
-- Volume seed scripts add ~30 sec to CI when run.
+- Mỗi tính năng tốn khoảng ~$30-80 chi phí agent cho factory + fixture + bộ sinh property.
+- Khó khăn học JUnit 5 giữa dự án cho đội QA (được giảm nhẹ bằng mẫu `prompts/qa-author-property-tests.md`).
+- Script gieo khối lượng thêm ~30 giây vào CI khi chạy.
 
-### Neutral
+### Trung tính
 
-- 5 classes don't all apply to every feature; conditional sections (status: Not Applicable) acceptable.
-- gofakeit + JUnit 5 pinned in MVP; revisit if testing ecosystem shifts.
+- 5 lớp không phải đều áp dụng cho mọi tính năng; các mục có điều kiện (status: Not Applicable) là chấp nhận được.
+- gofakeit + JUnit 5 được ghim trong MVP; xem xét lại nếu hệ sinh thái kiểm thử thay đổi.
 
-## Alternatives Considered
+## Các phương án đã cân nhắc
 
-### A. Lighter: 3 classes only (fixtures + factories + volume) — Rejected
+### A. Nhẹ hơn: chỉ 3 lớp (fixtures + factory + khối lượng) — Bị loại bỏ
 
-Loses property-based fuzz-discovery and UI demo data; cuts that defeat the purpose.
+Mất khả năng phát hiện fuzz dựa trên thuộc tính và dữ liệu demo UI; cắt giảm đánh bại mục đích.
 
-### B. No new artifact: document inside `04-test-plan.md` — Rejected
+### B. Không tạo sản phẩm mới: tài liệu hóa bên trong `04-test-plan.md` — Bị loại bỏ
 
-Loses joint QA+DBA RACI; loses linter R0210 enforcement target; visibility suffers.
+Mất RACI chung QA+DBA; mất mục tiêu ép buộc linter R0210; giảm khả năng hiển thị.
 
-### C. Skip; keep current scattered state — Rejected
+### C. Bỏ qua; giữ nguyên trạng thái phân tán hiện tại — Bị loại bỏ
 
-Defers the problem; current MVP already exhibits the failure modes.
+Hoãn vấn đề; MVP hiện tại đã thể hiện các lỗi này.
 
-## Related
+## Liên kết liên quan
 
-- ADR-0001 — Per-feature folder
-- ADR-0009 — Defense-in-depth (R0210 joins R-family; determinism supports R1005 two-run consistency)
-- ADR-0011 — Hybrid agent identity (factories support reproducibility for behavioral tests)
-- ADR-0014 — UI/UX role (demo data drives frontend screenshots)
-- ADR-0016 — UI testing (factories + fixtures used by Vitest + Playwright)
+- ADR-0001 — Thư mục theo tính năng
+- ADR-0009 — Phòng thủ chiều sâu (R0210 gia nhập họ R; tính xác định hỗ trợ R1005 nhất quán hai lần chạy)
+- ADR-0011 — Nhận dạng agent lai (factory hỗ trợ khả năng tái hiện cho kiểm thử hành vi)
+- ADR-0014 — Vai trò UI/UX (dữ liệu demo thúc đẩy ảnh chụp frontend)
+- ADR-0016 — Chiến lược kiểm thử UI (factory + fixture được sử dụng bởi Vitest + Playwright)
 
-## Notes for future revision
+## Ghi chú cho lần xem xét sau
 
-- **Fake-data library** (gofakeit) — revisit if Java ecosystem coalesces around alternative.
-- **Property-based library** (JUnit 5) — `rapid` is newer; revisit in 1-2 years.
-- **PII regex patterns** — extend as new pattern classes emerge (e.g., passport numbers if compliance scope expands).
-- **Production-anonymized snapshot** (the 6th class) — design when first production deployment lands.
+- **Thư viện dữ liệu giả** (gofakeit) — xem xét lại nếu hệ sinh thái Java hội tụ quanh giải pháp thay thế.
+- **Thư viện dựa trên thuộc tính** (JUnit 5) — `rapid` mới hơn; xem xét lại trong 1-2 năm.
+- **Mẫu regex PII** — mở rộng khi xuất hiện các lớp mẫu mới (ví dụ: số hộ chiếu nếu phạm vi tuân thủ mở rộng).
+- **Ảnh chụp ẩn danh từ sản xuất** (lớp thứ 6) — thiết kế khi triển khai sản xuất đầu tiên đi vào hoạt động.

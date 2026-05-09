@@ -1,69 +1,69 @@
-# ADR-0016: UI testing strategy — layered stack with loop integration
+# ADR-0016: Chiến lược kiểm thử UI — bộ công cụ phân lớp tích hợp vòng lặp
 
-- **Status:** Accepted
-- **Date:** 2026-05-08
-- **Deciders:** QA (lead), UI/UX (co-owner), Security (a11y), DevOps (CI integration)
-- **Tags:** testing, ui, accessibility, foundation
-- **Supersedes:** —
-- **Superseded by:** —
+- **Trạng thái:** Đã phê duyệt
+- **Ngày:** 08-05-2026
+- **Người quyết định:** QA (dẫn dắt), UI/UX (đồng sở hữu), Bảo mật (a11y), DevOps (tích hợp CI)
+- **Thẻ:** kiểm-thử, ui, khả-năng-truy-cập, nền-tảng
+- **Thay thế cho:** —
+- **Được thay thế bởi:** —
 
-## Context
+## Ngữ cảnh
 
-ADR-0014 added UI/UX role + `07-ui-spec.md` artifact. The existing `04-test-plan.md` template has 4 categories (Functional, Integration, Performance, Security) — none cover UI. Without a UI testing strategy, regressions ship freely and a11y is unverified.
+ADR-0014 đã bổ sung vai trò UI/UX + sản phẩm bàn giao `07-ui-spec.md`. Bản mẫu `04-test-plan.md` hiện có 4 danh mục (Chức năng, Tích hợp, Hiệu năng, Bảo mật) — không danh mục nào bao phủ UI. Nếu không có chiến lược kiểm thử UI, sai lệch thoải mái đưa vào sản xuất và a11y không được kiểm chứng.
 
-Six concerns UI testing must cover:
+Sáu mối quan tâm mà kiểm thử UI phải bao phủ:
 
-1. End-to-end browser flows
-2. Component-level rendering / interaction
-3. Visual regression (screenshot diff)
-4. Accessibility (WCAG 2.1 AA target from ADR-0014)
-5. API contract (frontend ↔ backend types in sync)
-6. UI performance (Core Web Vitals)
+1. Luồng trình duyệt đầu-cuối (E2E)
+2. Render / tương tác mức component
+3. Sai lệch trực quan (so sánh ảnh chụp)
+4. Khả năng truy cập (mục tiêu WCAG 2.1 AA từ ADR-0014)
+5. Hợp đồng API (đồng bộ kiểu frontend <-> backend)
+6. Hiệu năng UI (Core Web Vitals)
 
-## Decision
+## Quyết định
 
-Adopt **layered tooling stack** with **5 new test categories** in `04-test-plan.md`, **3 new reviewer agents** in roster, and **loop-integrated UI findings**.
+Áp dụng **bộ công cụ phân lớp** với **5 danh mục kiểm thử mới** trong `04-test-plan.md`, **3 reviewer agent mới** trong danh sách, và **kết quả kiểm thử UI tích hợp vòng lặp**.
 
-### Tooling stack
+### Bộ công cụ
 
-| Layer                         | Tool                                                          | Why                                                                                 |
-| ----------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| E2E browser flows             | **Playwright**                                                | Multi-browser; trace viewer; codegen; built-in screenshot diff                      |
-| Component rendering           | **Vitest + React Testing Library**                            | Vite-native (matches frontend build); Jest-API-compatible; fast                     |
-| Visual regression             | **Playwright snapshot comparison**                            | One tool covers E2E + visual; baselines committed to repo                           |
-| Accessibility                 | **`@axe-core/playwright`** (E2E) + **`jest-axe`** (component) | De facto a11y standard; WCAG 2.1 AA rule set                                        |
-| Component dev / visual review | **Storybook** with CSF stories                                | Required when `07-ui-spec.md` lists >5 components; doubles as design-review surface |
-| Component-level API mocks     | **MSW** (Mock Service Worker)                                 | Per ADR-0015                                                                        |
-| API contract                  | **Hand-mirrored TS types** (MVP) → OpenAPI/Pact (v2)          | Manual sufficient at MVP scale                                                      |
-| UI performance                | **Lighthouse CI**                                             | Industry standard for Core Web Vitals                                               |
+| Tầng                               | Công cụ                                                       | Lý do                                                                                 |
+| ---------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Luồng trình duyệt E2E              | **Playwright**                                                | Đa trình duyệt; trace viewer; codegen; so sánh ảnh chụp tích hợp sẵn                 |
+| Render component                   | **Vitest + React Testing Library**                            | Tương thích Vite gốc (khớp build frontend); tương thích API Jest; nhanh               |
+| Sai lệch trực quan                 | **So sánh snapshot Playwright**                               | Một công cụ bao phủ E2E + trực quan; baseline được commit vào kho                    |
+| Khả năng truy cập                  | **`@axe-core/playwright`** (E2E) + **`jest-axe`** (component) | Tiêu chuẩn a11y thực tế; bộ quy tắc WCAG 2.1 AA                                      |
+| Phát triển component / soát xét trực quan | **Storybook** với CSF stories                          | Bắt buộc khi `07-ui-spec.md` liệt kê >5 component; đồng thời là bề mặt soát xét thiết kế |
+| Mock API mức component             | **MSW** (Mock Service Worker)                                 | Theo ADR-0015                                                                         |
+| Hợp đồng API                       | **Kiểu TS phản chiếu thủ công** (MVP) -> OpenAPI/Pact (v2)    | Thủ công đủ ở quy mô MVP                                                              |
+| Hiệu năng UI                       | **Lighthouse CI**                                             | Tiêu chuẩn ngành cho Core Web Vitals                                                  |
 
-### New test categories in `04-test-plan.md` template
+### Các danh mục kiểm thử mới trong bản mẫu `04-test-plan.md`
 
-Existing 4 categories → 9. Section ownership:
+Từ 4 danh mục hiện có lên 9. Quyền sở hữu các mục:
 
-| #     | Category              | Owner                     | Tool                     |
-| ----- | --------------------- | ------------------------- | ------------------------ |
-| 1     | Functional            | QA-A                      | Java                     |
-| 2     | Integration           | QA-B                      | Java + Playwright        |
-| 3     | Performance (backend) | QA-B                      | Java + k6                |
-| 4     | Security              | QA + Security             | Java + ZAP scan          |
-| **5** | **UI E2E**            | **QA + UI/UX**            | **Playwright**           |
-| **6** | **UI Component**      | **UI/UX + QA**            | **Vitest + RTL**         |
-| **7** | **Accessibility**     | **UI/UX + QA + Security** | **axe-core**             |
-| **8** | **Visual Regression** | **UI/UX**                 | **Playwright snapshots** |
-| **9** | **UI Performance**    | **UI/UX**                 | **Lighthouse CI**        |
+| #     | Danh mục                | Chủ sở hữu                | Công cụ                  |
+| ----- | ----------------------- | ------------------------- | ------------------------ |
+| 1     | Chức năng               | QA-A                      | Java                     |
+| 2     | Tích hợp                | QA-B                      | Java + Playwright        |
+| 3     | Hiệu năng (backend)     | QA-B                      | Java + k6                |
+| 4     | Bảo mật                 | QA + Bảo mật              | Java + quét ZAP          |
+| **5** | **UI E2E**              | **QA + UI/UX**            | **Playwright**           |
+| **6** | **UI Component**        | **UI/UX + QA**            | **Vitest + RTL**         |
+| **7** | **Khả năng truy cập**   | **UI/UX + QA + Bảo mật**  | **axe-core**             |
+| **8** | **Sai lệch trực quan**  | **UI/UX**                 | **Playwright snapshots** |
+| **9** | **Hiệu năng UI**        | **UI/UX**                 | **Lighthouse CI**        |
 
-### New reviewer roster handles (extending ADR-0011)
+### Các handle reviewer mới trong danh sách (mở rộng ADR-0011)
 
-| Handle                       | Underlying                                          | Loop layer                    | permitted_C         |
-| ---------------------------- | --------------------------------------------------- | ----------------------------- | ------------------- |
-| `@claude-ui-design-reviewer` | `comprehensive-review:architect-review` (UI prompt) | per-artifact (07-ui-spec)     | UI/UX, SA, Dev      |
-| `@claude-a11y-auditor`       | (axe-core findings → loop format)                   | per-artifact (UI components)  | UI/UX, Security, QA |
-| `@claude-visual-diff-triage` | (Playwright snapshot diff → finding triage)         | per-artifact (visual changes) | UI/UX               |
+| Handle                       | Nền tảng                                            | Tầng vòng lặp                 | permitted_C          |
+| ---------------------------- | --------------------------------------------------- | ----------------------------- | -------------------- |
+| `@claude-ui-design-reviewer` | `comprehensive-review:architect-review` (prompt UI) | per-artifact (07-ui-spec)     | UI/UX, SA, Dev       |
+| `@claude-a11y-auditor`       | (kết quả axe-core -> định dạng vòng lặp)            | per-artifact (UI components)  | UI/UX, Bảo mật, QA   |
+| `@claude-visual-diff-triage` | (so sánh snapshot Playwright -> phân loại kết quả)  | per-artifact (thay đổi trực quan) | UI/UX            |
 
-### Loop integration — UI findings as fingerprints
+### Tích hợp vòng lặp — Kết quả UI dưới dạng fingerprint
 
-When Playwright fails in the loop, **failed visual diffs and a11y violations become fingerprints** in the loop-iteration format from ADR-0013:
+Khi Playwright thất bại trong vòng lặp, **sai lệch trực quan và vi phạm a11y trở thành fingerprint** theo định dạng lần lặp vòng lặp từ ADR-0013:
 
 ```yaml
 findings_fingerprints:
@@ -71,94 +71,94 @@ findings_fingerprints:
   - R-A11Y-002:routes/customers.tsx:0-0:a11y-contrast
 ```
 
-Visual-regression fingerprints have a special `suggested_fix.type`:
+Fingerprint sai lệch trực quan có `suggested_fix.type` đặc biệt:
 
-| Fix type             | Behavior                                      |
-| -------------------- | --------------------------------------------- |
-| `accept-baseline`    | Human approves; bot updates baseline PNG      |
-| `revert-to-baseline` | Change unintentional; fixer reverts component |
-| `escalate`           | Ambiguous; human review                       |
+| Loại khắc phục         | Hành vi                                                |
+| ---------------------- | ------------------------------------------------------ |
+| `accept-baseline`      | Con người phê duyệt; bot cập nhật PNG baseline         |
+| `revert-to-baseline`   | Thay đổi không cố ý; bộ khắc phục hoàn nguyên component |
+| `escalate`             | Không rõ ràng; con người soát xét                      |
 
-Loop **cannot** auto-decide visual changes (judgment); emits the finding; human approves baseline updates. ADR-0006 A-is-human-only respected.
+Vòng lặp **không thể** tự quyết định thay đổi trực quan (cần phán đoán); phát ra kết quả; con người phê duyệt cập nhật baseline. Tôn trọng ADR-0006 A-chỉ-con-người-được-quyết.
 
-### CI workflow targets
+### Mục tiêu quy trình CI
 
 ```
-make test           # Java integration (existing) + frontend Vitest
-make test-e2e       # Playwright (requires services running)
-make test-a11y      # axe-core on built UI
-make test-visual    # Playwright screenshot diffs
-make test-ui        # all UI categories above
-make test-all       # everything
+make test           # Tích hợp Java (hiện có) + Vitest frontend
+make test-e2e       # Playwright (cần dịch vụ đang chạy)
+make test-a11y      # axe-core trên UI đã build
+make test-visual    # So sánh ảnh chụp Playwright
+make test-ui        # tất cả danh mục UI ở trên
+make test-all       # tất cả mọi thứ
 ```
 
-### Severity tiers (per ADR-0005 lifecycle)
+### Các tầng nghiêm trọng (theo vòng đời ADR-0005)
 
-| Test category     | Phase 0 severity | Phase 1+ severity                           |
-| ----------------- | ---------------- | ------------------------------------------- |
-| UI E2E            | warn             | error                                       |
-| UI Component      | warn             | error                                       |
-| Accessibility     | warn             | error (new code only; legacy grandfathered) |
-| Visual Regression | warn             | warn (always — humans approve)              |
-| UI Performance    | info             | warn                                        |
+| Danh mục kiểm thử      | Nghiêm trọng Phase 0 | Nghiêm trọng Phase 1+                              |
+| ---------------------- | -------------------- | -------------------------------------------------- |
+| UI E2E                 | warn                 | error                                              |
+| UI Component           | warn                 | error                                              |
+| Khả năng truy cập      | warn                 | error (chỉ code mới; code cũ được miễn trừ)        |
+| Sai lệch trực quan     | warn                 | warn (luôn — con người phê duyệt)                  |
+| Hiệu năng UI           | info                 | warn                                               |
 
-### Linter rule additions
+### Bổ sung quy tắc linter
 
-- **`R0220`** — UI artifacts must declare `applies_a11y_baseline` (defaulting to "WCAG-2.1-AA"); `07-ui-spec.md` must populate
-- **`R0221`** — `04-test-plan.md` UI sections cross-reference the test categories above (no missing category for features with `07-ui-spec.md` Approved)
-- **`R0222`** — Storybook stories required when `07-ui-spec.md` lists >5 components (advisory)
+- **`R0220`** — Sản phẩm UI phải khai báo `applies_a11y_baseline` (mặc định "WCAG-2.1-AA"); `07-ui-spec.md` phải điền
+- **`R0221`** — Các mục UI trong `04-test-plan.md` phải tham chiếu chéo các danh mục kiểm thử trên (không thiếu danh mục cho tính năng có `07-ui-spec.md` Đã phê duyệt)
+- **`R0222`** — Cần Storybook stories khi `07-ui-spec.md` liệt kê >5 component (tư vấn)
 
-## Consequences
+## Hệ quả
 
-### Positive
+### Tích cực
 
-- 9 test categories give credible UI coverage; matches the upgraded design ambition.
-- Playwright's 3-in-1 (E2E + visual + a11y via plugin) keeps tooling lean.
-- a11y violations surface as loop findings — agentic fixer can address simple cases (alt text, ARIA labels); humans handle complex ones.
-- Visual baselines committed in repo (no SaaS dep) supports "local-runnable" goal.
+- 9 danh mục kiểm thử mang lại độ bao phủ UI đáng tin cậy; phù hợp với tham vọng thiết kế nâng cấp.
+- Tính 3-trong-1 của Playwright (E2E + trực quan + a11y qua plugin) giúp công cụ tinh gọn.
+- Vi phạm a11y xuất hiện dưới dạng kết quả vòng lặp — agent khắc phục có thể xử lý các trường hợp đơn giản (alt text, nhãn ARIA); con người xử lý các trường hợp phức tạp.
+- Baseline trực quan được commit trong kho (không phụ thuộc SaaS) hỗ trợ mục tiêu "chạy được tại chỗ".
 
-### Negative / Costs
+### Hạn chế / Chi phí
 
-- One-time platform: ~3-4 days (ADR + role agent updates + prompts + linter rules).
-- Per-feature added: ~$30-80 in agent costs for UI test authoring.
-- Visual regression maintenance — baselines must be deliberately updated; humans approve diffs.
-- Browser binaries: Playwright downloads ~150MB on first run.
+- Nền tảng một lần: ~3-4 ngày (ADR + cập nhật agent vai trò + prompt + quy tắc linter).
+- Chi phí thêm mỗi tính năng: ~$30-80 chi phí agent cho việc viết kiểm thử UI.
+- Bảo trì sai lệch trực quan — baseline phải được cập nhật có chủ đích; con người phê duyệt diff.
+- Binary trình duyệt: Playwright tải xuống ~150MB trong lần chạy đầu tiên.
 
-### Neutral
+### Trung tính
 
-- Chromium-only for MVP (fast CI); add Firefox + WebKit in v2.
-- Storybook adds dev-time tooling (~30s extra on `pnpm install`); pays for itself on UI-heavy features.
+- Chỉ Chromium cho MVP (CI nhanh); thêm Firefox + WebKit trong v2.
+- Storybook thêm công cụ thời gian phát triển (~30s thêm trên `pnpm install`); bù đắp cho các tính năng nặng UI.
 
-## Alternatives Considered
+## Các phương án đã cân nhắc
 
-### A. Cypress + Vitest — Rejected
+### A. Cypress + Vitest — Bị loại bỏ
 
-Equally capable for E2E; smaller multi-browser story; Playwright is the better long-term bet.
+Khả năng E2E tương đương; câu chuyện đa trình duyệt yếu hơn; Playwright là lựa chọn dài hạn tốt hơn.
 
-### B. Selenium — Rejected
+### B. Selenium — Bị loại bỏ
 
-Slow, brittle; legacy.
+Chậm, dễ hỏng; công nghệ cũ.
 
-### C. Skip UI testing in MVP — Rejected
+### C. Bỏ qua kiểm thử UI trong MVP — Bị loại bỏ
 
-Misses the user's explicit ask; produces UI without test coverage.
+Bỏ qua yêu cầu rõ ràng của người dùng; tạo ra UI không có độ bao phủ kiểm thử.
 
-### D. Playwright + Vitest only (skip Storybook + visual + Lighthouse) — Rejected
+### D. Chỉ Playwright + Vitest (bỏ Storybook + trực quan + Lighthouse) — Bị loại bỏ
 
-~50% of value; loses visual diffs and component-dev velocity.
+Chỉ đạt ~50% giá trị; mất so sánh trực quan và tốc độ phát triển component.
 
-## Related
+## Liên kết liên quan
 
-- ADR-0008 — Tiered approval matrix (cross-provider advisory routine extended to UI reviewers)
-- ADR-0009 — Defense-in-depth (R0220-R0222 join the R-family)
-- ADR-0011 — Hybrid agent identity (3 new roster handles)
-- ADR-0013 — Agentic loop topology (UI findings integrated into loop format)
-- ADR-0014 — UI/UX role + 07-ui-spec.md (this ADR tests that artifact)
-- ADR-0015 — Test data first-class (UI demo data + factories used by Vitest/Playwright)
+- ADR-0008 — Ma trận phê duyệt phân tầng (quy trình tư vấn đa nhà cung cấp mở rộng cho reviewer UI)
+- ADR-0009 — Phòng thủ chiều sâu (R0220-R0222 gia nhập họ R)
+- ADR-0011 — Nhận dạng agent lai (3 handle danh sách mới)
+- ADR-0013 — Cấu trúc liên kết vòng lặp agent (kết quả UI tích hợp vào định dạng vòng lặp)
+- ADR-0014 — Vai trò UI/UX + 07-ui-spec.md (ADR này kiểm thử sản phẩm bàn giao đó)
+- ADR-0015 — Dữ liệu kiểm thử hạng nhất (dữ liệu demo UI + factory được sử dụng bởi Vitest/Playwright)
 
-## Notes for future revision
+## Ghi chú cho lần xem xét sau
 
-- **Browser coverage** — chromium-only is a deliberate cut; add Firefox + WebKit when CI time budget allows.
-- **Visual baseline storage** — committed PNGs work for MVP; migrate to Chromatic or LFS when baseline volume exceeds ~50MB.
-- **a11y rule strictness** — start at WCAG 2.1 AA; tighten to AAA only if specific compliance need surfaces.
-- **Lighthouse CI thresholds** — start with default Core Web Vitals; tune after observing real performance.
+- **Độ bao phủ trình duyệt** — chỉ chromium là cắt giảm có chủ đích; thêm Firefox + WebKit khi ngân sách thời gian CI cho phép.
+- **Lưu trữ baseline trực quan** — PNG commit phù hợp cho MVP; chuyển sang Chromatic hoặc LFS khi khối lượng baseline vượt ~50MB.
+- **Mức nghiêm ngặt quy tắc a11y** — bắt đầu ở WCAG 2.1 AA; siết chặt lên AAA chỉ khi có nhu cầu tuân thủ cụ thể.
+- **Ngưỡng Lighthouse CI** — bắt đầu với Core Web Vitals mặc định; điều chỉnh sau khi quan sát hiệu năng thực tế.
