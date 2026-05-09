@@ -96,40 +96,40 @@ Quy trình của UI/UX mở rộng với kiểm tra mới trong `Drafting07`:
 
 Theo ADR-0013 tầng giữa: một agent coordinator (`@claude-architect-reviewer` với prompt batch-review) chạy sau khi tất cả vòng lặp per-artifact hội tụ. Nó chạy R0240-R0243 + soát xét chéo thủ công. Nếu phát hiện khoảng trống mà kiểm tra per-role bỏ sót, những khoảng trống đó trở thành **ca hồi quy** — được thêm vào quy trình của vai trò tương ứng dưới dạng mục kiểm tra.
 
-## Consequences
+## Hệ quả
 
-### Positive
+### Tích cực
 
-- **Workflow gap closed**: cross-artifact coverage isn't optional; checked at 4 separate points (BA, UI/UX, QA, per-batch reviewer) plus 7 linter rules
-- Dev agents receive **validated specs** — fewer post-hoc fix iterations; less reassignment churn
-- Gen 2's specific failures (placeholder pages, missing endpoints) become impossible: R0244 (page implementation) and R0240 (endpoint coverage) catch them mechanically
-- Proactive gap detection cheaper than reactive fix (ADR-0009 defense-in-depth principle)
+- **Khoảng trống quy trình đã được khắc phục**: bao phủ chéo sản phẩm bàn giao không còn tùy chọn; được kiểm tra tại 4 điểm riêng biệt (BA, UI/UX, QA, reviewer theo lô) cộng với 7 quy tắc linter
+- Agent Dev nhận được **spec đã được xác thực** — ít vòng lặp khắc phục sau sự cố hơn; ít tái phân công hơn
+- Các lỗi cụ thể của Gen 2 (trang giữ chỗ, endpoint thiếu) trở nên không thể xảy ra: R0244 (triển khai trang) và R0240 (bao phủ endpoint) phát hiện chúng tự động
+- Phát hiện khoảng trống chủ động rẻ hơn khắc phục phản ứng (nguyên tắc phòng thủ chiều sâu ADR-0009)
 
-### Negative / Costs
+### Hạn chế / Chi phí
 
-- BA + QA + UI/UX role workloads grow ~10-15% (the extra review states add ~1 day per feature)
-- 7 new linter rules require implementation (~1 wk DevOps work)
-- Initial false-positive rate on R0240-R0246 will be higher; expect tuning in first month
-- More escalation traffic in early adoption (all those gaps that were silent are now loud)
+- Khối lượng công việc của BA + QA + UI/UX tăng ~10-15% (các trạng thái soát xét thêm khoảng ~1 ngày mỗi tính năng)
+- 7 quy tắc linter mới cần triển khai (~1 tuần công việc DevOps)
+- Tỷ lệ dương tính giả ban đầu trên R0240-R0246 sẽ cao hơn; dự kiến điều chỉnh trong tháng đầu tiên
+- Nhiều lưu lượng leo thang hơn trong giai đoạn đầu áp dụng (tất cả những khoảng trống âm thầm giờ trở nên rõ ràng)
 
-### Neutral
+### Trung tính
 
-- Per-batch reviewer doesn't disappear — it's still the safety net for novel gap patterns the linter doesn't yet encode
-- Some R0240-R0243 false-positives expected when artifacts use synonyms (e.g., "list customers" vs "search customers"); add normalization rules over time
+- Reviewer theo lô không biến mất — nó vẫn là lưới an toàn cho các mẫu khoảng trống mới mà linter chưa mã hóa
+- Một số dương tính giả R0240-R0243 dự kiến khi sản phẩm bàn giao sử dụng từ đồng nghĩa (ví dụ: "list customers" vs "search customers"); thêm quy tắc chuẩn hóa theo thời gian
 
-## Alternatives Considered
+## Các phương án đã cân nhắc
 
-### A. Per-batch reviewer only (no role-level proactive checks) — Rejected
+### A. Chỉ reviewer theo lô (không có kiểm tra chủ động ở mức vai trò) — Bị loại bỏ
 
-ADR-0013's middle layer is theoretically sufficient but in practice runs late (after artifact authoring); upstream gaps cause downstream churn. Front-loading the checks at role level reduces churn dramatically.
+Tầng giữa của ADR-0013 đủ về mặt lý thuyết nhưng thực tế chạy muộn (sau khi tác giả viết sản phẩm bàn giao); khoảng trống thượng nguồn gây xáo trộn hạ nguồn. Đẩy kiểm tra lên sớm ở mức vai trò giảm xáo trộn đáng kể.
 
-### B. Linter-only enforcement (no workflow changes) — Rejected
+### B. Chỉ ép buộc qua linter (không thay đổi quy trình) — Bị loại bỏ
 
-Linter catches the _forms_ of gaps it knows; workflow checks catch _intent_ gaps (a missing endpoint isn't a syntactic violation; the linter doesn't know "GET /v1/customers should exist" without the spec saying so first). Both layers needed.
+Linter phát hiện _hình thức_ khoảng trống mà nó biết; kiểm tra quy trình phát hiện khoảng trống _ý định_ (endpoint thiếu không phải là vi phạm cú pháp; linter không biết "GET /v1/customers phải tồn tại" nếu spec không nói trước). Cần cả hai lớp.
 
-### C. Skip the discipline — Rejected
+### C. Bỏ qua kỷ luật — Bị loại bỏ
 
-Gen 2 shipped a frontend with 75% placeholder pages and the system reported "all green." That's the failure mode this ADR closes.
+Gen 2 đã giao frontend với 75% trang giữ chỗ và hệ thống báo cáo "tất cả xanh." Đó chính là chế độ lỗi mà ADR này khắc phục.
 
 ## Related
 
