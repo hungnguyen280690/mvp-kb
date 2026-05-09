@@ -1,0 +1,146 @@
+# ============================================================================
+# Trivy Image Scan Policy — VDBAS TT.OUT.MANUAL
+# Block HIGH/CRITICAL CVEs in container images
+# Generated: 2026-05-10 | Stage 4 — QA
+# ============================================================================
+
+# Scan targets (container images)
+targets:
+  - image: "vdbas/bff:latest"
+    name: "BFF (Backend for Frontend)"
+  - image: "vdbas/ltt-service:latest"
+    name: "LTT Payment Order Service"
+  - image: "vdbas/integration-gateway:latest"
+    name: "Integration Gateway (LNH/SP/LKB)"
+  - image: "vdbas/gl-pusher:latest"
+    name: "GL Pusher Service"
+
+# Severity thresholds
+severity:
+  # Block these severity levels
+  block:
+    - CRITICAL
+    - HIGH
+  # Report but do not block
+  warn:
+    - MEDIUM
+  # Ignore
+  ignore:
+    - LOW
+    - UNKNOWN
+    - INFO
+
+# Vulnerability type configuration
+vulnerabilityTypes:
+  os:
+    enabled: true
+    severityThreshold: "HIGH"
+  library:
+    enabled: true
+    severityThreshold: "HIGH"
+  language:
+    enabled: true
+    severityThreshold: "HIGH"
+
+# Specific CVE ignores (accepted risks with justification)
+ignoredCves:
+  # Example: CVE with compensating control
+  # - id: CVE-2024-XXXXX
+  #   reason: "Compensating control: WAF blocks exploitation vector"
+  #   expiresAt: "2026-08-10"
+  #   approvedBy: "G2-SA"
+
+# Misconfiguration checks
+misconfiguration:
+  enabled: true
+  checks:
+    # Dockerfile best practices
+    - id: "DS001"  # ADD instead of COPY
+      severity: LOW
+    - id: "DS002"  # Image user is root
+      severity: HIGH
+      action: BLOCK
+    - id: "DS004"  # Sensitive info in ENV
+      severity: HIGH
+      action: BLOCK
+    - id: "DS005"  # apt-get dist-upgrade
+      severity: MEDIUM
+    - id: "DS006"  # latest tag used
+      severity: LOW
+    - id: "DS007"  # apt cache not deleted
+      severity: LOW
+    - id: "DS008"  # No HEALTHCHECK
+      severity: MEDIUM
+    - id: "DS009"  # EXPOSE port without protocol
+      severity: LOW
+    - id: "DS010"  # apt-get install without no-install-recommends
+      severity: LOW
+    - id: "DS011"  # COPY with more than 2 arguments
+      severity: LOW
+    - id: "DS012"  # No COPY --chown
+      severity: LOW
+    - id: "DS013"  # File with secrets
+      severity: CRITICAL
+      action: BLOCK
+    - id: "DS014"  # Running as root
+      severity: HIGH
+      action: BLOCK
+    - id: "DS015"  # apt-get update without apt-get install
+      severity: LOW
+    - id: "DS016"  # apt cache persisted
+      severity: LOW
+    - id: "DS017"  # wget without certificate check
+      severity: HIGH
+      action: BLOCK
+
+# Secret scanning
+secretScanning:
+  enabled: true
+  blockOnFind: true
+  categories:
+    - AWS Access Key
+    - GitHub Token
+    - GitLab Token
+    - JWT Secret
+    - Private Key
+    - Database Connection String
+    - Oracle Password
+
+# License scanning
+licenseScanning:
+  enabled: true
+  blockedLicenses:
+    - GPL-2.0
+    - GPL-3.0
+    - AGPL-3.0
+    - CPAL-1.0
+    - EUPL-1.2
+    - MS-RL
+  allowedLicenses:
+    - Apache-2.0
+    - MIT
+    - BSD-2-Clause
+    - BSD-3-Clause
+    - ISC
+    - MPL-2.0
+    - LGPL-2.1
+    - LGPL-3.0
+    - EPL-2.0
+    - CDDL-1.1
+    - Unlicense
+    - CC0-1.0
+
+# SBOM generation
+sbom:
+  enabled: true
+  format: "cyclonedx"
+  outputDir: "./test-results/sbom"
+
+# Report configuration
+reporting:
+  format: ["table", "json", "sarif"]
+  outputDir: "./test-results/trivy"
+  exitCode: 1  # Non-zero exit on failure
+
+# Scan timing
+timeout: 300  # 5 minutes per image

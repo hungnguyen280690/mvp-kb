@@ -1,0 +1,156 @@
+# ============================================================================
+# ZAP Baseline Scan Configuration — VDBAS TT.OUT.MANUAL
+# Target: BFF API endpoints (api-internal-v1.yaml)
+# Generated: 2026-05-10 | Stage 4 — QA
+# ============================================================================
+
+# Scan target
+target:
+  url: "https://vdbas-internal-staging.kbnn.gov.vn"
+  apiBase: "/api/internal/v1"
+  contextName: "vdbas-bff-api"
+
+# Authentication
+authentication:
+  method: "bearer"
+  token: "${ZAP_AUTH_TOKEN}"
+  headerName: "Authorization"
+  headerPrefix: "Bearer "
+  additionalHeaders:
+    - name: "X-User-Id"
+      value: "zap-scanner"
+    - name: "X-User-Role"
+      value: "MAKER"
+
+# API endpoints to scan (from api-internal-v1.yaml)
+endpoints:
+  - path: "/api/internal/v1/payment-orders"
+    methods: ["GET", "POST"]
+  - path: "/api/internal/v1/payment-orders/{id}"
+    methods: ["GET", "PUT", "DELETE"]
+    parameters:
+      - name: "id"
+        type: "uuid"
+        testValues: ["a1b2c3d4-e5f6-7890-abcd-ef1234567890"]
+  - path: "/api/internal/v1/payment-orders/{id}/submit"
+    methods: ["POST"]
+  - path: "/api/internal/v1/payment-orders/{id}/approve"
+    methods: ["POST"]
+  - path: "/api/internal/v1/payment-orders/{id}/reject"
+    methods: ["POST"]
+  - path: "/api/internal/v1/payment-orders/{id}/sign"
+    methods: ["POST"]
+  - path: "/api/internal/v1/payment-orders/{id}/send"
+    methods: ["POST"]
+  - path: "/api/internal/v1/payment-orders/{id}/cancel"
+    methods: ["POST"]
+  - path: "/api/internal/v1/payment-orders/{id}/reverse"
+    methods: ["POST"]
+  - path: "/api/internal/v1/payment-orders/{id}/audit-trail"
+    methods: ["GET"]
+  - path: "/api/internal/v1/dm/channels"
+    methods: ["GET"]
+  - path: "/api/internal/v1/dm/coa-segments"
+    methods: ["GET"]
+  - path: "/api/internal/v1/balance"
+    methods: ["GET"]
+
+# Scan rules configuration
+rules:
+  # Block on HIGH and CRITICAL findings
+  failOnError: true
+  minAlertLevel: "WARN"
+
+  # Thresholds
+  thresholds:
+    critical: 0      # No CRITICAL alerts allowed
+    high: 0          # No HIGH alerts allowed
+    medium: 10       # Up to 10 MEDIUM alerts (review needed)
+    low: 50          # Up to 50 LOW alerts
+    informational: -1 # Unlimited INFO alerts
+
+  # Specific rule configurations
+  activeRules:
+    # SQL Injection tests
+    - ruleId: "40018"  # SQL Injection
+      enabled: true
+      strength: "HIGH"
+    - ruleId: "40019"  # SQL Injection (MySQL)
+      enabled: true
+    - ruleId: "40020"  # SQL Injection (Oracle)
+      enabled: true
+      strength: "HIGH"
+
+    # XSS tests
+    - ruleId: "40012"  # Cross Site Scripting (Reflected)
+      enabled: true
+      strength: "HIGH"
+    - ruleId: "40014"  # Cross Site Scripting (Persistent)
+      enabled: true
+
+    # Path traversal
+    - ruleId: "40006"  # Path Traversal
+      enabled: true
+
+    # Remote file inclusion
+    - ruleId: "40007"  # Remote File Inclusion
+      enabled: true
+
+    # IDOR / BOLA
+    - ruleId: "40021"  # IDOR
+      enabled: true
+
+    # Authentication tests
+    - ruleId: "40026"  # Bypassing Authentication
+      enabled: true
+
+  passiveRules:
+    # Information disclosure
+    - ruleId: "100000" # Information Disclosure
+      enabled: true
+    - ruleId: "100001" # Insecure Content
+      enabled: true
+    - ruleId: "10010"  # Cookie No HttpOnly Flag
+      enabled: true
+    - ruleId: "10011"  # Cookie Without Secure Flag
+      enabled: true
+
+    # CORS
+    - ruleId: "100040" # CORS
+      enabled: true
+
+    # Security headers
+    - ruleId: "100024" # Content Security Policy
+      enabled: true
+    - ruleId: "100020" # Anti-clickjacking
+      enabled: true
+    - ruleId: "100021" # X-Content-Type-Options
+      enabled: true
+    - ruleId: "100023" # Strict-Transport-Security
+      enabled: true
+
+# Exclusions for known false positives or accepted risks
+exclusions:
+  # API returns JSON, not HTML — XSS false positives on JSON responses
+  - ruleId: "40012"
+    reason: "API returns application/json; reflected content in JSON is not XSS"
+    urlPattern: "/api/internal/v1/*"
+    parameter: "*"
+    alertLevel: "INFO"
+
+  # OPTIONS preflight requests return 401 — expected for CORS
+  - ruleId: "100040"
+    reason: "OPTIONS preflight returns 401 by design; CORS is configured at gateway"
+    urlPattern: "/api/internal/v1/*"
+
+  # Test data in non-production environment
+  - ruleId: "100000"
+    reason: "Stack traces in error responses accepted in staging; filtered in production"
+    urlPattern: "/api/internal/v1/*"
+    alertLevel: "INFO"
+
+# Report configuration
+reporting:
+  format: ["html", "json", "md"]
+  outputDir: "./test-results/zap"
+  fileName: "zap-baseline-report"
