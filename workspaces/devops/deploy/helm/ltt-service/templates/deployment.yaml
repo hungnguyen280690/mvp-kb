@@ -1,0 +1,124 @@
+# generated_by: Claude Opus 4.7 (DevOps/SRE)
+# applies_adrs: [ADR-0007, ADR-SA-0001, ADR-SA-0002]
+# classification: Public
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vdbas.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vdbas.labels" . | nindent 4 }}
+  annotations:
+    generated_by: "Claude Opus 4.7 (DevOps/SRE)"
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "vdbas.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        {{- include "vdbas.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "vdbas.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "vdbas.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+            - name: management
+              containerPort: {{ .Values.service.managementPort }}
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: {{ .Values.environment }}
+            - name: SERVER_PORT
+              value: {{ .Values.service.port | quote }}
+            - name: MANAGEMENT_SERVER_PORT
+              value: {{ .Values.service.managementPort | quote }}
+            - name: GATEWAY_SERVICE_URL
+              value: {{ .Values.config.gatewayServiceUrl }}
+            - name: AUDIT_SERVICE_URL
+              value: {{ .Values.config.auditServiceUrl }}
+            - name: TADCOMM_URL
+              value: {{ .Values.config.tadcommUrl }}
+            - name: GL_SERVICE_URL
+              value: {{ .Values.config.glUrl }}
+            - name: ECM_SERVICE_URL
+              value: {{ .Values.config.ecmUrl }}
+            - name: SAGA_TIMEOUT_SECONDS
+              value: {{ .Values.config.saga.timeoutSeconds | quote }}
+            - name: SAGA_MAX_RETRIES
+              value: {{ .Values.config.saga.maxRetries | quote }}
+            - name: SAGA_RETRY_BACKOFF_MS
+              value: {{ .Values.config.saga.retryBackoffMs | quote }}
+            - name: OUTBOX_POLLING_INTERVAL_MS
+              value: {{ .Values.config.outbox.pollingIntervalMs | quote }}
+            - name: OUTBOX_BATCH_SIZE
+              value: {{ .Values.config.outbox.batchSize | quote }}
+            - name: OUTBOX_RETENTION_DAYS
+              value: {{ .Values.config.outbox.retentionDays | quote }}
+            - name: FUND_RESERVE_TIMEOUT_SECONDS
+              value: {{ .Values.config.fundReserve.timeoutSeconds | quote }}
+            - name: COA_VALIDATION_ENABLED
+              value: {{ .Values.config.coaValidation.enabled | quote }}
+            - name: IDEMPOTENCY_TTL_HOURS
+              value: {{ .Values.config.idempotency.ttlHours | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ include "vdbas.name" . }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.tracing.endpoint }}
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: {{ .Values.tracing.samplingRate | quote }}
+            - name: SPRING_DATASOURCE_URL
+              value: {{ include "vdbas.jdbcUrl" . }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "vdbas.fullname" . }}
+            - secretRef:
+                name: {{ .Values.database.secretName }}
+                optional: false
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      topologySpreadConstraints:
+        {{- with .Values.topologySpreadConstraints }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
