@@ -1,0 +1,423 @@
+# ============================================================================
+# API Specification Summary — TT.OUT.MANUAL
+# Module: Lenh thanh toan di NHNN thu cong
+# Source: SRS sheet "6-API Spec"
+# Generated: 2026-05-10
+# ============================================================================
+
+apis:
+
+  # --------------------------------------------------------------------------
+  # Outbound APIs — Goi tu VDBAS ra he thong ngoai
+  # --------------------------------------------------------------------------
+
+  - id: API-001
+    code: "API-OUT-001"
+    direction: OUTBOUND
+    name: "SubmitPaymentLNH"
+    method: POST
+    path: "/api/payment/lnh/submit"
+    target_system: "Outbound Gateway -> NHNN/CITAD"
+    trigger: "Khi LTT da Approve + ky so tren kenh LNH"
+    description: "Gui LTT da ky so qua kenh Lien ngan hang den NHNN/CITAD."
+    request_fields:
+      - correlationId
+      - "requestId (= So YCTT)"
+      - "channel = LNH"
+      - orderType
+      - fromBank
+      - toBank
+      - fromAccount
+      - toAccount
+      - amount
+      - currency
+      - valueDate
+      - remark
+      - signedXml
+      - signature
+      - signerCert
+    response_fields:
+      - "responseCode (00=Success, !=00=Error)"
+      - responseMessage
+      - providerRefId
+      - timestamp
+    error_codes:
+      - code: "01"
+        meaning: "Sai chu ky"
+      - code: "02"
+        meaning: "Sai checksum TK"
+      - code: "03"
+        meaning: "Vuot han muc"
+      - code: "09"
+        meaning: "Het gio cut-off"
+      - code: "99"
+        meaning: "Loi he thong"
+    idempotency: "Idempotent theo requestId+channel; retry 3 lan backoff 5/15/45s; timeout 60s"
+
+  - id: API-002
+    code: "API-OUT-002"
+    direction: OUTBOUND
+    name: "SubmitPaymentSP"
+    method: POST
+    path: "/api/payment/sp/submit"
+    target_system: "Outbound Gateway -> NHTM (TTSP)"
+    trigger: "Khi LTT da Approve tren kenh SP"
+    description: "Gui LTT da phe duyet qua kenh Thanh toan song phuong den NHTM."
+    request_fields:
+      - correlationId
+      - requestId
+      - "channel = SP"
+      - toBankCode
+      - toBankName
+      - fromAccount
+      - toAccount
+      - amount
+      - currency
+      - originalDocNo
+      - originalDocDate
+      - narrative
+      - signedJson
+      - signature
+    response_fields:
+      - responseCode
+      - responseMessage
+      - providerRefId
+      - settlementDate
+      - timestamp
+    error_codes:
+      - code: "01"
+        meaning: "NH nhan khong ho tro"
+      - code: "02"
+        meaning: "Sai TK nhan"
+      - code: "03"
+        meaning: "Vuot han muc song phuong"
+      - code: "99"
+        meaning: "Loi he thong"
+    idempotency: "Idempotent; retry 3 lan; timeout 60s"
+
+  - id: API-003
+    code: "API-OUT-003"
+    direction: OUTBOUND
+    name: "SubmitPaymentLKB"
+    method: POST
+    path: "/api/payment/lkb/submit"
+    target_system: "Outbound Gateway -> Lien kho bac (LKB)"
+    trigger: "Khi LTT da Approve tren kenh LKB"
+    description: "Gui LTT da phe duyet qua kenh Lien kho bac."
+    request_fields:
+      - correlationId
+      - requestId
+      - "channel = LKB"
+      - fromTreasury
+      - toTreasury
+      - account
+      - amount
+      - narrative
+      - signedJson
+    response_fields:
+      - responseCode
+      - responseMessage
+      - providerRefId
+      - timestamp
+    error_codes:
+      - code: "01"
+        meaning: "KB khong hop le"
+      - code: "02"
+        meaning: "Het gio LKB"
+      - code: "99"
+        meaning: "Loi he thong"
+    idempotency: "Idempotent; retry 3 lan; timeout 60s"
+
+  - id: API-004
+    code: "API-OUT-004"
+    direction: OUTBOUND
+    name: "PushGL"
+    method: POST
+    path: "/api/gl/postings"
+    target_system: "Outbound -> So cai (GL)"
+    trigger: "Sau khi nhan callback success tu NH/KB"
+    description: "Hach toan GL sau khi LTT duoc NH/KB xac nhan thanh cong."
+    request_fields:
+      - correlationId
+      - "sourceTxId (= So YCTT)"
+      - debitAccount
+      - creditAccount
+      - amount
+      - currency
+      - txDate
+      - narrative
+      - "segments[COA]"
+    response_fields:
+      - responseCode
+      - glVoucherNo
+      - postedAt
+    error_codes:
+      - code: "01"
+        meaning: "COA khong hop le"
+      - code: "02"
+        meaning: "Ky ke toan da dong"
+      - code: "99"
+        meaning: "Loi he thong"
+    idempotency: "Idempotent theo sourceTxId; retry 5 lan backoff 30/60/120/240/480s; co hang doi DLQ"
+
+  - id: API-005
+    code: "API-OUT-005"
+    direction: OUTBOUND
+    name: "PushQLT"
+    method: POST
+    path: "/api/qlt/notify"
+    target_system: "Outbound -> Quan ly thu (QLT)"
+    trigger: "Khi LTT la loai lien quan den QLT (hoan thu, dieu chinh)"
+    description: "Thong bao cho QLT khi LTT co yeu to hoan/dieu chinh thu."
+    request_fields:
+      - correlationId
+      - sourceTxId
+      - qltRefId
+      - amount
+      - "segments[COA]"
+      - narrative
+    response_fields:
+      - responseCode
+      - qltRefIdAck
+    error_codes:
+      - code: "01"
+        meaning: "qltRefId khong hop le"
+      - code: "02"
+        meaning: "Trang thai QLT khong cho phep cap nhat"
+      - code: "99"
+        meaning: "Loi he thong"
+    idempotency: "Idempotent; retry 3 lan"
+
+  - id: API-006
+    code: "API-OUT-006"
+    direction: OUTBOUND
+    name: "PushQLChi"
+    method: POST
+    path: "/api/qlchi/disbursement"
+    target_system: "Outbound -> Quan ly chi (QLChi)"
+    trigger: "Khi LTT co lien ket hop dong/cam ket chi QLChi"
+    description: "Thong bao cho QLChi khi LTT co lien ket hop dong chi."
+    request_fields:
+      - correlationId
+      - sourceTxId
+      - contractId
+      - drawdownNo
+      - amount
+      - "segments[COA]"
+    response_fields:
+      - responseCode
+      - qlchiRefId
+      - remainingAmount
+    error_codes:
+      - code: "01"
+        meaning: "Hop dong khong ton tai"
+      - code: "02"
+        meaning: "Vuot so du hop dong"
+      - code: "99"
+        meaning: "Loi he thong"
+    idempotency: "Idempotent; retry 3 lan"
+
+  - id: API-007
+    code: "API-OUT-007"
+    direction: OUTBOUND
+    name: "PushECM"
+    method: POST
+    path: "/api/ecm/archive"
+    target_system: "Outbound -> ECM (Luu tru)"
+    trigger: "Sau khi Sign + Send thanh cong"
+    description: "Luu tru chung tu vao ECM sau khi ky so va gui thanh cong."
+    request_fields:
+      - correlationId
+      - sourceTxId
+      - "files[{name, base64, hash}]"
+      - "metadata{...}"
+    response_fields:
+      - responseCode
+      - ecmDocId
+    error_codes:
+      - code: "01"
+        meaning: "Hash khong khop"
+      - code: "02"
+        meaning: "Dinh dang khong ho tro"
+      - code: "99"
+        meaning: "Loi he thong"
+    idempotency: "Async; queue-based; retry khong gio han cho den khi success"
+
+  - id: API-008
+    code: "API-OUT-008"
+    direction: OUTBOUND
+    name: "GetBalance"
+    method: GET
+    path: "/api/account/balance"
+    target_system: "Outbound -> Core Account"
+    trigger: "Khi Submit/Approve, de rang buoc so du kha dung"
+    description: "Kiem tra so du kha dung truoc khi Submit/Approve LTT."
+    request_fields:
+      - accountNumber
+      - currency
+      - asOfDate
+    response_fields:
+      - balance
+      - holdAmount
+      - availableBalance
+      - asOfTimestamp
+    error_codes:
+      - code: "01"
+        meaning: "TK khong ton tai"
+      - code: "02"
+        meaning: "TK bi khoa"
+      - code: "99"
+        meaning: "Loi he thong"
+    idempotency: "Synchronous; timeout 5s; co cache 30s"
+
+  # --------------------------------------------------------------------------
+  # Inbound APIs — Goi tu he thong ngoai vao VDBAS
+  # --------------------------------------------------------------------------
+
+  - id: API-009
+    code: "API-IN-001"
+    direction: INBOUND
+    name: "PaymentCallback"
+    method: POST
+    path: "/api/payment/callback"
+    target_system: "Inbound tu NH/KB ve VDBAS"
+    trigger: "Sau khi NH xu ly xong (success/fail)"
+    description: "Nhan callback ket qua xu ly LTT tu NH/KB."
+    request_fields:
+      - correlationId
+      - requestId
+      - "status (SUCCESS/FAIL)"
+      - errorCode
+      - errorMessage
+      - providerRefId
+      - settlementDate
+      - signature
+    response_fields:
+      - "responseCode (00=Acknowledged)"
+    error_codes:
+      - code: "01"
+        meaning: "Sai chu ky"
+      - code: "02"
+        meaning: "Khong tim thay requestId"
+      - code: "99"
+        meaning: "Loi he thong"
+    idempotency: "Idempotent: neu nhan callback trung thi tra 00 va bo qua"
+
+  # --------------------------------------------------------------------------
+  # Internal Service APIs — In-cluster, khong goi ra NH/KB
+  # --------------------------------------------------------------------------
+
+  - id: API-010
+    code: "API-INT-001"
+    direction: INTERNAL
+    name: "GetLTTDetail"
+    method: GET
+    path: "/api/internal/ltt/{id}"
+    target_system: "VDBAS UI <-> VDBAS Backend"
+    trigger: "Khi mo S03 (xem chi tiet) hoac khi mo S02 o Edit-mode"
+    description: "Lay chi tiet LTT theo id, ho tro optimistic lock qua versionExpected."
+    request_fields:
+      - "id (path)"
+      - "versionExpected (optional)"
+    response_fields:
+      - "ltt {id, version, status, header{...}, items[{...}], parties{...}, audit{...}}"
+    error_codes:
+      - code: "404"
+        meaning: "Khong tim thay"
+      - code: "403"
+        meaning: "Khong co quyen xem"
+      - code: "99"
+        meaning: "Loi he thong"
+    idempotency: "Synchronous; timeout 5s"
+
+  - id: API-011
+    code: "API-INT-002"
+    direction: INTERNAL
+    name: "UpdateLTTDraft"
+    method: PUT
+    path: "/api/internal/ltt/{id}"
+    target_system: "VDBAS UI <-> VDBAS Backend"
+    trigger: "Khi Maker bam Luu nap hoac Gui kiem soat tu Edit-mode"
+    description: "Cap nhat LTT draft hoac submit tu edit-mode, ho tro optimistic lock."
+    request_fields:
+      - "id (path)"
+      - "version (header If-Match)"
+      - "payload {header, items, parties, savedAs in {DRAFT, SUBMITTED}}"
+    response_fields:
+      - "ltt {id, version, status, updatedAt}"
+    error_codes:
+      - code: "400"
+        meaning: "VAL-* fail"
+      - code: "403"
+        meaning: "Khong phai Maker goc"
+      - code: "409"
+        meaning: "Version mismatch (VAL-036)"
+      - code: "423"
+        meaning: "LTT dang lock"
+      - code: "99"
+        meaning: "Loi he thong"
+    idempotency: "Idempotent theo (id, version); timeout 10s; ghi audit EDIT"
+
+  - id: API-012
+    code: "API-INT-003"
+    direction: INTERNAL
+    name: "DeleteLTTDraft"
+    method: DELETE
+    path: "/api/internal/ltt/{id}"
+    target_system: "VDBAS UI <-> VDBAS Backend"
+    trigger: "Khi Maker xac nhan tren S07 popup xoa"
+    description: "Soft-delete LTT draft, yeu cau ly do va optimistic lock."
+    request_fields:
+      - "id (path)"
+      - "version (header If-Match)"
+      - "payload {reason (10..500)}"
+    response_fields:
+      - "ack {id, status=DELETED, deletedAt}"
+    error_codes:
+      - code: "400"
+        meaning: "Ly do < 10 ky tu (VAL-030)"
+      - code: "403"
+        meaning: "Khong phai Maker goc"
+      - code: "409"
+        meaning: "Version mismatch"
+      - code: "412"
+        meaning: "Trang thai khong cho phep (VAL-031)"
+      - code: "99"
+        meaning: "Loi he thong"
+    idempotency: "Idempotent: neu da DELETED tra 200 va bo qua; ghi audit DELETE_DRAFT"
+
+  - id: API-013
+    code: "API-INT-004"
+    direction: INTERNAL
+    name: "AcquireLttEditLock"
+    method: POST
+    path: "/api/internal/ltt/{id}/lock"
+    target_system: "VDBAS UI <-> VDBAS Backend"
+    trigger: "Khi mo Edit-mode (S02)"
+    description: "Lay khoa chinh sua LTT, ngan hai user cung sua mot ban ghi."
+    request_fields:
+      - id
+      - "lockTtlSeconds (mac dinh 300)"
+    response_fields:
+      - "{lockId, lockedBy, expiresAt}"
+    error_codes:
+      - code: "423"
+        meaning: "Da co lock cua user khac (VAL-033)"
+      - code: "99"
+        meaning: "Loi he thong"
+    idempotency: "Synchronous; auto-renew khi user thao tac; tu release khi dong form/timeout"
+
+# ============================================================================
+# API summary
+# ============================================================================
+api_summary:
+  total: 13
+  by_direction:
+    outbound: 8    # API-001 to API-008
+    inbound: 1     # API-009
+    internal: 4    # API-010 to API-013
+  by_method:
+    GET: 2
+    POST: 7
+    PUT: 1
+    DELETE: 1
