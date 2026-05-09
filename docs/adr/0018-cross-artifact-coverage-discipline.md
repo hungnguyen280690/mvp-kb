@@ -23,78 +23,78 @@ Khắc phục theo hai hướng:
 - **Kiểm tra bao phủ tự động bắt buộc** (họ linter R0240) — ép buộc bằng máy; không thể bỏ qua
 - **Soát xét chủ động ở mức vai trò bắt buộc** (mở rộng quy trình BA + QA + UI/UX) — con người/agent phát hiện khoảng trống TRƯỚC KHI Dev triển khai, không phải sau
 
-## Decision
+## Quyết định
 
-Adopt **Cross-artifact Coverage Discipline** with three enforcement layers:
+Áp dụng **Kỷ luật bao phủ chéo sản phẩm bàn giao** với ba lớp ép buộc:
 
-### Layer 1 — Linter rule family R0240 (machine-enforced cross-artifact checks)
+### Lớp 1 — Họ quy tắc linter R0240 (kiểm tra chéo sản phẩm bàn giao ép buộc bằng máy)
 
-| Rule      | Check                                                                                                                                                              | Severity |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
-| **R0240** | Every API endpoint in `07-ui-spec.md §7` data-contracts table EXISTS in `02-design.md` API/integration section                                                     | error    |
-| **R0241** | Every UI route in `07-ui-spec.md §3` route map has a corresponding E2E test in `04-test-plan.md §UI E2E`                                                           | error    |
-| **R0242** | Every Functional Requirement (FR-N) in `01-requirements.md` is referenced by ≥1 test in `04-test-plan.md` traceability matrix                                      | error    |
-| **R0243** | Every API endpoint in `02-design.md` API table has ≥1 integration test in `04-test-plan.md §Integration`                                                           | error    |
-| **R0244** | Every page in `07-ui-spec.md §3` route map has implementation in code repo (file matches `frontend/src/routes/<page>.tsx` or equivalent) — checked at code-PR time | error    |
-| **R0245** | Every component in `07-ui-spec.md §4.2` composites table has implementation file matching `frontend/src/components/tt-out-manual/<Component>.tsx`                  | error    |
-| **R0246** | Every endpoint in `02-design.md` API table has implementation route in code (Java: `mux.HandleFunc("METHOD /v1/...", ...)` exists)                                 | error    |
+| Quy tắc  | Kiểm tra                                                                                                                                                           | Nghiêm trọng |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ |
+| **R0240** | Mọi API endpoint trong bảng hợp đồng dữ liệu `07-ui-spec.md §7` đều TỒN TẠI trong mục API/tích hợp của `02-design.md`                                             | error        |
+| **R0241** | Mọi tuyến UI trong bản đồ tuyến `07-ui-spec.md §3` đều có kiểm thử E2E tương ứng trong `04-test-plan.md §UI E2E`                                                  | error        |
+| **R0242** | Mọi Yêu cầu Chức năng (FR-N) trong `01-requirements.md` đều được tham chiếu bởi >=1 kiểm thử trong ma trận truy nguồn `04-test-plan.md`                           | error        |
+| **R0243** | Mọi API endpoint trong bảng API `02-design.md` đều có >=1 kiểm thử tích hợp trong `04-test-plan.md §Integration`                                                  | error        |
+| **R0244** | Mọi trang trong bản đồ tuyến `07-ui-spec.md §3` đều có triển khai trong kho mã (file khớp `frontend/src/routes/<page>.tsx` hoặc tương đương) — kiểm tra tại thời điểm PR code | error |
+| **R0245** | Mọi component trong bảng tổng hợp `07-ui-spec.md §4.2` đều có file triển khai khớp `frontend/src/components/tt-out-manual/<Component>.tsx`                         | error        |
+| **R0246** | Mọi endpoint trong bảng API `02-design.md` đều có tuyến triển khai trong code (Java: `mux.HandleFunc("METHOD /v1/...", ...)` tồn tại)                             | error        |
 
-R0240-R0243: doc-only (run on documentation PRs)
-R0244-R0246: code-doc bridge (run on code PRs; require declared spec linkage in PR description)
+R0240-R0243: chỉ tài liệu (chạy trên PR tài liệu)
+R0244-R0246: cầu nối code-tài liệu (chạy trên PR code; yêu cầu liên kết spec khai báo trong mô tả PR)
 
-Severity: **error from Phase 0** for R0240-R0243 (doc-doc checks are cheap and unambiguous); **warn → error in Phase 1** for R0244-R0246 (allow time to backfill coverage during MVP).
+Nghiêm trọng: **error từ Phase 0** cho R0240-R0243 (kiểm tra doc-doc rẻ và rõ ràng); **warn -> error ở Phase 1** cho R0244-R0246 (cho thời gian bổ sung bao phủ trong MVP).
 
-### Layer 2 — BA proactive design-gap review
+### Lớp 2 — BA soát xét khoảng trống thiết kế chủ động
 
-BA's workflow extends beyond `Approved01` to a new state:
-
-```
-Approved01 → ConsultingDesign → MonitoringDesign → Approved01-Final
-```
-
-After SA submits `02-design.md` for review, **BA agent runs `design-gap-review` procedure**:
-
-- Reads `01-requirements.md` (their own output)
-- Reads `02-design.md` (SA's draft)
-- For each requirement (FR-N), confirms an API endpoint or component exists in design that addresses it
-- Output: `02-design.md` review comment listing any uncovered FRs
-- If gaps found → SA fixes via inner-loop fix-attempt; ripple through
-
-This makes BA the **first line of cross-artifact defense** for requirements ↔ design coverage.
-
-### Layer 3 — QA pre-implementation gap detection
-
-QA's workflow gains a new state BEFORE `Drafting04`:
+Quy trình của BA mở rộng vượt ra khỏi `Approved01` với trạng thái mới:
 
 ```
-Reviewing01 → Reviewing02 → Reviewing03 → GapDetection → Drafting04
+Approved01 -> ConsultingDesign -> MonitoringDesign -> Approved01-Final
 ```
 
-In `GapDetection`, **QA agent runs `pre-implementation-gap-detection` procedure**:
+Sau khi SA nộp `02-design.md` để soát xét, **agent BA chạy quy trình `design-gap-review`**:
 
-- Reads `01-requirements.md`, `02-design.md`, `03-schema.md`, `07-ui-spec.md` (all available predecessors)
-- Cross-checks:
-  - Every FR has a target test category
-  - Every API endpoint in design has a test slot
-  - Every UI page in spec has an E2E test slot
-  - Every PII column in schema has a test in security-tests
-- Output: `04-test-plan.md` Draft pre-populated with traceability matrix; AND a separate `gap-report.md` listing uncovered items
-- If gaps found → respective role-owner fixes upstream artifact; QA's matrix becomes the contract Dev must implement
+- Đọc `01-requirements.md` (đầu ra của chính BA)
+- Đọc `02-design.md` (bản nháp của SA)
+- Với mỗi yêu cầu (FR-N), xác nhận có endpoint API hoặc component trong thiết kế giải quyết nó
+- Đầu ra: nhận xét soát xét `02-design.md` liệt kê các FR chưa được bao phủ
+- Nếu phát hiện khoảng trống -> SA khắc phục qua inner-loop fix-attempt; lan truyền
 
-This makes QA the **second line of defense** before Dev burns cycles on incomplete specs.
+Điều này làm BA trở thành **tuyến phòng thủ đầu tiên chéo sản phẩm bàn giao** cho bao phủ yêu cầu <-> thiết kế.
 
-### Layer 4 — UI/UX data-contract consistency check
+### Lớp 3 — QA phát hiện khoảng trống trước triển khai
 
-UI/UX's workflow extends to a new check during `Drafting07`:
+Quy trình của QA thêm trạng thái mới TRƯỚC `Drafting04`:
 
-- After UI/UX drafts `07-ui-spec.md §7` data-contracts table, agent verifies each endpoint exists in `02-design.md` API table
-- Mismatches → file `escalations/conflict.md` to SA (request endpoint addition or remove from UI scope)
+```
+Reviewing01 -> Reviewing02 -> Reviewing03 -> GapDetection -> Drafting04
+```
 
-This is the **third line of defense** — UI doesn't ship a spec referencing endpoints SA hasn't designed.
+Trong `GapDetection`, **agent QA chạy quy trình `pre-implementation-gap-detection`**:
 
-### Per-batch reviewer (the catch-all)
+- Đọc `01-requirements.md`, `02-design.md`, `03-schema.md`, `07-ui-spec.md` (tất cả tiền nhiệm hiện có)
+- Kiểm tra chéo:
+  - Mọi FR đều có danh mục kiểm thử mục tiêu
+  - Mọi API endpoint trong thiết kế đều có slot kiểm thử
+  - Mọi trang UI trong spec đều có slot kiểm thử E2E
+  - Mọi cột PII trong schema đều có kiểm thử trong security-tests
+- Đầu ra: Bản nháp `04-test-plan.md` được điền trước ma trận truy nguồn; VÀ một `gap-report.md` riêng liệt kê các mục chưa bao phủ
+- Nếu phát hiện khoảng trống -> chủ sở hữu vai trò tương ứng khắc phục sản phẩm bàn giao thượng nguồn; ma trận của QA trở thành hợp đồng mà Dev phải triển khai
 
-Per ADR-0013 middle layer: a coordinator agent (`@claude-architect-reviewer` with batch-review prompt) runs after all per-artifact loops converge. It runs R0240-R0243 + manual cross-cut review. If it finds gaps the per-role checks missed, those gaps become **regression cases** — added to the corresponding role's procedure as a checkable item.
+Điều này làm QA trở thành **tuyến phòng thủ thứ hai** trước khi Dev lãng phí công sức trên spec chưa đầy đủ.
+
+### Lớp 4 — Kiểm tra nhất quán hợp đồng dữ liệu UI/UX
+
+Quy trình của UI/UX mở rộng với kiểm tra mới trong `Drafting07`:
+
+- Sau khi UI/UX viết bảng hợp đồng dữ liệu `07-ui-spec.md §7`, agent xác nhận mỗi endpoint tồn tại trong bảng API `02-design.md`
+- Không khớp -> tạo `escalations/conflict.md` gửi SA (yêu cầu thêm endpoint hoặc loại khỏi phạm vi UI)
+
+Đây là **tuyến phòng thủ thứ ba** — UI không giao spec tham chiếu endpoint mà SA chưa thiết kế.
+
+### Reviewer theo lô (bắt tất cả)
+
+Theo ADR-0013 tầng giữa: một agent coordinator (`@claude-architect-reviewer` với prompt batch-review) chạy sau khi tất cả vòng lặp per-artifact hội tụ. Nó chạy R0240-R0243 + soát xét chéo thủ công. Nếu phát hiện khoảng trống mà kiểm tra per-role bỏ sót, những khoảng trống đó trở thành **ca hồi quy** — được thêm vào quy trình của vai trò tương ứng dưới dạng mục kiểm tra.
 
 ## Consequences
 

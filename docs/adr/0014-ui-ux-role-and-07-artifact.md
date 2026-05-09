@@ -1,111 +1,111 @@
-# ADR-0014: UI/UX role addition + `07-ui-spec.md` artifact
+# ADR-0014: Thêm vai trò UI/UX + sản phẩm bàn giao `07-ui-spec.md`
 
-- **Status:** Accepted
-- **Date:** 2026-05-08
-- **Deciders:** SA (lead), UI/UX Tech Lead, all roles consulted
-- **Tags:** roles, artifacts, ui, frontend
-- **Supersedes:** —
-- **Superseded by:** —
+- **Trạng thái:** Đã phê duyệt
+- **Ngày:** 08-05-2026
+- **Người quyết định:** SA (chủ trì), Trưởng kỹ thuật UI/UX, tham vấn tất cả vai trò
+- **Thẻ:** vai trò, sản phẩm bàn giao, ui, frontend
+- **Thay thế cho:** —
+- **Được thay thế bởi:** —
 
-## Context
+## Ngữ cảnh
 
-ADR-0010 noted UX as "optional, depending on UI scope." TT.OUT.MANUAL has a customer self-service UI + admin UI; treating UI work as a buried Dev concern conflates design judgment with code execution and loses dedicated review. The current MVP's `web/index.html` is vanilla-JS placeholder — sufficient for curl-substitution, insufficient for real product.
+ADR-0010 ghi nhận UX là "tùy chọn, tùy thuộc vào phạm vi UI." TT.OUT.MANUAL có UI tự phục vụ khách hàng + UI quản trị; coi công việc UI là mối quan tâm Dev bị chôn vùi sẽ làm nhầm lẫn phán đoán thiết kế với thực thi mã và mất đi soát xét chuyên trách. `web/index.html` hiện tại của MVP là placeholder vanilla-JS — đủ để thay thế curl, không đủ cho sản phẩm thực tế.
 
-Three options for elevating UI:
+Ba lựa chọn để nâng tầm UI:
 
-- **Absorb into Dev** — one of 3 Devs is "frontend lead." Loses dedicated artifact + RACI.
-- **Pair (Designer + Frontend Dev)** — 10-role taxonomy, heavyweight for TT.OUT.MANUAL.
-- **Single UI/UX role** with both design + implementation oversight — clean accountability without role explosion.
+- **Hấp thụ vào Dev** — một trong 3 Dev là "trưởng frontend." Mất sản phẩm bàn giao chuyên trách + RACI.
+- **Cặp (Designer + Frontend Dev)** — phân loại 10 vai trò, quá nặng cho TT.OUT.MANUAL.
+- **Vai trò UI/UX duy nhất** với cả thiết kế + giám sát triển khai — trách nhiệm rõ ràng mà không bùng nổ vai trò.
 
-## Decision
+## Quyết định
 
-Add **UI/UX as the 9th role** (joining PO, BA, SA, DBA, Dev, QA, DevOps, Security) and **`07-ui-spec.md` as the 8th lifecycle artifact**.
+Thêm **UI/UX làm vai trò thứ 9** (cùng với PO, BA, SA, DBA, Dev, QA, DevOps, Bảo mật) và **`07-ui-spec.md` làm sản phẩm bàn giao thứ 8 trong vòng đời**.
 
-### Role definition
+### Định nghĩa vai trò
 
-| Aspect                      | Value                                                                                                                                                                                                                   |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Target ratio (per ADR-0010) | **60/40** human/agent                                                                                                                                                                                                   |
-| RACI on `07-ui-spec.md`     | **R/A**: UI/UX; **C**: Dev (feasibility), BA (requirements alignment), QA (testability), Security (XSS/CSRF surface), SA (architecture fit)                                                                             |
-| Workflow states             | Awaiting → ReviewingRequirements → Drafting07 → InReview07 → Approved07 → ConsultingDev → Operating                                                                                                                     |
-| Authorized agents           | `@claude-opus-reviewer` (component-design analysis), `@claude-sonnet-test-automator` (component scaffolding), `@glm-4-air-doc-drafter` (boilerplate forms), `@claude-architect-reviewer` (cross-cutting UI consistency) |
-| Authorship rotation         | ≥1 substantive `07-ui-spec.md` per quarter without agent assistance                                                                                                                                                     |
+| Khía cạnh                     | Giá trị                                                                                                                                                                                                                     |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tỷ lệ mục tiêu (theo ADR-0010) | **60/40** con người/agent                                                                                                                                                                                                   |
+| RACI trên `07-ui-spec.md`     | **R/A**: UI/UX; **C**: Dev (tính khả thi), BA (phù hợp yêu cầu), QA (tính kiểm thử được), Bảo mật (bề mặt XSS/CSRF), SA (phù hợp kiến trúc)                                                                                |
+| Trạng thái quy trình          | Awaiting → ReviewingRequirements → Drafting07 → InReview07 → Approved07 → ConsultingDev → Operating                                                                                                                         |
+| Agent được ủy quyền           | `@claude-opus-reviewer` (phân tích thiết kế component), `@claude-sonnet-test-automator` (scaffold component), `@glm-4-air-doc-drafter` (form boilerplate), `@claude-architect-reviewer` (tính nhất quán UI liên tính năng) |
+| Vòng xoay tác giả             | >= 1 `07-ui-spec.md` có nội dung thực chất mỗi quý không có sự hỗ trợ của agent                                                                                                                                             |
 
-### `07-ui-spec.md` required sections (per `manifest.yml` update)
+### Các mục bắt buộc trong `07-ui-spec.md` (theo cập nhật `manifest.yml`)
 
-- User personas (pulls from `00-idea`/`01-requirements`)
-- User flows (Mermaid sequence per primary flow)
-- Information architecture (route map, navigation hierarchy)
-- Component specification (composition tree, state machines, loading/error/empty states)
-- Design tokens (colors, typography, spacing, motion)
-- **Accessibility requirements (WCAG 2.1 AA target)**
-- Data contracts (per-page API endpoints, request/response shapes)
-- Out of scope
+- Chân dung người dùng (lấy từ `00-idea`/`01-requirements`)
+- Luồng người dùng (sơ đồ trình tự Mermaid cho mỗi luồng chính)
+- Kiến trúc thông tin (sơ đồ route, phân cấp điều hướng)
+- Đặc tả component (cây thành phần, máy trạng thái, trạng thái loading/error/empty)
+- Design tokens (màu sắc, kiểu chữ, khoảng cách, chuyển động)
+- **Yêu cầu khả năng tiếp cận (mục tiêu WCAG 2.1 AA)**
+- Hợp đồng dữ liệu (endpoint API theo trang, cấu trúc request/response)
+- Ngoài phạm vi
 
-Required when feature has UI scope; `Not Applicable` status acceptable for backend-only features.
+Bắt buộc khi tính năng có phạm vi UI; trạng thái `Not Applicable` được chấp nhận cho tính năng chỉ có backend.
 
-### Tech stack baseline
+### Cơ sở ngăn xếp công nghệ
 
 - **React 18 + TypeScript + Tailwind + TypeScript 5 + Vite + Tailwind 3 + shadcn/ui**
-- **TanStack Query** (server state) + **Zustand** (client state)
-- **React Router v6** (file-based routing optional in v2)
-- **WCAG 2.1 AA** target
+- **TanStack Query** (trạng thái server) + **Zustand** (trạng thái client)
+- **React Router v6** (file-based routing tùy chọn ở v2)
+- **WCAG 2.1 AA** mục tiêu
 
-Baseline locked; deviations require feature-local ADR.
+Cơ sở đã khóa; sai lệch yêu cầu ADR cục bộ theo tính năng.
 
-### Repo placement
+### Vị trí trong repo
 
-- **MVP**: `frontend/` subdirectory in same code repo (single-repo simplicity)
-- **Production**: separate repo per ADR-0003 multi-repo hybrid (when team scales)
+- **MVP**: thư mục con `frontend/` trong cùng repo mã nguồn (đơn giản của single-repo)
+- **Production**: repo riêng theo mô hình multi-repo hybrid ADR-0003 (khi nhóm mở rộng)
 
-## Consequences
+## Hệ quả
 
-### Positive
+### Tích cực
 
-- Dedicated artifact + RACI for UI work; no more conflation.
-- shadcn/ui's copy-paste-source pattern means no runtime dep + full customization.
-- Tech stack matches `02-design.md` ("React + TypeScript") and is well-trained in agent corpus.
-- WCAG 2.1 AA target is testable (axe-core; see ADR-0016).
+- Sản phẩm bàn giao chuyên trách + RACI cho công việc UI; không còn nhầm lẫn.
+- Pattern copy-paste-source của shadcn/ui nghĩa là không có phụ thuộc runtime + tùy biến đầy đủ.
+- Ngăn xếp công nghệ phù hợp với `02-design.md` ("React + TypeScript") và được đào tạo tốt trong kho ngữ liệu agent.
+- Mục tiêu WCAG 2.1 AA có thể kiểm thử (axe-core; xem ADR-0016).
 
-### Negative / Costs
+### Tiêu cực / Chi phí
 
-- 9th role expands roster + role-cards + workflows; +~1-2 weeks of platform updates one-time.
-- Frontend build pipeline adds Node+Vite dependency on developer workstation (low cost; single `pnpm install`).
-- shadcn copy-paste means manual updates when shadcn evolves; trade-off accepted for no-runtime-dep benefit.
+- Vai trò thứ 9 mở rộng danh sách + role-cards + quy trình làm việc; thêm khoảng 1-2 tuần cập nhật nền tảng một lần.
+- Pipeline build frontend thêm phụ thuộc Node+Vite trên máy trạm lập trình viên (chi phí thấp; chỉ cần `pnpm install` một lần).
+- Copy-paste shadcn nghĩa là cập nhật thủ công khi shadcn tiến hóa; đánh đổi được chấp nhận cho lợi ích không phụ thuộc runtime.
 
-### Neutral
+### Trung tính
 
-- `07-ui-spec.md` is conditional: features without UI mark `Not Applicable`; not every feature gets one.
-- TanStack Query + Zustand split is industry-standard but not universal; tunable per project.
+- `07-ui-spec.md` có điều kiện: tính năng không có UI đánh dấu `Not Applicable`; không phải tính năng nào cũng cần.
+- Phân chia TanStack Query + Zustand là tiêu chuẩn ngành nhưng không phổ quát; có thể điều chỉnh theo dự án.
 
-## Alternatives Considered
+## Các phương án thay thế đã xem xét
 
-### A. Absorb UI into Dev — Rejected
+### A. Hấp thụ UI vào Dev — Bị loại bỏ
 
-Loses dedicated review surface; conflates disciplines.
+Mất bề mặt soát xét chuyên trách; làm nhầm lẫn các lĩnh vực.
 
-### B. Designer + Frontend Dev pair (10 roles) — Rejected
+### B. Cặp Designer + Frontend Dev (10 vai trò) — Bị loại bỏ
 
-Heavyweight; saved for orgs >30 engineers.
+Quá nặng; dành cho tổ chức trên 30 kỹ sư.
 
-### C. UI subsection in `02-design.md` only — Rejected
+### C. Chỉ có mục con UI trong `02-design.md` — Bị loại bỏ
 
-SA reviews UI design; conflates with architecture; no enforced "must have UI section."
+SA soát xét thiết kế UI; nhầm lẫn với kiến trúc; không ép buộc "phải có mục UI."
 
-### D. Stay vanilla JS / HTMX — Rejected
+### D. Giữ nguyên vanilla JS / HTMX — Bị loại bỏ
 
-Agent training coverage weaker; bets against locked design doc choice.
+Độ bao phủ đào tạo agent yếu hơn; đi ngược lại lựa chọn trong tài liệu thiết kế đã khóa.
 
-## Related
+## Liên quan
 
-- ADR-0001 — Per-feature folder + per-artifact file (`07-ui-spec.md` is the 8th artifact)
-- ADR-0003 — Multi-repo hybrid (production frontend split)
-- ADR-0006 — A-is-human-only (UI/UX role A is human; agents R/C only)
-- ADR-0010 — Human role design (UI/UX at 60/40 ratio)
-- ADR-0016 — UI testing strategy (companion ADR; testing the artifact this ADR creates)
+- ADR-0001 — Thư mục theo tính năng + file theo sản phẩm bàn giao (`07-ui-spec.md` là sản phẩm bàn giao thứ 8)
+- ADR-0003 — Multi-repo hybrid (chia frontend production)
+- ADR-0006 — A-là-chỉ-con-người (vai trò A của UI/UX là con người; agent chỉ R/C)
+- ADR-0010 — Thiết kế vai trò con người (UI/UX ở tỷ lệ 60/40)
+- ADR-0016 — Chiến lược kiểm thử UI (ADR bổ sung; kiểm thử sản phẩm bàn giao mà ADR này tạo ra)
 
-## Notes for future revision
+## Ghi chú cho lần rà soát tới
 
-- **Component library choice** (shadcn vs Material vs Mantine) — shadcn picked for no-runtime-dep + agent-friendliness; revisit if accessibility issues emerge.
-- **State management split** (TanStack Query + Zustand) — works for MVP scale; if global state grows, consider Redux Toolkit.
-- **shadcn updates** — manual; track via component-version comments in copied source files; periodic refresh.
+- **Lựa chọn thư viện component** (shadcn vs Material vs Mantine) — shadcn được chọn vì không phụ thuộc runtime + thân thiện với agent; xem xét lại nếu phát sinh vấn đề khả năng tiếp cận.
+- **Phân chia quản lý trạng thái** (TanStack Query + Zustand) — hoạt động ở quy mô MVP; nếu trạng thái toàn cục tăng, cân nhắc Redux Toolkit.
+- **Cập nhật shadcn** — thủ công; theo dõi qua comment phiên bản component trong các file nguồn đã sao chép; làm mới định kỳ.
