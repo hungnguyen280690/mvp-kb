@@ -1,91 +1,91 @@
-# ADR-0017: Output completeness discipline — suppress guessing, suppress hallucination
+# ADR-0017: Kỷ luật tính đầy đủ của đầu ra — triệt tiêu phỏng đoán, triệt tiêu ảo giác
 
-- **Status:** Accepted
-- **Date:** 2026-05-08
-- **Deciders:** SA (lead), all roles
-- **Tags:** quality, prompts, linter, foundation
-- **Supersedes:** —
-- **Superseded by:** —
+- **Trạng thái:** Đã phê duyệt
+- **Ngày:** 08-05-2026
+- **Người quyết định:** SA (dẫn dắt), tất cả các vai trò
+- **Thẻ:** chất-lượng, prompt, linter, nền-tảng
+- **Thay thế cho:** —
+- **Được thay thế bởi:** —
 
-## Context
+## Ngữ cảnh
 
-ADR-0009 introduced cite-or-die (R1001) and no-TBD (R0103). These prevent the most egregious hallucinations and placeholders. They are necessary but not sufficient — observed gaps:
+ADR-0009 đã giới thiệu cite-or-die (R1001) và no-TBD (R0103). Những quy tắc này ngăn chặn các ảo giác và placeholder nghiêm trọng nhất. Chúng cần thiết nhưng chưa đủ — các khoảng trống quan sát được:
 
-- **Vague hedges** survive cite-or-die: "the system should be performant," "we use appropriate caching," "errors are handled gracefully"
-- **Implicit assumptions** propagate: design omits a section the next role needs, that role asks back; cycle wastes one round-trip
-- **Soft-ambiguous wording** lets agents emit confident-sounding output that downstream readers parse differently
-- **Missing-but-not-required sections** don't trip linter rules (which only check required sections)
-- **Numeric vagueness** survives: "low latency" instead of "p95 <200ms"; "high availability" instead of "99.9% (43 min/mo budget)"
+- **Cụm từ lảng tránh mơ hồ** sống sót qua cite-or-die: "hệ thống sẽ hiệu năng tốt," "chúng ta sử dụng bộ nhớ đệm phù hợp," "lỗi được xử lý khéo léo"
+- **Giả định ngầm** lan truyền: thiết kế bỏ sót một mục mà vai trò tiếp theo cần, vai trò đó phải hỏi ngược lại; lãng phí một vòng lặp
+- **Cụm từ mơ hồ nhẹ** cho phép agent phát ra đầu ra nghe có vẻ tự tin mà người đọc hạ lưu diễn giải khác nhau
+- **Các mục bị thiếu nhưng không bắt buộc** không vi phạm quy tắc linter (vốn chỉ kiểm tra các mục bắt buộc)
+- **Sự mơ hồ về số học** vẫn tồn tại: "độ trễ thấp" thay vì "p95 <200ms"; "độ sẵn sàng cao" thay vì "99.9% (ngân sách 43 phút/tháng)"
 
-The system claim is "no missing/conflict/overlap of role/scope/task." Completeness is the foundation of "no missing." Vague output is **half-missing** — the words exist but the information doesn't.
+Khẳng định của hệ thống là "không thiếu sót / không mâu thuẫn / không chồng chéo về vai trò / phạm vi / nhiệm vụ." Tính đầy đủ là nền tảng của "không thiếu sót." Đầu ra mơ hồ là **thiếu một nửa** — từ ngữ tồn tại nhưng thông tin thì không.
 
-## Decision
+## Quyết định
 
-Adopt **Output Completeness Discipline** as a cross-cutting principle, with three enforcement layers:
+Áp dụng **Kỷ luật tính đầy đủ của đầu ra** như một nguyên tắc xuyên suốt, với ba lớp ép buộc:
 
-### Layer 1 — Agent prompt boilerplate (all prompt templates)
+### Lớp 1 — Boilerplate prompt agent (tất cả bản mẫu prompt)
 
-Every prompt template gets a mandatory `## Anti-hallucination + completeness contract` section:
+Mọi bản mẫu prompt đều có mục bắt buộc `## Hợp đồng chống ảo giác + tính đầy đủ`:
 
 ```markdown
-## Anti-hallucination + completeness contract
+## Hợp đồng chống ảo giác + tính đầy đủ
 
-Before emitting output, you MUST:
+Trước khi phát ra đầu ra, bạn PHẢI:
 
-1. **Cite every factual claim** to a specific source (ADR id + sha; stakeholder quote + timestamp;
-   standard reference; predecessor artifact section). No claim without a citation.
-2. **Replace hedges with measurements**:
-   - "performant" → specific latency/throughput target ("p95 <200ms at 100 RPS")
-   - "scalable" → specific scale target ("10K subscriptions in <30 min")
-   - "secure" → specific control ("OIDC bearer tokens; CSP `default-src 'self'`")
-   - "user-friendly" → specific UX criterion ("<3 clicks to plan-change; keyboard-only flow possible")
-3. **Forbid soft-ambiguity phrases**: "obvious", "should", "as appropriate", "where applicable",
+1. **Trích dẫn mọi tuyên bố thực tế** đến một nguồn cụ thể (id ADR + sha; trích dẫn bên liên quan + timestamp;
+   tham chiếu tiêu chuẩn; mục sản phẩm bàn giao tiền nhiệm). Không tuyên bố nào không có trích dẫn.
+2. **Thay thế cụm từ lảng tránh bằng phép đo cụ thể**:
+   - "hiệu năng tốt" -> mục tiêu độ trễ/thông lượng cụ thể ("p95 <200ms ở 100 RPS")
+   - "có thể mở rộng" -> mục tiêu quy mô cụ thể ("10K gói cước trong <30 phút")
+   - "an toàn" -> kiểm soát cụ thể ("bearer token OIDC; CSP `default-src 'self'`")
+   - "thân thiện với người dùng" -> tiêu chí UX cụ thể ("<3 lần click để đổi gói cước; luồng chỉ dùng bàn phím khả thi")
+3. **Cấm các cụm từ mơ hồ nhẹ**: "obvious", "should", "as appropriate", "where applicable",
    "etc.", "and so on", "tbd", "todo", "lorem ipsum", "to be determined", "later".
-   If you cannot avoid one, output `<<MISSING-INFO: <what>>>` instead and file an
+   Nếu không thể tránh, xuất `<<MISSING-INFO: <cái_gì>>>` thay thế và tạo
    `escalations/incomplete-input.md`.
-4. **Self-verify before emit**: re-read your output against the checklist in your prompt template's
-   `## Output completeness checklist` section. If any item fails, fix or escalate.
-5. **No invention**: if a fact is not in your context, do NOT generate it. Output `<<MISSING-INFO>>`
-   and escalate.
+4. **Tự xác minh trước khi phát ra**: đọc lại đầu ra của bạn theo danh sách kiểm tra trong mục
+   `## Danh sách kiểm tra tính đầy đủ đầu ra` của bản mẫu prompt. Nếu bất kỳ mục nào thất bại, khắc phục hoặc leo thang.
+5. **Không bịa đặt**: nếu một thông tin không có trong ngữ cảnh của bạn, KHÔNG tạo ra nó. Xuất `<<MISSING-INFO>>`
+   và leo thang.
 ```
 
-### Layer 2 — Per-artifact completeness checklist (in each artifact template)
+### Lớp 2 — Danh sách kiểm tra tính đầy đủ cho từng sản phẩm bàn giao (trong mỗi bản mẫu sản phẩm)
 
-Each artifact template includes a `## Output completeness checklist` section that the authoring agent (and human reviewer) verifies before status: In Review:
+Mỗi bản mẫu sản phẩm bàn giao bao gồm mục `## Danh sách kiểm tra tính đầy đủ đầu ra` mà agent tác giả (và người soát xét) xác minh trước khi trạng thái: Đang soát xét:
 
 ```markdown
-## Output completeness checklist (NON-NEGOTIABLE)
+## Danh sách kiểm tra tính đầy đủ đầu ra (KHÔNG THƯƠNG LƯỢNG)
 
-- [ ] Every section header present (no skipped sections); empty sections marked
-      `Not Applicable` with rationale, never blank
-- [ ] Every factual claim cites a source
-- [ ] No forbidden hedge phrases (regex-checked by linter R0230)
-- [ ] All measurable requirements have measurable targets (units, thresholds)
-- [ ] All cross-references resolve (paths exist, anchors valid)
-- [ ] All dependencies declared in front-matter (`predecessors`, `applies_adrs`,
+- [ ] Mọi tiêu đề mục đều có mặt (không bỏ sót mục); các mục trống được đánh dấu
+      `Not Applicable` kèm lý do, không bao giờ để trống
+- [ ] Mọi tuyên bố thực tế đều trích dẫn nguồn
+- [ ] Không có cụm từ lảng tránh bị cấm (kiểm tra regex bởi linter R0230)
+- [ ] Mọi yêu cầu có thể đo lường đều có mục tiêu có thể đo lường (đơn vị, ngưỡng)
+- [ ] Mọi tham chiếu chéo đều hợp lệ (đường dẫn tồn tại, anchor hợp lệ)
+- [ ] Mọi phụ thuộc được khai báo trong front-matter (`predecessors`, `applies_adrs`,
       `applies_policies`, `applies_standards`)
-- [ ] No `<<MISSING-INFO>>` markers remaining (escalate if any)
-- [ ] Reviewer can complete their work using ONLY this artifact + its declared
-      predecessors (no implicit context required)
+- [ ] Không còn đánh dấu `<<MISSING-INFO>>` nào (leo thang nếu có)
+- [ ] Người soát xét có thể hoàn thành công việc của họ sử dụng CHỈ sản phẩm bàn giao này + các sản phẩm
+      tiền nhiệm đã khai báo (không cần ngữ cảnh ngầm)
 ```
 
-### Layer 3 — New linter rule family R0230-R0239 (forbidden hedges + completeness)
+### Lớp 3 — Họ quy tắc linter mới R0230-R0239 (cụm từ lảng tránh bị cấm + tính đầy đủ)
 
-| Rule  | Description                                                                | Severity |
-| ----- | -------------------------------------------------------------------------- | -------- |
-| R0230 | Forbidden hedge phrases (regex against locked enum)                        | error    |
-| R0231 | Numeric vagueness (regex: "low/high/fast/slow" without measurement nearby) | warn     |
-| R0232 | All section headers from template manifest are present                     | error    |
-| R0233 | No `<<MISSING-INFO>>` markers in `status: In Review` or later              | error    |
-| R0234 | Self-verification artifact section populated (the checklist above, ticked) | warn     |
-| R0235 | "Reviewer can complete using only this + predecessors" assertion verified  | advisory |
+| Quy tắc | Mô tả                                                                              | Nghiêm trọng |
+| ------- | ---------------------------------------------------------------------------------- | ------------ |
+| R0230   | Cụm từ lảng tránh bị cấm (regex theo enum khóa)                                   | error        |
+| R0231   | Mơ hồ số học (regex: "low/high/fast/slow" không có phép đo gần đó)                | warn         |
+| R0232   | Mọi tiêu đề mục từ manifest bản mẫu đều có mặt                                     | error        |
+| R0233   | Không có đánh dấu `<<MISSING-INFO>>` trong `status: In Review` hoặc sau đó         | error        |
+| R0234   | Mục tự xác minh sản phẩm bàn giao đã được điền (danh sách kiểm tra trên, đã đánh dấu) | warn      |
+| R0235   | Khẳng định "Người soát xét có thể hoàn thành chỉ dùng sản phẩm này + tiền nhiệm" đã được xác minh | advisory |
 
-### Forbidden hedge phrases (locked enum, R0230)
+### Các cụm từ lảng tránh bị cấm (enum khóa, R0230)
 
 ```yaml
 forbidden_hedges:
   - "obvious"
-  - "should be" # use "must" or specific outcome
+  - "should be" # dùng "must" hoặc kết quả cụ thể
   - "as appropriate"
   - "where applicable"
   - "etc."
@@ -94,72 +94,72 @@ forbidden_hedges:
   - "todo"
   - "lorem ipsum"
   - "to be determined"
-  - "later" # context-dependent; allowed in "future revisions" sections
-  - "user-friendly" # use specific UX criterion
-  - "performant" # use specific perf target
-  - "scalable" # use specific scale target
-  - "robust" # use specific failure-mode coverage
-  - "industry-standard" # cite specific standard
-  - "best practice" # cite specific source
+  - "later" # phụ thuộc ngữ cảnh; cho phép trong mục "các bản sửa đổi tương lai"
+  - "user-friendly" # dùng tiêu chí UX cụ thể
+  - "performant" # dùng mục tiêu hiệu năng cụ thể
+  - "scalable" # dùng mục tiêu quy mô cụ thể
+  - "robust" # dùng độ bao phủ chế độ lỗi cụ thể
+  - "industry-standard" # trích dẫn tiêu chuẩn cụ thể
+  - "best practice" # trích dẫn nguồn cụ thể
 ```
 
-The list is tunable; additions require ADR-0005 lifecycle (severity-tiered with `enforce_after`).
+Danh sách có thể điều chỉnh; việc bổ sung cần tuân theo vòng đời ADR-0005 (phân tầng nghiêm trọng với `enforce_after`).
 
-### Reviewer agents extended with completeness focus
+### Mở rộng reviewer agent với trọng tâm tính đầy đủ
 
-Existing `@claude-code-reviewer` and `@claude-architect-reviewer` (per ADR-0011) get prompt updates: their finding categories now include `completeness-gap` (new finding fingerprint category) which maps to R0230-R0234.
+Các agent `@claude-code-reviewer` và `@claude-architect-reviewer` hiện có (theo ADR-0011) được cập nhật prompt: danh mục kết quả của họ giờ bao gồm `completeness-gap` (danh mục fingerprint kết quả mới) ánh xạ đến R0230-R0234.
 
-A new reviewer specialty:
+Một chuyên môn reviewer mới:
 
-- `@claude-completeness-reviewer` — sole job is to verify the completeness checklist, regex-scan for hedges, and validate "downstream role can consume without asking back."
+- `@claude-completeness-reviewer` — nhiệm vụ duy nhất là xác minh danh sách kiểm tra tính đầy đủ, quét regex tìm cụm từ lảng tránh, và kiểm chứng "vai trò hạ lưu có thể sử dụng mà không cần hỏi ngược lại."
 
-## Consequences
+## Hệ quả
 
-### Positive
+### Tích cực
 
-- Concrete, measurable outputs become the default — no more "should be performant"
-- Downstream roles spend less time asking back; per-feature wall-clock reduced
-- Loop divergence is reduced (concrete findings → easier to fix definitively)
-- Audit chain stronger — every claim cited
-- Hallucinations land as `<<MISSING-INFO>>` markers instead of confident-sounding fabrications
+- Đầu ra cụ thể, có thể đo lường trở thành mặc định — không còn "sẽ hiệu năng tốt"
+- Các vai trò hạ dựng ít thời gian hỏi ngược lại hơn; thời gian thực tế mỗi tính năng giảm
+- Phân kỳ vòng lặp giảm (kết quả cụ thể -> dễ khắc phục dứt khoát)
+- Chuỗi kiểm toán mạnh hơn — mọi tuyên bố đều được trích dẫn
+- Ảo giác xuất hiện dưới dạng đánh dấu `<<MISSING-INFO>>` thay vì bịa tạo nghe có vẻ tự tin
 
-### Negative / Costs
+### Hạn chế / Chi phí
 
-- Authoring takes longer — first drafts can no longer rely on hedges
-- ~10-20% prompt token increase per agent invocation (the boilerplate)
-- More escalations for `incomplete-input` early in adoption (eventually decreases as upstream artifacts tighten)
-- Forbidden-hedge enum needs maintenance as new vague patterns surface
+- Viết tác phẩm mất nhiều thời gian hơn — bản nháp đầu tiên không còn dựa vào cụm từ lảng tránh
+- Tăng ~10-20% token prompt mỗi lần gọi agent (boilerplate)
+- Nhiều leo thang `incomplete-input` hơn trong giai đoạn đầu áp dụng (sẽ giảm khi sản phẩm thượng nguồn chặt hơn)
+- Enum cụm từ lảng tránh bị cấm cần bảo trì khi xuất hiện mẫu mơ hồ mới
 
-### Neutral
+### Trung tính
 
-- The "Reviewer can complete using only this + predecessors" assertion is intentionally strong; some artifacts will need predecessor tightening to satisfy it
-- Numeric-vagueness rule (R0231) is heuristic; tune false-positive rate in first month
+- Khẳng định "Người soát xét có thể hoàn thành chỉ dùng sản phẩm này + tiền nhiệm" cố ý rất mạnh; một số sản phẩm cần siết chặt tiền nhiệm để thỏa mãn
+- Quy tắc mơ hồ số học (R0231) mang tính heuristic; điều chỉnh tỷ lệ dương tính giả trong tháng đầu tiên
 
-## Alternatives Considered
+## Các phương án đã cân nhắc
 
-### A. Stronger cite-or-die only (extend R1001) — Rejected
+### A. Chỉ tăng cường cite-or-die (mở rộng R1001) — Bị loại bỏ
 
-Doesn't catch numeric vagueness or soft hedges; doesn't enforce completeness checklist.
+Không phát hiện được mơ hồ số học hoặc cụm từ lảng tránh nhẹ; không ép buộc danh sách kiểm tra tính đầy đủ.
 
-### B. Reviewer-only enforcement (no linter) — Rejected
+### B. Chỉ ép buộc qua reviewer (không có linter) — Bị loại bỏ
 
-Reviewers miss things at scale; ADR-0009's defense-in-depth principle says detection is one layer.
+Reviewer bỏ sót ở quy mô lớn; nguyên tắc phòng thủ chiều sâu của ADR-0009 nói phát hiện chỉ là một lớp.
 
-### C. Skip; trust prompts — Rejected
+### C. Bỏ qua; tin tưởng prompt — Bị loại bỏ
 
-Without enforcement, prompt boilerplate gets dropped during quick edits.
+Không có ép buộc, boilerplate prompt bị loại bỏ trong các chỉnh sửa nhanh.
 
-## Related
+## Liên kết liên quan
 
-- ADR-0001 — Per-feature folder + per-artifact file
-- ADR-0009 — Defense-in-depth (R-family extended)
-- ADR-0011 — Hybrid agent identity (`@claude-completeness-reviewer` joins roster)
-- ADR-0013 — Agentic loop topology (`completeness-gap` joins finding category enum)
-- All prompt templates updated to include the contract section
+- ADR-0001 — Thư mục theo tính năng + file theo sản phẩm bàn giao
+- ADR-0009 — Phòng thủ chiều sâu (họ R được mở rộng)
+- ADR-0011 — Nhận dạng agent lai (`@claude-completeness-reviewer` gia nhập danh sách)
+- ADR-0013 — Cấu trúc liên kết vòng lặp agent (`completeness-gap` gia nhập enum danh mục kết quả)
+- Tất cả bản mẫu prompt được cập nhật để bao gồm mục hợp đồng
 
-## Notes for future revision
+## Ghi chú cho lần xem xét sau
 
-- **Forbidden-hedge enum** evolves; quarterly review of false-positives + new patterns
-- **R0231 numeric vagueness** is hardest to enforce — start advisory, tighten as data accumulates
-- **`<<MISSING-INFO>>` marker convention** must be respected by all authoring agents (prompt update needed across all existing prompt templates as a one-time migration)
-- **Self-verification step** can be partially auto-checked by linter (R0234); humans still decide on judgment items
+- **Enum cụm từ lảng tránh bị cấm** tiến hóa; xem xét hàng quý về dương tính giả + mẫu mới
+- **R0231 mơ hồ số học** là khó ép buộc nhất — bắt đầu advisory, siết chặt khi tích lũy dữ liệu
+- **Quy ước đánh dấu `<<MISSING-INFO>>`** phải được tôn trọng bởi tất cả agent tác giả (cần cập nhật prompt trên tất cả bản mẫu prompt hiện có như một lần di chuyển)
+- **Bước tự xác minh** có thể được tự kiểm tra một phần bởi linter (R0234); con người vẫn quyết định các mục cần phán đoán

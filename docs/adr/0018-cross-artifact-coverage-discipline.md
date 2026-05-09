@@ -1,27 +1,27 @@
-# ADR-0018: Cross-artifact coverage discipline (BA + QA + UI/UX proactive gap detection)
+# ADR-0018: Kỷ luật bao phủ chéo sản phẩm bàn giao (phát hiện khoảng trống chủ động bởi BA + QA + UI/UX)
 
-- **Status:** Accepted
-- **Date:** 2026-05-08
-- **Deciders:** SA (lead), BA, QA, UI/UX, all roles consulted
-- **Tags:** workflow, traceability, gap-detection, foundation
-- **Supersedes:** —
-- **Superseded by:** —
+- **Trạng thái:** Đã phê duyệt
+- **Ngày:** 08-05-2026
+- **Người quyết định:** SA (dẫn dắt), BA, QA, UI/UX, tham vấn tất cả các vai trò
+- **Thẻ:** quy-trình, khả-năng-truy-nguồn, phát-hiện-khoảng-trống, nền-tảng
+- **Thay thế cho:** —
+- **Được thay thế bởi:** —
 
-## Context
+## Ngữ cảnh
 
-Gen 2 TT.OUT.MANUAL regen exposed a workflow gap. The system caught **per-artifact** completeness violations (R0103 no-TBD, R0220 missing a11y baseline, R0230 forbidden hedges, R1001 cite-or-die) but missed **cross-artifact** gaps:
+Việc tái tạo Gen 2 TT.OUT.MANUAL đã phơi bày một khoảng trống quy trình. Hệ thống phát hiện được vi phạm tính đầy đủ **trong từng sản phẩm bàn giao** (R0103 no-TBD, R0220 thiếu baseline a11y, R0230 cụm từ lảng tránh bị cấm, R1001 cite-or-die) nhưng bỏ sót các khoảng trống **chéo giữa các sản phẩm bàn giao**:
 
-1. `07-ui-spec.md §3` route map listed `/customers`, `/subscriptions`, `/invoices` as full pages — Frontend agent shipped placeholders. Spec ↔ implementation drifted silently.
-2. `07-ui-spec.md §7` data-contracts referenced `GET /v1/customers` (admin search) — backend `02-design.md` API table didn't include this endpoint. Spec ↔ design drifted silently.
-3. `01-requirements.md` FR-1.4 ("self-service plan change") had no UI implementation. Requirements ↔ implementation drifted silently.
-4. No QA agent verified that every endpoint in design has a test in `04-test-plan.md`. Design ↔ tests drifted silently.
+1. `07-ui-spec.md §3` bản đồ tuyến liệt kê `/customers`, `/subscriptions`, `/invoices` là các trang đầy đủ — Agent Frontend chỉ giao các trang giữ chỗ. Spec <-> triển khai sai lệch âm thầm.
+2. `07-ui-spec.md §7` hợp đồng dữ liệu tham chiếu `GET /v1/customers` (tìm kiếm admin) — bảng API `02-design.md` của backend không bao gồm endpoint này. Spec <-> thiết kế sai lệch âm thầm.
+3. `01-requirements.md` FR-1.4 ("tự đổi gói cước") không có triển khai UI. Yêu cầu <-> triển khai sai lệch âm thầm.
+4. Không có agent QA nào xác minh rằng mọi endpoint trong thiết kế đều có kiểm thử trong `04-test-plan.md`. Thiết kế <-> kiểm thử sai lệch âm thầm.
 
-Per ADR-0013, the **per-batch (middle-layer) loop** was supposed to catch these — coordinator reviews ALL artifacts together for cross-cutting consistency. But the demonstration slice didn't actually run the per-batch reviewer; I (the orchestrator) wrote `07-ui-spec.md` independently of the Frontend agent's output. The check existed in design but not in execution.
+Theo ADR-0013, **vòng lặp theo lô (tầng giữa)** đáng lẽ phải phát hiện những vấn đề này — coordinator soát xét TẤT CẢ sản phẩm bàn giao cùng lúc để đảm bảo tính nhất quán xuyên suốt. Nhưng lát cắt demo thực tế không chạy reviewer theo lô; tôi (orchestrator) đã viết `07-ui-spec.md` độc lập với đầu ra của agent Frontend. Kiểm tra tồn tại trong thiết kế nhưng không được thực thi.
 
-The fix is twofold:
+Khắc phục theo hai hướng:
 
-- **Mandatory automated coverage checks** (linter R0240 family) — machine-enforced; can't be skipped
-- **Mandatory proactive role-level reviews** (BA + QA + UI/UX workflow extensions) — humans/agents do gap detection BEFORE Dev implements, not after
+- **Kiểm tra bao phủ tự động bắt buộc** (họ linter R0240) — ép buộc bằng máy; không thể bỏ qua
+- **Soát xét chủ động ở mức vai trò bắt buộc** (mở rộng quy trình BA + QA + UI/UX) — con người/agent phát hiện khoảng trống TRƯỚC KHI Dev triển khai, không phải sau
 
 ## Decision
 
