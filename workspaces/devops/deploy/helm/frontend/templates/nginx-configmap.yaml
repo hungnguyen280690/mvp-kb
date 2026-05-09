@@ -1,0 +1,65 @@
+# generated_by: Claude Opus 4.7 (DevOps/SRE)
+# applies_adrs: [ADR-0007]
+# classification: Public
+#
+# nginx configuration for serving the React SPA.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "vdbas.fullname" . }}-nginx
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vdbas.labels" . | nindent 4 }}
+  annotations:
+    generated_by: "Claude Opus 4.7 (DevOps/SRE)"
+data:
+  default.conf: |
+    server {
+        listen 8080;
+        server_name _;
+        root /usr/share/nginx/html;
+        index index.html;
+
+        # Security headers
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';" always;
+
+        # Gzip compression
+        gzip on;
+        gzip_types text/plain text/css application/json application/javascript text/xml;
+        gzip_min_length 256;
+
+        # Cache static assets
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+            expires 30d;
+            add_header Cache-Control "public, immutable";
+        }
+
+        # Health check endpoint
+        location /healthz {
+            access_log off;
+            return 200 "OK";
+            add_header Content-Type text/plain;
+        }
+
+        # Metrics stub
+        location /metrics {
+            access_log off;
+            return 200 "# HELP vdbas_frontend_info Frontend service info\n# TYPE vdbas_frontend_info gauge\nvdbas_frontend_info{version=\"{{ .Chart.AppVersion }}\"} 1\n";
+            add_header Content-Type text/plain;
+        }
+
+        # SPA fallback — all routes served by index.html
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+
+        # Deny access to hidden files
+        location ~ /\. {
+            deny all;
+            return 404;
+        }
+    }

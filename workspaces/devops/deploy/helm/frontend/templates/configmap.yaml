@@ -1,0 +1,16 @@
+# generated_by: Claude Opus 4.7 (DevOps/SRE)
+# applies_adrs: [ADR-0007]
+# classification: Public
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "vdbas.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vdbas.labels" . | nindent 4 }}
+  annotations:
+    generated_by: "Claude Opus 4.7 (DevOps/SRE)"
+data:
+  BFF_API_URL: {{ .Values.config.bffApiUrl | quote }}
+  KEYCLOAK_URL: {{ .Values.config.keycloakUrl | quote }}
+  KEYCLOAK_CLIENT_ID: {{ .Values.config.keycloakClientId | quote }}
