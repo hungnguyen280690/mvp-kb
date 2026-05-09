@@ -1,0 +1,25 @@
+# generated_by: Claude Opus 4.7 (DevOps/SRE)
+# applies_adrs: [ADR-0007]
+# classification: Public
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "vdbas.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vdbas.labels" . | nindent 4 }}
+  annotations:
+    generated_by: "Claude Opus 4.7 (DevOps/SRE)"
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+    - name: management
+      port: {{ .Values.service.managementPort }}
+      targetPort: management
+      protocol: TCP
+  selector:
+    {{- include "vdbas.selectorLabels" . | nindent 4 }}

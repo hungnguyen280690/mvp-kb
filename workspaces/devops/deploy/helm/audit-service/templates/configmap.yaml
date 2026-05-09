@@ -1,0 +1,24 @@
+# generated_by: Claude Opus 4.7 (DevOps/SRE)
+# applies_adrs: [ADR-0007]
+# classification: Public
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "vdbas.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vdbas.labels" . | nindent 4 }}
+  annotations:
+    generated_by: "Claude Opus 4.7 (DevOps/SRE)"
+data:
+  SPRING_PROFILES_ACTIVE: {{ .Values.environment | default "dev" | quote }}
+  HASH_CHAIN_ALGORITHM: {{ .Values.config.hashChain.algorithm | quote }}
+  HASH_CHAIN_VERIFICATION_CRON: {{ .Values.config.hashChain.verificationCron | quote }}
+  HASH_CHAIN_VERIFICATION_BATCH_SIZE: {{ .Values.config.hashChain.verificationBatchSize | quote }}
+  OUTBOX_POLLING_INTERVAL_MS: {{ .Values.config.outbox.pollingIntervalMs | quote }}
+  OUTBOX_BATCH_SIZE: {{ .Values.config.outbox.batchSize | quote }}
+  OUTBOX_RETENTION_DAYS: {{ .Values.config.outbox.retentionDays | quote }}
+  AUDIT_LOG_QUERY_MAX_DAYS: {{ .Values.config.auditLog.queryMaxDays | quote }}
+  AUDIT_LOG_EXPORT_BATCH_SIZE: {{ .Values.config.auditLog.exportBatchSize | quote }}
+  LOGGING_FORMAT: {{ .Values.logging.format | default "json" | quote }}
+  OTEL_SERVICE_NAME: {{ include "vdbas.name" . }}

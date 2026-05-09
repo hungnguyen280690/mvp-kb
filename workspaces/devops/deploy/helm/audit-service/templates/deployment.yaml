@@ -1,0 +1,111 @@
+# generated_by: Claude Opus 4.7 (DevOps/SRE)
+# applies_adrs: [ADR-0007, ADR-SA-0001]
+# classification: Public
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vdbas.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vdbas.labels" . | nindent 4 }}
+  annotations:
+    generated_by: "Claude Opus 4.7 (DevOps/SRE)"
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "vdbas.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        {{- include "vdbas.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "vdbas.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "vdbas.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+            - name: management
+              containerPort: {{ .Values.service.managementPort }}
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: {{ .Values.environment }}
+            - name: SERVER_PORT
+              value: {{ .Values.service.port | quote }}
+            - name: MANAGEMENT_SERVER_PORT
+              value: {{ .Values.service.managementPort | quote }}
+            - name: HASH_CHAIN_ALGORITHM
+              value: {{ .Values.config.hashChain.algorithm }}
+            - name: HASH_CHAIN_VERIFICATION_CRON
+              value: {{ .Values.config.hashChain.verificationCron }}
+            - name: HASH_CHAIN_VERIFICATION_BATCH_SIZE
+              value: {{ .Values.config.hashChain.verificationBatchSize | quote }}
+            - name: OUTBOX_POLLING_INTERVAL_MS
+              value: {{ .Values.config.outbox.pollingIntervalMs | quote }}
+            - name: OUTBOX_BATCH_SIZE
+              value: {{ .Values.config.outbox.batchSize | quote }}
+            - name: OUTBOX_RETENTION_DAYS
+              value: {{ .Values.config.outbox.retentionDays | quote }}
+            - name: AUDIT_LOG_QUERY_MAX_DAYS
+              value: {{ .Values.config.auditLog.queryMaxDays | quote }}
+            - name: AUDIT_LOG_EXPORT_BATCH_SIZE
+              value: {{ .Values.config.auditLog.exportBatchSize | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ include "vdbas.name" . }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.tracing.endpoint }}
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: {{ .Values.tracing.samplingRate | quote }}
+            - name: SPRING_DATASOURCE_URL
+              value: {{ include "vdbas.jdbcUrl" . }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "vdbas.fullname" . }}
+            - secretRef:
+                name: {{ .Values.database.secretName }}
+                optional: false
+            - secretRef:
+                name: {{ .Values.mq.secretName }}
+                optional: false
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
