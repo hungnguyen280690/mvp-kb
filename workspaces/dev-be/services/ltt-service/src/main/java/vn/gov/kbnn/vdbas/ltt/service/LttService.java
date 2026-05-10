@@ -13,6 +13,7 @@ import vn.gov.kbnn.vdbas.ltt.domain.enums.EventType;
 import vn.gov.kbnn.vdbas.ltt.domain.enums.LttState;
 import vn.gov.kbnn.vdbas.ltt.outbox.OutboxWriter;
 import vn.gov.kbnn.vdbas.ltt.repository.LttRepository;
+import vn.gov.kbnn.vdbas.ltt.repository.LttAuditRepository;
 import vn.gov.kbnn.vdbas.ltt.repository.OutboxRepository;
 import vn.gov.kbnn.vdbas.ltt.statemachine.LttStateMachine;
 import vn.gov.kbnn.vdbas.ltt.statemachine.TransitionResult;
@@ -33,7 +34,7 @@ import java.util.UUID;
 public class LttService {
 
     private final LttRepository lttRepository;
-    private final OutboxRepository outboxRepository;
+    private final LttAuditRepository lttAuditRepository;
     private final LttStateMachine stateMachine;
     private final ValRuleValidator valRuleValidator;
     private final FundReserveService fundReserveService;
@@ -467,7 +468,7 @@ public class LttService {
 
     @Transactional(readOnly = true)
     public Page<LttAudit> getAuditTrail(Long lttId, int page, int size) {
-        return outboxRepository.findByLttIdOrderByPerformedAtDesc(lttId, PageRequest.of(page, size));
+        return lttAuditRepository.findByLttIdOrderByPerformedAtDesc(lttId, PageRequest.of(page, size));
     }
 
     // =========================================================================
@@ -487,6 +488,6 @@ public class LttService {
                 .versionTo(ltt.getVersion())
                 .reason(reason)
                 .build();
-        outboxRepository.save(audit);
+        lttAuditRepository.save(audit);
     }
 }
