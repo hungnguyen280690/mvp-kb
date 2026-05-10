@@ -7,7 +7,7 @@ import { useAuth } from '@/auth';
 
 export function Navbar() {
   const { t } = useTranslation();
-  const { user, logout, switchRole, availableUsers } = useAuth();
+  const { user, logout } = useAuth();
 
   if (!user) return null;
 
