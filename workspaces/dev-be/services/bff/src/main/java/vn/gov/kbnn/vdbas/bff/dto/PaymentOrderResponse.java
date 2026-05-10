@@ -6,11 +6,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.UUID;
 
 @Data
 public class PaymentOrderResponse {
-    private UUID id;
+    private Long id;
     private long version;
     private String status;
     private String requestNumber;
@@ -49,7 +48,7 @@ public class PaymentOrderResponse {
     private String providerRefId;
     private LocalDate settlementDate;
     private String glVoucherNo;
-    private UUID reversalOfId;
+    private Long reversalOfId;
     private BigDecimal holdAmount;
     private String rejectReason;
     private boolean deleted;
