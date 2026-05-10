@@ -1,18 +1,22 @@
 package vn.gov.kbnn.vdbas.bff.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.UUID;
 
 @Data
 public class PaymentOrderResponse {
-    private UUID id;
+    private Long id;
     private long version;
+    @JsonProperty("state")
     private String status;
+
+    @com.fasterxml.jackson.annotation.JsonGetter("status")
+    public String getStatus() { return status; }
     private String requestNumber;
     private String channel;
     private String orderType;
@@ -49,7 +53,7 @@ public class PaymentOrderResponse {
     private String providerRefId;
     private LocalDate settlementDate;
     private String glVoucherNo;
-    private UUID reversalOfId;
+    private Long reversalOfId;
     private BigDecimal holdAmount;
     private String rejectReason;
     private boolean deleted;

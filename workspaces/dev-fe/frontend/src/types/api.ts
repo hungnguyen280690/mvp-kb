@@ -3,15 +3,13 @@
 // Response types tu OpenAPI api-internal-v1.yaml
 // ============================================================================
 
-/** Phan trang danh sach LTT */
+/** Phan trang danh sach LTT — match Spring Data Page format */
 export interface PaymentOrderListResponse {
   content: import('./payment-order').PaymentOrderSummary[];
-  page: {
-    number: number;
-    size: number;
-    totalElements: number;
-    totalPages: number;
-  };
+  number: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
 }
 
 /** Audit log entry */

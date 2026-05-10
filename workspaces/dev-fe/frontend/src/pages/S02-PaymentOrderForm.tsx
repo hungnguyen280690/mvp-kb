@@ -460,8 +460,9 @@ export function S02PaymentOrderForm() {
                   data-testid="field-transaction-type"
                 >
                   <option value="">-- Chon --</option>
-                  <option value="INTERNAL">Noi bo</option>
-                  <option value="CROSS_BORDER">Lien ngan hang</option>
+                  <option value="TX-INT">Noi bo</option>
+                  <option value="TX-LCC">Lien ngan hang chuyen cung</option>
+                  <option value="TX-LCT">Lien ngan hang chuyen thuong</option>
                 </select>
               </div>
             )}

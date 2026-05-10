@@ -1,10 +1,12 @@
 package vn.gov.kbnn.vdbas.ltt.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -27,6 +29,8 @@ public class LttLineItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "LTT_ID", nullable = false)
+    @JsonIgnore
+    @ToString.Exclude
     private Ltt ltt;
 
     @Column(name = "LINE_NO", nullable = false)

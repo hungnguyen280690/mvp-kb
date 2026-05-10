@@ -1,15 +1,15 @@
 package vn.gov.kbnn.vdbas.bff.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 @Data
 public class PaymentOrderSummaryDto {
-    private UUID id;
+    private Long id;
     private String requestNumber;
     private String channel;
     private String orderType;
@@ -20,7 +20,11 @@ public class PaymentOrderSummaryDto {
     private LocalDate paymentDate;
     private BigDecimal amount;
     private String currency;
+    @JsonProperty("state")
     private String status;
+
+    @com.fasterxml.jackson.annotation.JsonGetter("status")
+    public String getStatus() { return status; }
     private String makerName;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;

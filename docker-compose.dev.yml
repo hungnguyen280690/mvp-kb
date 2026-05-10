@@ -30,7 +30,7 @@ services:
   # IBM MQ developer edition (queue manager QM1)
   # ─────────────────────────────────────────────────
   ibmmq:
-    image: ibmcom/mq:9.4.0.0-r2
+    image: ibmcom/mq:latest
     container_name: kbnn-ibmmq
     environment:
       LICENSE: accept

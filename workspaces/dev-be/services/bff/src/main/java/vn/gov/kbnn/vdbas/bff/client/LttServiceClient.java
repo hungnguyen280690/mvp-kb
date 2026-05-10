@@ -8,6 +8,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import vn.gov.kbnn.vdbas.bff.dto.*;
 
+import java.util.ArrayList;
+import java.util.Map;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -62,7 +65,7 @@ public class LttServiceClient {
             UUID idempotencyKey, String userId, String userRole,
             PaymentOrderCreateRequest request) {
 
-        return lttWebClient.post()
+        Map<String, Object> raw = lttWebClient.post()
                 .uri(API_PATH + "/payment-orders")
                 .header("Idempotency-Key", idempotencyKey.toString())
                 .header("X-User-Id", userId)
@@ -70,22 +73,24 @@ public class LttServiceClient {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .retrieve()
-                .bodyToMono(PaymentOrderResponse.class)
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                 .block();
+        return mapToPaymentOrderResponse(raw);
     }
 
-    public PaymentOrderResponse getPaymentOrder(UUID id, String userId, String userRole) {
-        return lttWebClient.get()
+    public PaymentOrderResponse getPaymentOrder(Long id, String userId, String userRole) {
+        Map<String, Object> raw = lttWebClient.get()
                 .uri(API_PATH + "/payment-orders/{id}", id)
                 .header("X-User-Id", userId)
                 .header("X-User-Role", userRole)
                 .retrieve()
-                .bodyToMono(PaymentOrderResponse.class)
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                 .block();
+        return mapToPaymentOrderResponse(raw);
     }
 
     public PaymentOrderResponse updatePaymentOrder(
-            UUID id, long version, String userId, String userRole,
+            Long id, long version, String userId, String userRole,
             PaymentOrderUpdateRequest request) {
 
         return lttWebClient.put()
@@ -101,7 +106,7 @@ public class LttServiceClient {
     }
 
     public DeleteResponse deletePaymentOrder(
-            UUID id, long version, String userId, String userRole,
+            Long id, long version, String userId, String userRole,
             DeleteRequest request) {
 
         return lttWebClient.method(org.springframework.http.HttpMethod.DELETE)
@@ -121,40 +126,40 @@ public class LttServiceClient {
     // =========================================================================
 
     public PaymentOrderResponse submitPaymentOrder(
-            UUID id, UUID idempotencyKey, String userId, String userRole) {
+            Long id, UUID idempotencyKey, String userId, String userRole) {
         return postAction("/payment-orders/{id}/submit", id, idempotencyKey, userId, userRole);
     }
 
     public PaymentOrderResponse approvePaymentOrder(
-            UUID id, UUID idempotencyKey, String userId, String userRole) {
+            Long id, UUID idempotencyKey, String userId, String userRole) {
         return postAction("/payment-orders/{id}/approve", id, idempotencyKey, userId, userRole);
     }
 
     public PaymentOrderResponse rejectPaymentOrder(
-            UUID id, UUID idempotencyKey, String userId, String userRole,
+            Long id, UUID idempotencyKey, String userId, String userRole,
             RejectRequest request) {
         return postActionWithBody("/payment-orders/{id}/reject", id, idempotencyKey, userId, userRole, request);
     }
 
     public PaymentOrderResponse signPaymentOrder(
-            UUID id, UUID idempotencyKey, String userId, String userRole,
+            Long id, UUID idempotencyKey, String userId, String userRole,
             SignRequest request) {
         return postActionWithBody("/payment-orders/{id}/sign", id, idempotencyKey, userId, userRole, request);
     }
 
     public PaymentOrderResponse sendPaymentOrder(
-            UUID id, UUID idempotencyKey, String userId, String userRole) {
+            Long id, UUID idempotencyKey, String userId, String userRole) {
         return postAction("/payment-orders/{id}/send", id, idempotencyKey, userId, userRole);
     }
 
     public PaymentOrderResponse cancelPaymentOrder(
-            UUID id, UUID idempotencyKey, String userId, String userRole,
+            Long id, UUID idempotencyKey, String userId, String userRole,
             CancelRequest request) {
         return postActionWithBody("/payment-orders/{id}/cancel", id, idempotencyKey, userId, userRole, request);
     }
 
     public PaymentOrderResponse reversePaymentOrder(
-            UUID id, UUID idempotencyKey, String userId, String userRole,
+            Long id, UUID idempotencyKey, String userId, String userRole,
             ReverseRequest request) {
         return postActionWithBody("/payment-orders/{id}/reverse", id, idempotencyKey, userId, userRole, request);
     }
@@ -224,7 +229,7 @@ public class LttServiceClient {
     // Audit Trail
     // =========================================================================
 
-    public AuditTrailResponse getAuditTrail(UUID id, int page, int size, String userId, String userRole) {
+    public AuditTrailResponse getAuditTrail(Long id, int page, int size, String userId, String userRole) {
         return lttWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path(API_PATH + "/payment-orders/{id}/audit-trail")
@@ -242,21 +247,22 @@ public class LttServiceClient {
     // Helper methods
     // =========================================================================
 
-    private PaymentOrderResponse postAction(String path, UUID id, UUID idempotencyKey,
+    private PaymentOrderResponse postAction(String path, Long id, UUID idempotencyKey,
                                              String userId, String userRole) {
-        return lttWebClient.post()
+        Map<String, Object> raw = lttWebClient.post()
                 .uri(API_PATH + path, id)
                 .header("Idempotency-Key", idempotencyKey.toString())
                 .header("X-User-Id", userId)
                 .header("X-User-Role", userRole)
                 .retrieve()
-                .bodyToMono(PaymentOrderResponse.class)
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                 .block();
+        return mapToPaymentOrderResponse(raw);
     }
 
-    private PaymentOrderResponse postActionWithBody(String path, UUID id, UUID idempotencyKey,
+    private PaymentOrderResponse postActionWithBody(String path, Long id, UUID idempotencyKey,
                                                      String userId, String userRole, Object body) {
-        return lttWebClient.post()
+        Map<String, Object> raw = lttWebClient.post()
                 .uri(API_PATH + path, id)
                 .header("Idempotency-Key", idempotencyKey.toString())
                 .header("X-User-Id", userId)
@@ -264,7 +270,111 @@ public class LttServiceClient {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
                 .retrieve()
-                .bodyToMono(PaymentOrderResponse.class)
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                 .block();
+        return mapToPaymentOrderResponse(raw);
+    }
+
+    @SuppressWarnings("unchecked")
+    private PaymentOrderResponse mapToPaymentOrderResponse(Map<String, Object> raw) {
+        if (raw == null) return null;
+        PaymentOrderResponse r = new PaymentOrderResponse();
+        r.setId(toLong(raw.get("id")));
+        r.setVersion(toLong(raw.get("version")));
+        r.setStatus(str(raw.get("state")));
+        r.setChannel(str(raw.get("channel")));
+        r.setOrderType(str(raw.get("orderType")));
+        r.setTransactionType(str(raw.get("txnType")));
+        r.setSenderBankCode(str(raw.get("senderBankCode")));
+        r.setSenderBankName(str(raw.get("senderBankName")));
+        r.setReceiverBankCode(str(raw.get("receiverBankCode")));
+        r.setReceiverBankName(str(raw.get("receiverBankName")));
+        r.setPaymentContent(str(raw.get("paymentContent")));
+        r.setCurrency(str(raw.get("currency")));
+        r.setFeeType(str(raw.get("feeType")));
+        r.setOriginalDocNo(str(raw.get("origDocNo")));
+        r.setRejectReason(str(raw.get("rejectReason")));
+        r.setMakerId(str(raw.get("makerId")));
+        r.setMakerName(str(raw.get("makerName")));
+        r.setCheckerId(str(raw.get("checkerId")));
+        r.setCheckerName(str(raw.get("checkerName")));
+        r.setApproverId(str(raw.get("approverId")));
+        r.setApproverName(str(raw.get("approverName")));
+        r.setGlVoucherNo(str(raw.get("glVoucherNo")));
+
+        if (raw.get("paymentDate") != null) r.setPaymentDate(java.time.LocalDate.parse(str(raw.get("paymentDate"))));
+        if (raw.get("amount") != null) r.setAmount(new java.math.BigDecimal(str(raw.get("amount"))));
+        if (raw.get("exchangeRate") != null) r.setExchangeRate(new java.math.BigDecimal(str(raw.get("exchangeRate"))));
+        if (raw.get("createdAt") != null) r.setCreatedAt(java.time.OffsetDateTime.parse(str(raw.get("createdAt"))));
+        if (raw.get("updatedAt") != null) r.setUpdatedAt(java.time.OffsetDateTime.parse(str(raw.get("updatedAt"))));
+        if (raw.get("checkedAt") != null) r.setCheckedAt(java.time.OffsetDateTime.parse(str(raw.get("checkedAt"))));
+        if (raw.get("approvedAt") != null) r.setApprovedAt(java.time.OffsetDateTime.parse(str(raw.get("approvedAt"))));
+
+        // Map sender info from flat fields
+        SenderInfoDto sender = new SenderInfoDto();
+        sender.setName(str(raw.get("senderName")));
+        sender.setAddress(str(raw.get("senderAddress")));
+        sender.setAccountNumber(str(raw.get("senderAccount")));
+        sender.setCustomerCode(str(raw.get("senderCustomerCode")));
+        sender.setBankCode(str(raw.get("senderBankCode")));
+        sender.setBankName(str(raw.get("senderBankName")));
+        sender.setIdentityDoc(str(raw.get("senderIdNumber")));
+        sender.setTpcpCode(str(raw.get("tpcpCode")));
+        if (raw.get("senderIdIssueDate") != null)
+            sender.setIdentityDocIssueDate(java.time.LocalDate.parse(str(raw.get("senderIdIssueDate"))));
+        r.setSenderInfo(sender);
+
+        // Map receiver info from flat fields
+        ReceiverInfoDto receiver = new ReceiverInfoDto();
+        receiver.setName(str(raw.get("receiverName")));
+        receiver.setAddress(str(raw.get("receiverAddress")));
+        receiver.setAccountNumber(str(raw.get("receiverAccount")));
+        receiver.setBankCode(str(raw.get("receiverBankCode")));
+        receiver.setBankName(str(raw.get("receiverBankName")));
+        receiver.setAccountName(str(raw.get("receiverAccountName")));
+        receiver.setIdentityDoc(str(raw.get("receiverIdNumber")));
+        if (raw.get("receiverIdIssueDate") != null)
+            receiver.setIdentityDocIssueDate(java.time.LocalDate.parse(str(raw.get("receiverIdIssueDate"))));
+        r.setReceiverInfo(receiver);
+
+        // Map line items
+        Object rawItems = raw.get("lineItems");
+        if (rawItems instanceof java.util.List<?> list) {
+            java.util.List<LineItemDto> items = new ArrayList<>();
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> m) {
+                    LineItemDto li = new LineItemDto();
+                    li.setFundCode(str(m.get("coaFund")));
+                    li.setNaturalAccount(str(m.get("coaNaturalAccount")));
+                    li.setDvqhns(str(m.get("coaDvqhns")));
+                    li.setBudgetLevel(str(m.get("coaBudgetLevel")));
+                    li.setChapter(str(m.get("coaChapter")));
+                    li.setEconomicSector(str(m.get("coaIndustry")));
+                    li.setNdkt(str(m.get("coaNdkt")));
+                    li.setArea(str(m.get("coaArea")));
+                    li.setProgram(str(m.get("coaProgram")));
+                    li.setFundSource(str(m.get("coaFundSource")));
+                    li.setTreasuryCode(str(m.get("coaTreasury")));
+                    li.setReserve(str(m.get("coaReserve")));
+                    li.setDescription(str(m.get("description")));
+                    if (m.get("lineAmount") != null) li.setItemAmount(new java.math.BigDecimal(str(m.get("lineAmount"))));
+                    items.add(li);
+                }
+            }
+            r.setLineItems(items);
+        }
+
+        r.setAttachments(java.util.List.of());
+        return r;
+    }
+
+    private static String str(Object val) {
+        return val != null ? val.toString() : null;
+    }
+
+    private static Long toLong(Object val) {
+        if (val == null) return null;
+        if (val instanceof Number n) return n.longValue();
+        return Long.parseLong(val.toString());
     }
 }

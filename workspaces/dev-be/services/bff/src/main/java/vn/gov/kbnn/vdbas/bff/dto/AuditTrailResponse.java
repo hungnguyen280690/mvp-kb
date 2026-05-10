@@ -4,7 +4,6 @@ import lombok.Data;
 
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.UUID;
 
 @Data
 public class AuditTrailResponse {
@@ -21,8 +20,8 @@ public class AuditTrailResponse {
 
     @Data
     public static class AuditEntryDto {
-        private UUID id;
-        private UUID paymentOrderId;
+        private Long id;
+        private Long paymentOrderId;
         private String action;
         private String userId;
         private String userName;

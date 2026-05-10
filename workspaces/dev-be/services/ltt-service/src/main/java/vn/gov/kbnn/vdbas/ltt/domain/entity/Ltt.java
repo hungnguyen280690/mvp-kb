@@ -239,7 +239,8 @@ public class Ltt {
 
     // === Nhom 6: Tich hop ===
     @Column(name = "UNIT_CODE", nullable = false, length = 10)
-    private String unitCode;
+    @Builder.Default
+    private String unitCode = "0000000000";
 
     @Column(name = "WORKING_DATE", nullable = false)
     private LocalDate workingDate;

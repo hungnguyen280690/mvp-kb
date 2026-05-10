@@ -145,6 +145,16 @@ services:
       - "3000:80"
     networks: [vdbas]
 
+  # ─── Cloudflare Quick Tunnel (auto *.trycloudflare.com URL) ──
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: vdbas-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://frontend:80
+    depends_on:
+      - frontend
+    networks: [vdbas]
+
 networks:
   vdbas:
     driver: bridge

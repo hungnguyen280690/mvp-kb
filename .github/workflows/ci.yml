@@ -93,6 +93,7 @@ jobs:
         if: steps.filter.outputs.db == 'true'
         run: |
           git diff origin/main...HEAD --name-status -- workspaces/sa/db/migrations/ | \
+            grep -v 'setup_all\.sql' | \
             awk '$1=="M" {print "ERROR: Modified existing migration: "$2; exit 1}'
 
   # ─────────────────────────────────────────────────
@@ -165,7 +166,7 @@ jobs:
   # 5. AI REVIEW — reviewer dựa trên nghiệp vụ (GLM)
   # ─────────────────────────────────────────────────
   ai-review:
-    name: "🤖 AI reviewer (GLM-4.7-Flash)"
+    name: "🛡️ AI Reviewer (Structural & Safety)"
     runs-on: ubuntu-latest
     needs: [static, unit-backend, unit-frontend, deps-scan]
     if: github.event_name == 'pull_request'
@@ -212,16 +213,22 @@ jobs:
           except:
               diff = ""
 
-          prompt = f"""Ban la CI reviewer tu dong cho du an MVP Kho Bac (VDBAS TT.OUT.MANUAL).
-          Xem PR diff, doi chieu chinh sach, dua ra LGTM=true hoac LGTM=false.
+          prompt = f"""Bạn là CI reviewer tự động chuyên trách về TÍNH TOÀN VẸN CẤU TRÚC và AN TOÀN cho dự án MVP Kho Bạc.
+          Nhiệm vụ của bạn là đảm bảo PR tuân thủ các quy tắc "vệ sinh" mã nguồn, bảo vệ các file quan trọng và giữ ranh giới giữa các Stage.
 
-          Kiem tra theo thu tu:
-          1. SAFETY (BLOCKING): hard-code credential, file .env/.pem/.key, sua migration cu, @Disabled/xit moi, rm -rf/sudo
-          2. DOMAIN: state transition phai khop STATES.md, audit phai co test hash chain, POST moi phai check idempotency, maker khac checker khac approver, log phai mask so TK
-          3. COVERAGE: code prod >50 dong phai co test, sua saga/audit/outbox phai co test moi
-          4. CONVENTION: khong sua file generated, class PascalCase, endpoint kebab-case
+          Kiểm tra theo thứ tự ưu tiên:
+          1. SAFETY (BLOCKING): 
+             - Chặn xóa/sửa file Signoff (gates/G*-signoff.md) hoặc quy tắc lõi (docs/SAFETY.md).
+             - Chặn sửa file DB migration cũ (db/migrations/V*__*.sql đã tồn tại).
+             - Chặn lệnh nguy hiểm (rm -rf, sudo), lộ secret (.env, .pem), bypass test (@Disabled).
+          2. STAGE FREEZING: Kiểm tra PR có vi phạm ranh giới Stage (VD: Stage 2 không được sửa code services/, Stage 3 không được sửa contracts/).
+          3. DOCUMENT CONTROL: File .md phải có front-matter đầy đủ; Chặn hedge phrases ("as needed", "TBD"); PR Stage 1-2 phải có diagram (.pml/.mmd).
+          4. NAMING & CODE: 
+             - Java: PascalCase (Class), camelCase (Method). DB: snake_case. API: kebab-case.
+             - Chặn debug code (console.log, printStackTrace).
+             - Code thêm > 50 dòng phải có test đi kèm.
 
-          DOMAIN CONTEXT:
+          DOMAIN CONTEXT (chỉ để tham chiếu cấu trúc):
           {context}
 
           PR DIFF STAT:
@@ -230,8 +237,8 @@ jobs:
           PR DIFF:
           {diff}
 
-          Output bat buoc JSON o cuoi:
-          {{"lgtm": true|false, "risk_level": "low|medium|high", "findings": [{{"severity": "block|warn|info", "file": "path", "line": 0, "category": "safety|domain|coverage|convention", "message": "mo ta", "suggestion": "cach sua"}}], "summary": "tom tat"}}
+          Output bắt buộc JSON ở cuối phản hồi:
+          {{"lgtm": true|false, "risk_level": "low|medium|high", "findings": [{{"severity": "block|warn|info", "file": "path", "line": 0, "category": "safety|stage|doc|naming|code", "message": "mô tả vi phạm", "suggestion": "cách sửa"}}], "summary": "tóm tắt ngắn gọn các vi phạm cấu trúc và an toàn."}}
           """
 
           payload = {

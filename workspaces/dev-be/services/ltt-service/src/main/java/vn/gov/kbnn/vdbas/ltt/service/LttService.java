@@ -13,6 +13,7 @@ import vn.gov.kbnn.vdbas.ltt.domain.enums.EventType;
 import vn.gov.kbnn.vdbas.ltt.domain.enums.LttState;
 import vn.gov.kbnn.vdbas.ltt.outbox.OutboxWriter;
 import vn.gov.kbnn.vdbas.ltt.repository.LttRepository;
+import vn.gov.kbnn.vdbas.ltt.repository.LttAuditRepository;
 import vn.gov.kbnn.vdbas.ltt.repository.OutboxRepository;
 import vn.gov.kbnn.vdbas.ltt.statemachine.LttStateMachine;
 import vn.gov.kbnn.vdbas.ltt.statemachine.TransitionResult;
@@ -33,7 +34,7 @@ import java.util.UUID;
 public class LttService {
 
     private final LttRepository lttRepository;
-    private final OutboxRepository outboxRepository;
+    private final LttAuditRepository lttAuditRepository;
     private final LttStateMachine stateMachine;
     private final ValRuleValidator valRuleValidator;
     private final FundReserveService fundReserveService;
@@ -47,6 +48,7 @@ public class LttService {
 
     @Transactional
     public Ltt create(Ltt ltt, String idempotencyKey, String userId, String userRole) {
+        log.info("Creating LTT with payload: {}", ltt);
         // Kiem tra idempotency
         if (idempotencyKey != null) {
             var existing = lttRepository.findByIdempotencyKey(idempotencyKey);
@@ -62,16 +64,23 @@ public class LttService {
         ltt.setMakerId(userId);
         ltt.setWorkingDate(LocalDate.now());
         ltt.setIsDeleted(false);
+        ltt.setSoYctt(generateSoYctt());
 
-        Ltt saved = lttRepository.save(ltt);
 
-        // Ghi audit
-        writeAudit(saved, EventType.CREATED, null, LttState.DRAFT.name(), userId, null);
+        try {
+            Ltt saved = lttRepository.save(ltt);
 
-        // Publish event
-        outboxWriter.writeEvent(saved, EventType.CREATED, userId, userRole, null);
+            // Ghi audit
+            writeAudit(saved, EventType.CREATED, null, LttState.DRAFT.name(), userId, null);
 
-        return saved;
+            // Publish event
+            outboxWriter.writeEvent(saved, EventType.CREATED, userId, userRole, null);
+
+            return saved;
+        } catch (Exception e) {
+            log.error("Error creating LTT: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
     @Transactional
@@ -467,7 +476,7 @@ public class LttService {
 
     @Transactional(readOnly = true)
     public Page<LttAudit> getAuditTrail(Long lttId, int page, int size) {
-        return outboxRepository.findByLttIdOrderByPerformedAtDesc(lttId, PageRequest.of(page, size));
+        return lttAuditRepository.findByLttIdOrderByPerformedAtDesc(lttId, PageRequest.of(page, size));
     }
 
     // =========================================================================
@@ -487,6 +496,12 @@ public class LttService {
                 .versionTo(ltt.getVersion())
                 .reason(reason)
                 .build();
-        outboxRepository.save(audit);
+        lttAuditRepository.save(audit);
+    }
+
+    private String generateSoYctt() {
+        // TODO: Implement sophisticated SO_YCTT generation rule, e.g., from a sequence.
+        // For now, using a simple timestamp-based unique string.
+        return "YCTT" + System.currentTimeMillis();
     }
 }
