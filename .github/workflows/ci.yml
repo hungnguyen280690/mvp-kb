@@ -248,48 +248,38 @@ jobs:
 
           python3 /tmp/review.py
 
-          # Call GLM API
-          RESPONSE=$(curl -s -X POST \
+          # Call GLM API — save raw response to file
+          curl -s -X POST \
             "https://open.bigmodel.cn/api/paas/v4/chat/completions" \
             -H "Authorization: Bearer $GLM_API_KEY" \
             -H "Content-Type: application/json" \
-            -d @/tmp/payload.json)
+            -d @/tmp/payload.json > /tmp/glm-raw-response.json
 
-          # Debug: log response keys (mask sensitive data)
+          # Debug: log response keys
           echo "API response status check:"
-          echo "$RESPONSE" | python3 -c "
-          import sys, json
-          try:
-              data = json.load(sys.stdin)
-              print('Keys:', list(data.keys()))
-              if 'error' in data:
-                  print('Error:', data['error'])
-              if 'choices' in data:
-                  print('Choices count:', len(data['choices']))
-          except Exception as e:
-              print(f'Parse error: {e}')
-              print('Raw (first 500):', sys.stdin.read()[:500])
-          " 2>/dev/null
+          python3 -c "
+          import json
+          with open('/tmp/glm-raw-response.json') as f:
+              data = json.load(f)
+          print('Keys:', list(data.keys()))
+          if 'error' in data:
+              print('Error:', data['error'])
+          if 'choices' in data:
+              print('Choices count:', len(data['choices']))
+          " 2>/dev/null || echo "Failed to parse API response"
 
-          # Extract text from response
-          TEXT=$(echo "$RESPONSE" | python3 -c "
-          import sys, json
-          try:
-              data = json.load(sys.stdin)
-              print(data['choices'][0]['message']['content'])
-          except Exception as e:
-              print(f'ERROR: {e}')
-          " 2>/dev/null || echo "ERROR: API call failed")
+          # Extract text from response via file (no shell interpolation)
+          python3 -c "
+          import json
+          with open('/tmp/glm-raw-response.json') as f:
+              data = json.load(f)
+          content = data['choices'][0]['message']['content']
+          with open('/tmp/review-response.txt', 'w') as out:
+              out.write(content)
+          " 2>/dev/null || echo "ERROR: API call failed" > /tmp/review-response.txt
 
-          echo "$TEXT" > /tmp/review-response.txt
-          {
-            echo "response<<REVIEWEOF"
-            echo "$TEXT"
-            echo "REVIEWEOF"
-          } >> $GITHUB_OUTPUT
-
-          # Extract LGTM
-          LGTM=$(echo "$TEXT" | grep -oP '"lgtm"\s*:\s*(true|false)' | tail -1 | grep -oP '(true|false)' || echo "false")
+          # Extract LGTM from response file
+          LGTM=$(grep -oP '"lgtm"\s*:\s*(true|false)' /tmp/review-response.txt | tail -1 | grep -oP '(true|false)' || echo "false")
           echo "lgtm=$LGTM" >> $GITHUB_OUTPUT
 
           if [ "$LGTM" = "false" ]; then
