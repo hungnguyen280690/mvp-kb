@@ -1,4 +1,4 @@
-# MVP Kho Bạc — VDBAS TT.OUT.MANUAL
+# MVP KB — VDBAS TT.OUT.MANUAL
 
 Vibe-code MVP cho module **Lệnh thanh toán đi NHNN thủ công** (KBNN). Giả lập đầy đủ pipeline **BA → SA → Dev → Test → DevOps** với AI làm bulk, người chỉ đứng ở gate.
 
