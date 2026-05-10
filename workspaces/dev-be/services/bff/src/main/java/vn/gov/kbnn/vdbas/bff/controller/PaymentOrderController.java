@@ -76,7 +76,7 @@ public class PaymentOrderController {
 
     @GetMapping("/{id}")
     public ResponseEntity<PaymentOrderResponse> getPaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole) {
 
@@ -90,7 +90,7 @@ public class PaymentOrderController {
 
     @PutMapping("/{id}")
     public ResponseEntity<PaymentOrderResponse> updatePaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("If-Match") String ifMatch,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole,
@@ -108,7 +108,7 @@ public class PaymentOrderController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<DeleteResponse> deletePaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("If-Match") String ifMatch,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole,
@@ -127,7 +127,7 @@ public class PaymentOrderController {
 
     @PostMapping("/{id}/submit")
     public ResponseEntity<PaymentOrderResponse> submitPaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole) {
@@ -140,7 +140,7 @@ public class PaymentOrderController {
 
     @PostMapping("/{id}/approve")
     public ResponseEntity<PaymentOrderResponse> approvePaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole) {
@@ -153,7 +153,7 @@ public class PaymentOrderController {
 
     @PostMapping("/{id}/reject")
     public ResponseEntity<PaymentOrderResponse> rejectPaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole,
@@ -167,7 +167,7 @@ public class PaymentOrderController {
 
     @PostMapping("/{id}/sign")
     public ResponseEntity<PaymentOrderResponse> signPaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole,
@@ -181,7 +181,7 @@ public class PaymentOrderController {
 
     @PostMapping("/{id}/send")
     public ResponseEntity<PaymentOrderResponse> sendPaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole) {
@@ -194,7 +194,7 @@ public class PaymentOrderController {
 
     @PostMapping("/{id}/cancel")
     public ResponseEntity<PaymentOrderResponse> cancelPaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole,
@@ -208,7 +208,7 @@ public class PaymentOrderController {
 
     @PostMapping("/{id}/reverse")
     public ResponseEntity<PaymentOrderResponse> reversePaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole,
@@ -226,7 +226,7 @@ public class PaymentOrderController {
 
     @GetMapping("/{id}/audit-trail")
     public ResponseEntity<AuditTrailResponse> getAuditTrail(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
             @RequestHeader("X-User-Id") String userId,

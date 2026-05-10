@@ -74,7 +74,7 @@ public class LttServiceClient {
                 .block();
     }
 
-    public PaymentOrderResponse getPaymentOrder(UUID id, String userId, String userRole) {
+    public PaymentOrderResponse getPaymentOrder(Long id, String userId, String userRole) {
         return lttWebClient.get()
                 .uri(API_PATH + "/payment-orders/{id}", id)
                 .header("X-User-Id", userId)
@@ -85,7 +85,7 @@ public class LttServiceClient {
     }
 
     public PaymentOrderResponse updatePaymentOrder(
-            UUID id, long version, String userId, String userRole,
+            Long id, long version, String userId, String userRole,
             PaymentOrderUpdateRequest request) {
 
         return lttWebClient.put()
@@ -101,7 +101,7 @@ public class LttServiceClient {
     }
 
     public DeleteResponse deletePaymentOrder(
-            UUID id, long version, String userId, String userRole,
+            Long id, long version, String userId, String userRole,
             DeleteRequest request) {
 
         return lttWebClient.method(org.springframework.http.HttpMethod.DELETE)
@@ -121,40 +121,40 @@ public class LttServiceClient {
     // =========================================================================
 
     public PaymentOrderResponse submitPaymentOrder(
-            UUID id, UUID idempotencyKey, String userId, String userRole) {
+            Long id, UUID idempotencyKey, String userId, String userRole) {
         return postAction("/payment-orders/{id}/submit", id, idempotencyKey, userId, userRole);
     }
 
     public PaymentOrderResponse approvePaymentOrder(
-            UUID id, UUID idempotencyKey, String userId, String userRole) {
+            Long id, UUID idempotencyKey, String userId, String userRole) {
         return postAction("/payment-orders/{id}/approve", id, idempotencyKey, userId, userRole);
     }
 
     public PaymentOrderResponse rejectPaymentOrder(
-            UUID id, UUID idempotencyKey, String userId, String userRole,
+            Long id, UUID idempotencyKey, String userId, String userRole,
             RejectRequest request) {
         return postActionWithBody("/payment-orders/{id}/reject", id, idempotencyKey, userId, userRole, request);
     }
 
     public PaymentOrderResponse signPaymentOrder(
-            UUID id, UUID idempotencyKey, String userId, String userRole,
+            Long id, UUID idempotencyKey, String userId, String userRole,
             SignRequest request) {
         return postActionWithBody("/payment-orders/{id}/sign", id, idempotencyKey, userId, userRole, request);
     }
 
     public PaymentOrderResponse sendPaymentOrder(
-            UUID id, UUID idempotencyKey, String userId, String userRole) {
+            Long id, UUID idempotencyKey, String userId, String userRole) {
         return postAction("/payment-orders/{id}/send", id, idempotencyKey, userId, userRole);
     }
 
     public PaymentOrderResponse cancelPaymentOrder(
-            UUID id, UUID idempotencyKey, String userId, String userRole,
+            Long id, UUID idempotencyKey, String userId, String userRole,
             CancelRequest request) {
         return postActionWithBody("/payment-orders/{id}/cancel", id, idempotencyKey, userId, userRole, request);
     }
 
     public PaymentOrderResponse reversePaymentOrder(
-            UUID id, UUID idempotencyKey, String userId, String userRole,
+            Long id, UUID idempotencyKey, String userId, String userRole,
             ReverseRequest request) {
         return postActionWithBody("/payment-orders/{id}/reverse", id, idempotencyKey, userId, userRole, request);
     }
@@ -224,7 +224,7 @@ public class LttServiceClient {
     // Audit Trail
     // =========================================================================
 
-    public AuditTrailResponse getAuditTrail(UUID id, int page, int size, String userId, String userRole) {
+    public AuditTrailResponse getAuditTrail(Long id, int page, int size, String userId, String userRole) {
         return lttWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path(API_PATH + "/payment-orders/{id}/audit-trail")
@@ -242,7 +242,7 @@ public class LttServiceClient {
     // Helper methods
     // =========================================================================
 
-    private PaymentOrderResponse postAction(String path, UUID id, UUID idempotencyKey,
+    private PaymentOrderResponse postAction(String path, Long id, UUID idempotencyKey,
                                              String userId, String userRole) {
         return lttWebClient.post()
                 .uri(API_PATH + path, id)
@@ -254,7 +254,7 @@ public class LttServiceClient {
                 .block();
     }
 
-    private PaymentOrderResponse postActionWithBody(String path, UUID id, UUID idempotencyKey,
+    private PaymentOrderResponse postActionWithBody(String path, Long id, UUID idempotencyKey,
                                                      String userId, String userRole, Object body) {
         return lttWebClient.post()
                 .uri(API_PATH + path, id)
