@@ -104,6 +104,8 @@ public class LttInternalController {
             ltt.setReceiverIdNumber(request.receiverInfo().identityDoc());
             ltt.setReceiverIdIssueDate(request.receiverInfo().identityDocIssueDate());
             ltt.setReceiverIdIssuePlace(request.receiverInfo().identityDocIssuePlace());
+        } else {
+            ltt.setReceiverName("N/A");
         }
 
         // Map LineItems
