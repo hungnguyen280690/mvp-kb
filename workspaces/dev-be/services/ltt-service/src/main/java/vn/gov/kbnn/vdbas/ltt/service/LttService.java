@@ -64,6 +64,7 @@ public class LttService {
         ltt.setWorkingDate(LocalDate.now());
         ltt.setIsDeleted(false);
         ltt.setSoYctt(generateSoYctt());
+        ltt.setSenderBankCode("79652001"); // TODO: Lay tu thong tin don vi cua user
 
         Ltt saved = lttRepository.save(ltt);
 
@@ -490,5 +491,11 @@ public class LttService {
                 .reason(reason)
                 .build();
         lttAuditRepository.save(audit);
+    }
+
+    private String generateSoYctt() {
+        // TODO: Implement sophisticated SO_YCTT generation rule, e.g., from a sequence.
+        // For now, using a simple timestamp-based unique string.
+        return "YCTT" + System.currentTimeMillis();
     }
 }
