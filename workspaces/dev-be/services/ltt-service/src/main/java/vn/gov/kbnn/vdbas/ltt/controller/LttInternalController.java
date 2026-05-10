@@ -13,6 +13,7 @@ import vn.gov.kbnn.vdbas.ltt.service.LttService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -110,9 +111,12 @@ public class LttInternalController {
 
         // Map LineItems
         if (request.lineItems() != null) {
-            List<LttLineItem> lineItems = request.lineItems().stream().map(dto -> {
+            List<LttLineItem> lineItems = new java.util.ArrayList<>();
+            for (int i = 0; i < request.lineItems().size(); i++) {
+                var dto = request.lineItems().get(i);
                 LttLineItem item = new LttLineItem();
-                item.setLtt(ltt); // Set back-reference
+                item.setLtt(ltt);
+                item.setLineNo(i + 1);
                 item.setCoaFund(dto.fundCode());
                 item.setCoaNaturalAccount(dto.naturalAccount());
                 item.setCoaDvqhns(dto.dvqhns());
@@ -125,10 +129,12 @@ public class LttInternalController {
                 item.setCoaFundSource(dto.fundSource());
                 item.setCoaTreasury(dto.treasuryCode());
                 item.setCoaReserve(dto.reserve());
-                item.setDescription(dto.description());
-                item.setLineAmount(dto.itemAmount());
-                return item;
-            }).collect(Collectors.toList());
+                item.setDescription(dto.description() != null ? dto.description() : "N/A");
+                item.setLineAmount(dto.itemAmount() != null ? dto.itemAmount() : BigDecimal.ZERO);
+                item.setCreatedBy(userId);
+                item.setCreatedAt(OffsetDateTime.now());
+                lineItems.add(item);
+            }
             ltt.setLineItems(lineItems);
         }
 
