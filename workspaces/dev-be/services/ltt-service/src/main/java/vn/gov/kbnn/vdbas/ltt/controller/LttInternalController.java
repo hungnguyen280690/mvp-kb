@@ -65,9 +65,7 @@ public class LttInternalController {
             @RequestBody CreateLttRequest request) {
 
         Ltt ltt = new Ltt();
-        // Map fields from request DTO to Ltt entity
         ltt.setChannel(request.channel());
-        ltt.setRequestNumber(request.requestNumber());
         ltt.setOrderType(request.orderType());
         ltt.setTxnType(request.transactionType());
         ltt.setReceiverBankCode(request.receiverBankCode());
@@ -91,6 +89,9 @@ public class LttInternalController {
             ltt.setSenderIdIssueDate(request.senderInfo().identityDocIssueDate());
             ltt.setSenderIdIssuePlace(request.senderInfo().identityDocIssuePlace());
             ltt.setTpcpCode(request.senderInfo().tpcpCode());
+        } else {
+            ltt.setSenderName("N/A");
+            ltt.setSenderBankCode("00000000");
         }
 
         // Map ReceiverInfo

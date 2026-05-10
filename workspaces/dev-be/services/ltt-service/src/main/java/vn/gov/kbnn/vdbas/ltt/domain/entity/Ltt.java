@@ -35,9 +35,6 @@ public class Ltt {
     @Column(name = "SO_YCTT", nullable = false, length = 30)
     private String soYctt;
 
-    @Column(name = "REQUEST_NUMBER", length = 30)
-    private String requestNumber;
-
     @Column(name = "IDEMPOTENCY_KEY", length = 64, unique = true)
     private String idempotencyKey;
 
