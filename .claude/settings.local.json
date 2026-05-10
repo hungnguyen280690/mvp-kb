@@ -46,7 +46,10 @@
       "Bash(curl -s -w \"\\\\nHTTP %{http_code}\" -H \"X-User-Id: maker01\" -H \"X-User-Role: MAKER\" \"http://localhost:8080/api/internal/v1/payment-orders?page=0&size=20&sort=paymentDate,desc\")",
       "Bash(curl *)",
       "Bash(E2E_BASE_URL=http://localhost:3000 npx playwright test --config tests/e2e/playwright.config.ts --project=chromium --reporter=list)",
-      "Bash(sed *)"
+      "Bash(sed *)",
+      "Bash(kill 485067 *)",
+      "Bash(docker-compose *)",
+      "Bash(uuidgen)"
     ]
   }
 }
