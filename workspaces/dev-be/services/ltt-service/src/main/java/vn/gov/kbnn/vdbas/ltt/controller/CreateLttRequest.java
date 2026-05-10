@@ -21,7 +21,8 @@ public record CreateLttRequest(
     String paymentContent,
     List<LineItem> lineItems,
     SenderInfo senderInfo,
-    ReceiverInfo receiverInfo
+    ReceiverInfo receiverInfo,
+    String unitCode
 ) {
     public record LineItem(
         String fundCode,

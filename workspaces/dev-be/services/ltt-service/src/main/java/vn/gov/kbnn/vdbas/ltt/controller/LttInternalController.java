@@ -67,6 +67,7 @@ public class LttInternalController {
         Ltt ltt = new Ltt();
         // Map fields from request DTO to Ltt entity
         ltt.setChannel(request.channel());
+        ltt.setRequestNumber(request.requestNumber());
         ltt.setOrderType(request.orderType());
         ltt.setTxnType(request.transactionType());
         ltt.setReceiverBankCode(request.receiverBankCode());
