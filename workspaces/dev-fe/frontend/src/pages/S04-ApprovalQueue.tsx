@@ -41,9 +41,9 @@ export function S04ApprovalQueue() {
           status,
         });
         setData(response.content);
-        setTotalElements(response.page.totalElements);
-        setTotalPages(response.page.totalPages);
-        setCurrentPage(response.page.number);
+        setTotalElements(response.totalElements);
+        setTotalPages(response.totalPages);
+        setCurrentPage(response.number);
       } catch (error: unknown) {
         const err = error as { message?: string };
         notify('error', err.message || t('app.networkError'));
