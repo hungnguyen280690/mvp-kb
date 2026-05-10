@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.time.OffsetDateTime;
 
@@ -28,6 +29,7 @@ public class LttAttachment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "LTT_ID", nullable = false)
     @JsonIgnore
+    @ToString.Exclude
     private Ltt ltt;
 
     @Column(name = "FILE_NAME", nullable = false, length = 255)
