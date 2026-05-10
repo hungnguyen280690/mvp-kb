@@ -255,6 +255,22 @@ jobs:
             -H "Content-Type: application/json" \
             -d @/tmp/payload.json)
 
+          # Debug: log response keys (mask sensitive data)
+          echo "API response status check:"
+          echo "$RESPONSE" | python3 -c "
+          import sys, json
+          try:
+              data = json.load(sys.stdin)
+              print('Keys:', list(data.keys()))
+              if 'error' in data:
+                  print('Error:', data['error'])
+              if 'choices' in data:
+                  print('Choices count:', len(data['choices']))
+          except Exception as e:
+              print(f'Parse error: {e}')
+              print('Raw (first 500):', sys.stdin.read()[:500])
+          " 2>/dev/null
+
           # Extract text from response
           TEXT=$(echo "$RESPONSE" | python3 -c "
           import sys, json
