@@ -14,6 +14,9 @@ public class PaymentOrderResponse {
     private long version;
     @JsonProperty("state")
     private String status;
+
+    @com.fasterxml.jackson.annotation.JsonGetter("status")
+    public String getStatus() { return status; }
     private String requestNumber;
     private String channel;
     private String orderType;
