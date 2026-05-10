@@ -65,7 +65,7 @@ public class LttServiceClient {
             UUID idempotencyKey, String userId, String userRole,
             PaymentOrderCreateRequest request) {
 
-        return lttWebClient.post()
+        Map<String, Object> raw = lttWebClient.post()
                 .uri(API_PATH + "/payment-orders")
                 .header("Idempotency-Key", idempotencyKey.toString())
                 .header("X-User-Id", userId)
@@ -73,18 +73,20 @@ public class LttServiceClient {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .retrieve()
-                .bodyToMono(PaymentOrderResponse.class)
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                 .block();
+        return mapToPaymentOrderResponse(raw);
     }
 
     public PaymentOrderResponse getPaymentOrder(Long id, String userId, String userRole) {
-        return lttWebClient.get()
+        Map<String, Object> raw = lttWebClient.get()
                 .uri(API_PATH + "/payment-orders/{id}", id)
                 .header("X-User-Id", userId)
                 .header("X-User-Role", userRole)
                 .retrieve()
-                .bodyToMono(PaymentOrderResponse.class)
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                 .block();
+        return mapToPaymentOrderResponse(raw);
     }
 
     public PaymentOrderResponse updatePaymentOrder(
@@ -247,19 +249,20 @@ public class LttServiceClient {
 
     private PaymentOrderResponse postAction(String path, Long id, UUID idempotencyKey,
                                              String userId, String userRole) {
-        return lttWebClient.post()
+        Map<String, Object> raw = lttWebClient.post()
                 .uri(API_PATH + path, id)
                 .header("Idempotency-Key", idempotencyKey.toString())
                 .header("X-User-Id", userId)
                 .header("X-User-Role", userRole)
                 .retrieve()
-                .bodyToMono(PaymentOrderResponse.class)
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                 .block();
+        return mapToPaymentOrderResponse(raw);
     }
 
     private PaymentOrderResponse postActionWithBody(String path, Long id, UUID idempotencyKey,
                                                      String userId, String userRole, Object body) {
-        return lttWebClient.post()
+        Map<String, Object> raw = lttWebClient.post()
                 .uri(API_PATH + path, id)
                 .header("Idempotency-Key", idempotencyKey.toString())
                 .header("X-User-Id", userId)
@@ -267,7 +270,8 @@ public class LttServiceClient {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
                 .retrieve()
-                .bodyToMono(PaymentOrderResponse.class)
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                 .block();
+        return mapToPaymentOrderResponse(raw);
     }
 }
