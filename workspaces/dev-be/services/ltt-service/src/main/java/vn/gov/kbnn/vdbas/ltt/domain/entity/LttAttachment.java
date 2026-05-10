@@ -1,5 +1,6 @@
 package vn.gov.kbnn.vdbas.ltt.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,6 +27,7 @@ public class LttAttachment {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "LTT_ID", nullable = false)
+    @JsonIgnore
     private Ltt ltt;
 
     @Column(name = "FILE_NAME", nullable = false, length = 255)
