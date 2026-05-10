@@ -304,7 +304,7 @@ jobs:
           PR_NUM="${{ github.event.pull_request.number }}"
           RESPONSE="${{ steps.review.outputs.response }}"
 
-          COMMENT="## 🤖 AI Review (GLM-4-Flash)
+          COMMENT="## 🤖 AI Review (GLM-4.7-Flash)
 
           $(echo "$RESPONSE" | head -200)
 
