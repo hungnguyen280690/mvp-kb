@@ -20,6 +20,7 @@ public class PaymentOrderSummaryDto {
     private LocalDate paymentDate;
     private BigDecimal amount;
     private String currency;
+    @JsonProperty("state")
     private String status;
     private String makerName;
     private OffsetDateTime createdAt;

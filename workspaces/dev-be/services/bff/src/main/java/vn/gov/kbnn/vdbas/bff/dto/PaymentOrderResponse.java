@@ -1,5 +1,6 @@
 package vn.gov.kbnn.vdbas.bff.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.math.BigDecimal;
