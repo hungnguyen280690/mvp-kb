@@ -61,7 +61,9 @@ jobs:
             echo "risk=medium" >> $GITHUB_OUTPUT
           fi
       - name: Report
-        run: echo "PR risk level: ${{ steps.classify.outputs.risk }}"
+        run: |
+          echo "PR risk level: ${{ steps.classify.outputs.risk }}"
+
 
   # ─────────────────────────────────────────────────
   # 1. STATIC CHECKS
