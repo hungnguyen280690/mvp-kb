@@ -302,17 +302,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUM="${{ github.event.pull_request.number }}"
-          RESPONSE="${{ steps.review.outputs.response }}"
-
-          COMMENT="## 🤖 AI Review (GLM-4.7-Flash)
-
-          $(echo "$RESPONSE" | head -200)
-
-          ---
-
-          *Reviewed by AI reviewer | [Policy](docs/QUALITY_GATES.md)*"
-
-          echo "$COMMENT" | gh pr comment "$PR_NUM" --body-file -
+          {
+            echo "## 🤖 AI Review (GLM-4.7-Flash)"
+            echo ""
+            head -200 /tmp/review-response.txt
+            echo ""
+            echo "---"
+            echo ""
+            echo "*Reviewed by AI reviewer | [Policy](docs/QUALITY_GATES.md)*"
+          } > /tmp/review-comment.md
+          gh pr comment "$PR_NUM" --body-file /tmp/review-comment.md
 
       - name: Set check status
         if: always()
