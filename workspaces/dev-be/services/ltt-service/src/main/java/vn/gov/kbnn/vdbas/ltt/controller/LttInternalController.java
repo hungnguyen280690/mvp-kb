@@ -109,11 +109,11 @@ public class LttInternalController {
             List<LttLineItem> lineItems = request.lineItems().stream().map(dto -> {
                 LttLineItem item = new LttLineItem();
                 item.setLtt(ltt); // Set back-reference
-                item.setFundCode(dto.fundCode());
-                item.setNaturalAccount(dto.naturalAccount());
-                item.setDvqhns(dto.dvqhns());
-                item.setBudgetLevel(dto.budgetLevel());
-                item.setChapter(dto.chapter());
+                item.setCoaFund(dto.fundCode());
+                item.setCoaNaturalAccount(dto.naturalAccount());
+                item.setCoaDvqhns(dto.dvqhns());
+                item.setCoaBudgetLevel(dto.budgetLevel());
+                item.setCoaChapter(dto.chapter());
                 item.setCoaIndustry(dto.economicSector());
                 item.setCoaNdkt(dto.ndkt());
                 item.setCoaArea(dto.area());
@@ -122,7 +122,7 @@ public class LttInternalController {
                 item.setCoaTreasury(dto.treasuryCode());
                 item.setCoaReserve(dto.reserve());
                 item.setDescription(dto.description());
-                item.setAmount(dto.itemAmount());
+                item.setLineAmount(dto.itemAmount());
                 return item;
             }).collect(Collectors.toList());
             ltt.setLineItems(lineItems);
