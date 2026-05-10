@@ -162,19 +162,16 @@ jobs:
           exit-code: '0'
 
   # ─────────────────────────────────────────────────
-  # 5. CLAUDE AI REVIEW — reviewer dựa trên nghiệp vụ
+  # 5. AI REVIEW — reviewer dựa trên nghiệp vụ (GLM)
   # ─────────────────────────────────────────────────
-  claude-review:
-    name: "🤖 Claude AI reviewer"
+  ai-review:
+    name: "🤖 AI reviewer (GLM)"
     runs-on: ubuntu-latest
     needs: [static, unit-backend, unit-frontend, deps-scan]
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-
-      - name: Install Claude Code
-        run: npm install -g @anthropic-ai/claude-code
 
       - name: Get PR diff
         id: diff
@@ -183,70 +180,13 @@ jobs:
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           git diff $BASE_SHA..$HEAD_SHA --stat > /tmp/pr-stat.txt
           git diff $BASE_SHA..$HEAD_SHA > /tmp/pr-diff.txt
-          echo "stat_file=/tmp/pr-stat.txt" >> $GITHUB_OUTPUT
-          echo "diff_file=/tmp/pr-diff.txt" >> $GITHUB_OUTPUT
 
-      - name: Build review prompt
-        run: |
-          cat > /tmp/review-prompt.txt << 'PROMPT_END'
-          Bạn là CI reviewer tự động cho dự án MVP Kho Bạc (VDBAS TT.OUT.MANUAL).
-          Xem PR diff, đối chiếu chính sách dự án, đưa ra LGTM=true hoặc LGTM=false.
-
-          ## Bối cảnh bắt buộc
-          Đọc: docs/CONTEXT.md, docs/RULES.md, docs/STATES.md, docs/QUALITY_GATES.md
-
-          ## Kiểm tra theo thứ tự
-
-          ### 1. SAFETY (BLOCKING)
-          - Hard-code credential/password/secret/token → LGTM=false
-          - File .env, .pem, .key thêm vào diff → LGTM=false
-          - Sửa db/migrations/V*__*.sql đã tồn tại trên main → LGTM=false
-          - @Disabled, it.skip, xit thêm mới → LGTM=false
-          - rm -rf, sudo, force push → LGTM=false
-
-          ### 2. DOMAIN (nghiệp vụ)
-          - State transition mới nhưng STATES.md chưa cập nhật?
-          - Sửa logic audit mà không có test hash chain?
-          - API POST mới mà không check idempotency key?
-          - Constraint maker_id ≠ checker_id ≠ approver_id còn không?
-          - Sửa logic số tiền mà không có test?
-          - Log có chứa số TK đầy đủ không (phải mask)?
-
-          ### 3. COVERAGE / TEST
-          - Code prod thêm > 50 dòng nhưng test thêm = 0 → LGTM=false
-          - Sửa file critical (saga/, audit/, outbox/) mà test không tăng → LGTM=false
-
-          ### 4. CONVENTION
-          - File generated bị sửa tay → LGTM=false
-          - Tên class Java không PascalCase → comment
-          - Tên endpoint không kebab-case → comment
-
-          ## Output format — bắt buộc JSON ở cuối
-          ```json
-          {
-            "lgtm": true|false,
-            "risk_level": "low|medium|high",
-            "findings": [
-              {
-                "severity": "block|warn|info",
-                "file": "path/to/file",
-                "line": 42,
-                "category": "safety|domain|coverage|convention",
-                "message": "mô tả",
-                "suggestion": "cách sửa"
-              }
-            ],
-            "summary": "tóm tắt"
-          }
-          ```
-          PROMPT_END
-
-      - name: Run Claude review
+      - name: Run AI review
         id: review
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
         run: |
-          # Read domain context files for richer review
+          # Build domain context
           CONTEXT=""
           for f in docs/CONTEXT.md docs/RULES.md docs/STATES.md docs/QUALITY_GATES.md CLAUDE.md; do
             if [ -f "$f" ]; then
@@ -256,37 +196,74 @@ jobs:
             fi
           done
 
-          # Combine prompt + context + diff
+          DIFF_STAT=$(cat /tmp/pr-stat.txt)
+          DIFF_CONTENT=$(head -3000 /tmp/pr-diff.txt)
+
+          # Build JSON payload for GLM API
+          python3 -c "
+          import json, sys
+
+          prompt = '''Bạn là CI reviewer tự động cho dự án MVP Kho Bạc (VDBAS TT.OUT.MANUAL).
+          Xem PR diff, đối chiếu chính sách, đưa ra LGTM=true hoặc LGTM=false.
+
+          Kiểm tra theo thứ tự:
+          1. SAFETY (BLOCKING): hard-code credential, file .env/.pem/.key, sửa migration cũ, @Disabled/xit mới, rm -rf/sudo
+          2. DOMAIN: state transition phải khớp STATES.md, audit phải có test hash chain, POST mới phải check idempotency, maker≠checker≠approver, log phải mask số TK
+          3. COVERAGE: code prod >50 dòng phải có test, sửa saga/audit/outbox phải có test mới
+          4. CONVENTION: không sửa file generated, class PascalCase, endpoint kebab-case
+
+          DOMAIN CONTEXT:
+          ''' + open('/dev/stdin').read() + '''
+
+          PR DIFF STAT:
+          ''' + """$(echo "$DIFF_STAT")""" + '''
+
+          PR DIFF:
+          ''' + """$(echo "$DIFF_CONTENT")""" + '''
+
+          Output bắt buộc JSON ở cuối:
+          {\"lgtm\": true|false, \"risk_level\": \"low|medium|high\", \"findings\": [{\"severity\": \"block|warn|info\", \"file\": \"path\", \"line\": 0, \"category\": \"safety|domain|coverage|convention\", \"message\": \"mô tả\", \"suggestion\": \"cách sửa\"}], \"summary\": \"tóm tắt\"}
+          '''
+
+          payload = {
+            'model': 'glm-5.1',
+            'messages': [{'role': 'user', 'content': prompt}],
+            'max_tokens': 4096,
+            'temperature': 0.1
+          }
+          json.dump(payload, sys.stdout)
+          " "$CONTEXT" > /tmp/payload.json
+
+          # Call GLM API
+          RESPONSE=$(curl -s -X POST \
+            "https://open.bigmodel.cn/api/paas/v4/chat/completions" \
+            -H "Authorization: Bearer $GLM_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/payload.json 2>/dev/null)
+
+          # Extract text from response
+          TEXT=$(echo "$RESPONSE" | python3 -c "
+          import sys, json
+          try:
+            data = json.load(sys.stdin)
+            print(data['choices'][0]['message']['content'])
+          except Exception as e:
+            print(f'ERROR: {e}')
+          " 2>/dev/null || echo "ERROR: API call failed")
+
+          echo "$TEXT" > /tmp/review-response.txt
           {
-            cat /tmp/review-prompt.txt
-            echo ""
-            echo "## DOMAIN CONTEXT"
-            echo "${CONTEXT}"
-            echo ""
-            echo "## PR DIFF STAT"
-            cat /tmp/pr-stat.txt
-            echo ""
-            echo "## PR DIFF"
-            head -3000 /tmp/pr-diff.txt
-          } > /tmp/full-prompt.txt
+            echo "response<<REVIEWEOF"
+            echo "$TEXT"
+            echo "REVIEWEOF"
+          } >> $GITHUB_OUTPUT
 
-          # Call Claude API
-          RESPONSE=$(claude --print --model claude-sonnet-4-20250514 \
-            --max-tokens 4096 \
-            --dangerously-skip-permissions \
-            "$(cat /tmp/full-prompt.txt)" 2>/dev/null || echo "ERROR: Claude invocation failed")
-
-          echo "$RESPONSE" > /tmp/review-response.txt
-          echo "response<<EOF" >> $GITHUB_OUTPUT
-          echo "$RESPONSE" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          # Extract LGTM from JSON
-          LGTM=$(echo "$RESPONSE" | grep -oP '"lgtm"\s*:\s*(true|false)' | tail -1 | grep -oP '(true|false)')
+          # Extract LGTM
+          LGTM=$(echo "$TEXT" | grep -oP '"lgtm"\s*:\s*(true|false)' | tail -1 | grep -oP '(true|false)' || echo "true")
           echo "lgtm=$LGTM" >> $GITHUB_OUTPUT
 
           if [ "$LGTM" = "false" ]; then
-            echo "::error::Claude AI review: LGTM=false"
+            echo "::error::AI review: LGTM=false"
           fi
 
       - name: Post review comment
@@ -297,16 +274,14 @@ jobs:
           PR_NUM="${{ github.event.pull_request.number }}"
           RESPONSE="${{ steps.review.outputs.response }}"
 
-          # Build comment body
-          COMMENT="## 🤖 Claude AI Review
+          COMMENT="## 🤖 AI Review (GLM-5.1)
 
-          $(echo "$RESPONSE" | sed 's/```json//' | sed 's/```//' | head -200)
+          $(echo "$RESPONSE" | head -200)
 
           ---
 
-          *Reviewed by \`ci-reviewer\` agent | [Policy](docs/QUALITY_GATES.md)*"
+          *Reviewed by AI reviewer | [Policy](docs/QUALITY_GATES.md)*"
 
-          # Post to PR
           echo "$COMMENT" | gh pr comment "$PR_NUM" --body-file -
 
       - name: Set check status
@@ -314,10 +289,10 @@ jobs:
         run: |
           LGTM="${{ steps.review.outputs.lgtm }}"
           if [ "$LGTM" = "false" ]; then
-            echo "❌ Claude review: LGTM=false — blocking merge"
+            echo "AI review: LGTM=false — blocking merge"
             exit 1
           else
-            echo "✅ Claude review: LGTM=true"
+            echo "AI review: LGTM=true"
           fi
 
   # ─────────────────────────────────────────────────
