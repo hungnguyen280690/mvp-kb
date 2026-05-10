@@ -12,6 +12,7 @@ import java.util.List;
 public class PaymentOrderResponse {
     private Long id;
     private long version;
+    @JsonProperty("state")
     private String status;
     private String requestNumber;
     private String channel;

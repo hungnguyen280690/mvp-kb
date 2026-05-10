@@ -22,6 +22,9 @@ public class PaymentOrderSummaryDto {
     private String currency;
     @JsonProperty("state")
     private String status;
+
+    @com.fasterxml.jackson.annotation.JsonGetter("status")
+    public String getStatus() { return status; }
     private String makerName;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
