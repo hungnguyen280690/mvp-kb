@@ -113,10 +113,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
-          key: maven-${{ hashFiles('workspaces/dev-be/**/pom.xml') }}
+          key: maven-${{ hashFiles('workspaces/dev-be/services/**/pom.xml') }}
           restore-keys: maven-
       - name: Maven build + test
-        working-directory: workspaces/dev-be
+        working-directory: workspaces/dev-be/services
         run: mvn -B verify --no-transfer-progress
       - name: Upload test results
         uses: actions/upload-artifact@v4
