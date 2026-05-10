@@ -67,15 +67,20 @@ public class LttService {
         ltt.setSoYctt(generateSoYctt());
 
 
-        Ltt saved = lttRepository.save(ltt);
+        try {
+            Ltt saved = lttRepository.save(ltt);
 
-        // Ghi audit
-        writeAudit(saved, EventType.CREATED, null, LttState.DRAFT.name(), userId, null);
+            // Ghi audit
+            writeAudit(saved, EventType.CREATED, null, LttState.DRAFT.name(), userId, null);
 
-        // Publish event
-        outboxWriter.writeEvent(saved, EventType.CREATED, userId, userRole, null);
+            // Publish event
+            outboxWriter.writeEvent(saved, EventType.CREATED, userId, userRole, null);
 
-        return saved;
+            return saved;
+        } catch (Exception e) {
+            log.error("Error creating LTT: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
     @Transactional
