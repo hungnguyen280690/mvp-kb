@@ -235,7 +235,7 @@ jobs:
           """
 
           payload = {
-              "model": "glm-4",
+              "model": "glm-4-flash",
               "messages": [{"role": "user", "content": prompt}],
               "max_tokens": 4096,
               "temperature": 0.1
@@ -304,7 +304,7 @@ jobs:
           PR_NUM="${{ github.event.pull_request.number }}"
           RESPONSE="${{ steps.review.outputs.response }}"
 
-          COMMENT="## 🤖 AI Review (GLM-5.1)
+          COMMENT="## 🤖 AI Review (GLM-4-Flash)
 
           $(echo "$RESPONSE" | head -200)
 
