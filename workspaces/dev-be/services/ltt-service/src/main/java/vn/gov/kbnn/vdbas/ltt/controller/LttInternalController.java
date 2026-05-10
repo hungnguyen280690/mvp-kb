@@ -143,113 +143,112 @@ public class LttInternalController {
     }
 
     @GetMapping("/payment-orders/{id}")
-    public ResponseEntity<Ltt> getPaymentOrder(@PathVariable UUID id) {
-        // Convert UUID to Long (simplified — in production, UUID would be the actual PK)
-        Ltt ltt = lttService.getById(Long.parseLong(id.toString().substring(0, 8), 16));
+    public ResponseEntity<Ltt> getPaymentOrder(@PathVariable Long id) {
+        Ltt ltt = lttService.getById(id);
         return ResponseEntity.ok(ltt);
     }
 
     @PutMapping("/payment-orders/{id}")
     public ResponseEntity<Ltt> updatePaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("If-Match") String ifMatch,
             @RequestHeader("X-User-Id") String userId,
             @RequestBody Ltt updated) {
 
         long version = Long.parseLong(ifMatch.replace("\"", ""));
-        Ltt result = lttService.update(Long.parseLong(id.toString().substring(0, 8), 16), version, userId, updated);
+        Ltt result = lttService.update(id, version, userId, updated);
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/payment-orders/{id}/submit")
     public ResponseEntity<Ltt> submitPaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole) {
 
-        Ltt result = lttService.submit(Long.parseLong(id.toString().substring(0, 8), 16), userId, userRole);
+        Ltt result = lttService.submit(id, userId, userRole);
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/payment-orders/{id}/approve")
     public ResponseEntity<Ltt> approvePaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole) {
 
-        Ltt result = lttService.approve(Long.parseLong(id.toString().substring(0, 8), 16), userId, userRole);
+        Ltt result = lttService.approve(id, userId, userRole);
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/payment-orders/{id}/reject")
     public ResponseEntity<Ltt> rejectPaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole,
             @RequestBody RejectBody body) {
 
-        Ltt result = lttService.reject(Long.parseLong(id.toString().substring(0, 8), 16), userId, userRole, body.reason());
+        Ltt result = lttService.reject(id, userId, userRole, body.reason());
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/payment-orders/{id}/sign")
     public ResponseEntity<Ltt> signPaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole,
             @RequestBody SignBody body) {
 
-        Ltt result = lttService.sign(Long.parseLong(id.toString().substring(0, 8), 16), userId, userRole,
+        Ltt result = lttService.sign(id, userId, userRole,
                 body.signatureData(), body.signerCert());
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/payment-orders/{id}/send")
     public ResponseEntity<Ltt> sendPaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole) {
 
-        Ltt result = lttService.send(Long.parseLong(id.toString().substring(0, 8), 16), userId, userRole);
+        Ltt result = lttService.send(id, userId, userRole);
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/payment-orders/{id}/cancel")
     public ResponseEntity<Ltt> cancelPaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole,
             @RequestBody CancelBody body) {
 
-        Ltt result = lttService.cancel(Long.parseLong(id.toString().substring(0, 8), 16), userId, userRole, body.reason());
+        Ltt result = lttService.cancel(id, userId, userRole, body.reason());
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/payment-orders/{id}/reverse")
     public ResponseEntity<Ltt> reversePaymentOrder(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole,
             @RequestBody ReverseBody body) {
 
-        Ltt result = lttService.reverse(Long.parseLong(id.toString().substring(0, 8), 16), userId, userRole, body.reason());
+        Ltt result = lttService.reverse(id, userId, userRole, body.reason());
         return new ResponseEntity<>(result, HttpStatus.CREATED);
     }
 
     @GetMapping("/payment-orders/{id}/audit-trail")
     public ResponseEntity<Page<LttAudit>> getAuditTrail(
-            @PathVariable UUID id,
+            @PathVariable Long id,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
 
-        Page<LttAudit> result = lttService.getAuditTrail(Long.parseLong(id.toString().substring(0, 8), 16), page, size);
+        Page<LttAudit> result = lttService.getAuditTrail(id, page, size);
         return ResponseEntity.ok(result);
     }
 
