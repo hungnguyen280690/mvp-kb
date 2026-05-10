@@ -186,69 +186,83 @@ jobs:
         env:
           GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
         run: |
-          # Build domain context
-          CONTEXT=""
-          for f in docs/CONTEXT.md docs/RULES.md docs/STATES.md docs/QUALITY_GATES.md CLAUDE.md; do
-            if [ -f "$f" ]; then
-              CONTEXT="${CONTEXT}
-          === ${f} ===
-          $(head -200 "$f")"
-            fi
-          done
+          # Write Python script to build payload and call API
+          cat > /tmp/review.py << 'PYEOF'
+          import json, subprocess, sys
 
-          DIFF_STAT=$(cat /tmp/pr-stat.txt)
-          DIFF_CONTENT=$(head -3000 /tmp/pr-diff.txt)
+          # Read context files
+          context_parts = []
+          for f in ["docs/CONTEXT.md", "docs/RULES.md", "docs/STATES.md", "docs/QUALITY_GATES.md", "CLAUDE.md"]:
+              try:
+                  with open(f) as fh:
+                      context_parts.append(f"=== {f} ===\n" + fh.read()[:2000])
+              except FileNotFoundError:
+                  pass
+          context = "\n\n".join(context_parts)
 
-          # Build JSON payload for GLM API
-          python3 -c "
-          import json, sys
+          # Read diff
+          try:
+              with open("/tmp/pr-stat.txt") as f:
+                  stat = f.read()
+          except:
+              stat = ""
+          try:
+              with open("/tmp/pr-diff.txt") as f:
+                  diff = f.read()[:30000]
+          except:
+              diff = ""
 
-          prompt = '''Bạn là CI reviewer tự động cho dự án MVP Kho Bạc (VDBAS TT.OUT.MANUAL).
-          Xem PR diff, đối chiếu chính sách, đưa ra LGTM=true hoặc LGTM=false.
+          prompt = f"""Ban la CI reviewer tu dong cho du an MVP Kho Bac (VDBAS TT.OUT.MANUAL).
+          Xem PR diff, doi chieu chinh sach, dua ra LGTM=true hoac LGTM=false.
 
-          Kiểm tra theo thứ tự:
-          1. SAFETY (BLOCKING): hard-code credential, file .env/.pem/.key, sửa migration cũ, @Disabled/xit mới, rm -rf/sudo
-          2. DOMAIN: state transition phải khớp STATES.md, audit phải có test hash chain, POST mới phải check idempotency, maker≠checker≠approver, log phải mask số TK
-          3. COVERAGE: code prod >50 dòng phải có test, sửa saga/audit/outbox phải có test mới
-          4. CONVENTION: không sửa file generated, class PascalCase, endpoint kebab-case
+          Kiem tra theo thu tu:
+          1. SAFETY (BLOCKING): hard-code credential, file .env/.pem/.key, sua migration cu, @Disabled/xit moi, rm -rf/sudo
+          2. DOMAIN: state transition phai khop STATES.md, audit phai co test hash chain, POST moi phai check idempotency, maker khac checker khac approver, log phai mask so TK
+          3. COVERAGE: code prod >50 dong phai co test, sua saga/audit/outbox phai co test moi
+          4. CONVENTION: khong sua file generated, class PascalCase, endpoint kebab-case
 
           DOMAIN CONTEXT:
-          ''' + open('/dev/stdin').read() + '''
+          {context}
 
           PR DIFF STAT:
-          ''' + """$(echo "$DIFF_STAT")""" + '''
+          {stat}
 
           PR DIFF:
-          ''' + """$(echo "$DIFF_CONTENT")""" + '''
+          {diff}
 
-          Output bắt buộc JSON ở cuối:
-          {\"lgtm\": true|false, \"risk_level\": \"low|medium|high\", \"findings\": [{\"severity\": \"block|warn|info\", \"file\": \"path\", \"line\": 0, \"category\": \"safety|domain|coverage|convention\", \"message\": \"mô tả\", \"suggestion\": \"cách sửa\"}], \"summary\": \"tóm tắt\"}
-          '''
+          Output bat buoc JSON o cuoi:
+          {{"lgtm": true|false, "risk_level": "low|medium|high", "findings": [{{"severity": "block|warn|info", "file": "path", "line": 0, "category": "safety|domain|coverage|convention", "message": "mo ta", "suggestion": "cach sua"}}], "summary": "tom tat"}}
+          """
 
           payload = {
-            'model': 'glm-5.1',
-            'messages': [{'role': 'user', 'content': prompt}],
-            'max_tokens': 4096,
-            'temperature': 0.1
+              "model": "glm-5.1",
+              "messages": [{"role": "user", "content": prompt}],
+              "max_tokens": 4096,
+              "temperature": 0.1
           }
-          json.dump(payload, sys.stdout)
-          " "$CONTEXT" > /tmp/payload.json
+
+          with open("/tmp/payload.json", "w") as f:
+              json.dump(payload, f, ensure_ascii=False)
+          print("PAYLOAD_READY")
+          PYEOF
+
+          python3 /tmp/review.py
 
           # Call GLM API
           RESPONSE=$(curl -s -X POST \
             "https://open.bigmodel.cn/api/paas/v4/chat/completions" \
             -H "Authorization: Bearer $GLM_API_KEY" \
             -H "Content-Type: application/json" \
-            -d @/tmp/payload.json 2>/dev/null)
+            -d @/tmp/payload.json)
 
           # Extract text from response
           TEXT=$(echo "$RESPONSE" | python3 -c "
           import sys, json
           try:
-            data = json.load(sys.stdin)
-            print(data['choices'][0]['message']['content'])
+              data = json.load(sys.stdin)
+              print(data['choices'][0]['message']['content'])
           except Exception as e:
-            print(f'ERROR: {e}')
+              print(f'ERROR: {e}')
           " 2>/dev/null || echo "ERROR: API call failed")
 
           echo "$TEXT" > /tmp/review-response.txt
