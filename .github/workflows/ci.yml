@@ -165,7 +165,7 @@ jobs:
   # 5. AI REVIEW — reviewer dựa trên nghiệp vụ (GLM)
   # ─────────────────────────────────────────────────
   ai-review:
-    name: "🤖 AI reviewer (GLM-4-Flash)"
+    name: "🤖 AI reviewer (GLM-4.7-Flash)"
     runs-on: ubuntu-latest
     needs: [static, unit-backend, unit-frontend, deps-scan]
     if: github.event_name == 'pull_request'
@@ -235,7 +235,7 @@ jobs:
           """
 
           payload = {
-              "model": "glm-4-flash",
+              "model": "glm-4.7-flash",
               "messages": [{"role": "user", "content": prompt}],
               "max_tokens": 4096,
               "temperature": 0.1
