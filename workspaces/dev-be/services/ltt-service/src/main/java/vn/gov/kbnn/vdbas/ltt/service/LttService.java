@@ -63,6 +63,7 @@ public class LttService {
         ltt.setMakerId(userId);
         ltt.setWorkingDate(LocalDate.now());
         ltt.setIsDeleted(false);
+        ltt.setSoYctt(generateSoYctt());
 
         Ltt saved = lttRepository.save(ltt);
 
