@@ -314,9 +314,9 @@ class LttStateMachineTest {
         }
 
         @Test
-        @DisplayName("POSTED is final after REVERSE")
-        void postedIsFinal() {
-            assertTrue(LttState.POSTED.isFinal());
+        @DisplayName("POSTED is NOT final — can REVERSE to REVERSED")
+        void postedIsNotFinal() {
+            assertFalse(LttState.POSTED.isFinal());
         }
     }
 
@@ -359,10 +359,10 @@ class LttStateMachineTest {
         }
 
         @Test
-        @DisplayName("Cannot block final states")
-        void cannotBlockFinal() {
+        @DisplayName("Can block POSTED (not final, can REVERSE)")
+        void canBlockPosted() {
             TransitionResult result = stateMachine.block(LttState.POSTED);
-            assertFalse(result.success());
+            assertTrue(result.success());
         }
 
         @Test

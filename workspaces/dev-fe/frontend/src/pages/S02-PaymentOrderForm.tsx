@@ -24,7 +24,6 @@ import { paymentOrderFormSchema } from '@/lib/validation-rules';
 import { createEmptyLineItem, calculateTotalAmount } from '@/lib/coa-validator';
 import { getTodayDate, formatAmount } from '@/lib/utils';
 import type { PaymentOrder, PaymentOrderCreateRequest, LineItem, SenderInfo, ReceiverInfo, FormMode } from '@/types';
-import { LttState, UserRole, EDITABLE_STATES } from '@/types';
 
 interface FormData {
   requestNumber?: string;
@@ -147,9 +146,8 @@ export function S02PaymentOrderForm() {
     if (loadId) {
       setLoading(true);
       getPaymentOrder(loadId)
-        .then(({ data, etag: responseEtag }) => {
+        .then(({ data }) => {
           setExistingData(data);
-          setEtag(responseEtag);
 
           if (isCloneMode) {
             // Clone: reset ID, version, request number
@@ -321,7 +319,7 @@ export function S02PaymentOrderForm() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(handleSaveDraft)} className="space-y-6">
+      <form onSubmit={handleSubmit(handleSaveDraft)} className="space-y-6" data-testid="form-s02">
         {/* ================================================================
             Group 1: Thong tin chung
             ================================================================ */}
@@ -340,6 +338,7 @@ export function S02PaymentOrderForm() {
                 className={inputClass(errors.requestNumber)}
                 readOnly={isEditMode}
                 placeholder="De trong de tu sinh"
+                data-testid="field-request-number"
               />
               {errors.requestNumber && <p className="mt-1 text-xs text-danger-500">{errors.requestNumber.message}</p>}
             </div>
@@ -351,6 +350,7 @@ export function S02PaymentOrderForm() {
                 id="channel"
                 {...register('channel')}
                 className={inputClass(errors.channel)}
+                data-testid="select-channel"
               >
                 <option value="LNH">LNH - Lien ngan hang</option>
                 <option value="SP">SP - Song phuong</option>
@@ -367,6 +367,7 @@ export function S02PaymentOrderForm() {
                 type="text"
                 {...register('orderType')}
                 className={inputClass(errors.orderType)}
+                data-testid="field-order-type"
               />
               {errors.orderType && <p className="mt-1 text-xs text-danger-500">{errors.orderType.message}</p>}
             </div>
@@ -377,10 +378,11 @@ export function S02PaymentOrderForm() {
               <input
                 id="senderBankCode"
                 type="text"
-                value={user?.bankName || ''}
+                value={user?.bankCode || ''}
                 className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-gray-50"
                 readOnly
                 aria-readonly="true"
+                data-testid="field-sender-bank-code"
               />
             </div>
 
@@ -392,6 +394,7 @@ export function S02PaymentOrderForm() {
                 type="text"
                 {...register('receiverBankCode')}
                 className={inputClass(errors.receiverBankCode)}
+                data-testid="field-receiver-bank-code"
               />
               {errors.receiverBankCode && <p className="mt-1 text-xs text-danger-500">{errors.receiverBankCode.message}</p>}
             </div>
@@ -404,6 +407,7 @@ export function S02PaymentOrderForm() {
                 type="date"
                 {...register('paymentDate')}
                 className={inputClass(errors.paymentDate)}
+                data-testid="field-payment-date"
               />
               {errors.paymentDate && <p className="mt-1 text-xs text-danger-500">{errors.paymentDate.message}</p>}
             </div>
@@ -418,6 +422,7 @@ export function S02PaymentOrderForm() {
                 className={inputClass(errors.amount)}
                 min="0"
                 step="any"
+                data-testid="field-amount"
               />
               {errors.amount && <p className="mt-1 text-xs text-danger-500">{errors.amount.message}</p>}
               <p className="mt-1 text-xs text-gray-500">
@@ -435,6 +440,7 @@ export function S02PaymentOrderForm() {
                 id="currency"
                 {...register('currency')}
                 className={inputClass(errors.currency)}
+                data-testid="select-currency"
               >
                 <option value="VND">VND</option>
                 <option value="USD">USD</option>
@@ -451,6 +457,7 @@ export function S02PaymentOrderForm() {
                   id="transactionType"
                   {...register('transactionType')}
                   className={inputClass(errors.transactionType)}
+                  data-testid="field-transaction-type"
                 >
                   <option value="">-- Chon --</option>
                   <option value="INTERNAL">Noi bo</option>
@@ -471,6 +478,7 @@ export function S02PaymentOrderForm() {
                   min="0"
                   step="any"
                   placeholder="Ty gia"
+                  data-testid="field-exchange-rate"
                 />
                 {errors.exchangeRate && <p className="mt-1 text-xs text-danger-500">{errors.exchangeRate.message}</p>}
               </div>
@@ -509,6 +517,7 @@ export function S02PaymentOrderForm() {
                 className={inputClass(errors.paymentContent)}
                 rows={3}
                 maxLength={500}
+                data-testid="field-payment-content"
               />
               {errors.paymentContent && <p className="mt-1 text-xs text-danger-500">{errors.paymentContent.message}</p>}
             </div>
@@ -582,7 +591,7 @@ export function S02PaymentOrderForm() {
             </div>
             <div>
               <label htmlFor="senderAccount" className={labelClass}>{t('s02.fields.senderAccount')} *</label>
-              <input id="senderAccount" type="text" {...register('senderInfo.accountNumber')} className={inputClass(errors.senderInfo?.accountNumber)} />
+              <input id="senderAccount" type="text" {...register('senderInfo.accountNumber')} className={inputClass(errors.senderInfo?.accountNumber)} data-testid="field-sender-account" />
             </div>
             <div>
               <label htmlFor="senderCustomerCode" className={labelClass}>{t('s02.fields.senderCustomerCode')}</label>
@@ -671,6 +680,7 @@ export function S02PaymentOrderForm() {
               <button
                 type="submit"
                 disabled={saving}
+                data-testid="btn-save-draft"
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
               >
                 {saving ? t('app.saving') : t('s02.actions.saveDraft')}
@@ -679,6 +689,7 @@ export function S02PaymentOrderForm() {
                 type="button"
                 onClick={() => setShowSubmitConfirm(true)}
                 disabled={saving}
+                data-testid="btn-submit"
                 className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50"
               >
                 {t('s02.actions.submit')}

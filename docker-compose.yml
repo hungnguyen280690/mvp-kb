@@ -1,0 +1,153 @@
+# VDBAS TT.OUT.MANUAL — Full stack docker-compose
+# Start: docker compose up --build
+# Stop:  docker compose down
+
+services:
+  # ─── Infrastructure ────────────────────────────────────
+  oracle:
+    image: gvenzl/oracle-free:23-slim-faststart
+    container_name: vdbas-oracle
+    environment:
+      ORACLE_PASSWORD: changeme
+    ports:
+      - "1521:1521"
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+      - ./workspaces/sa/db/migrations/setup_all.sql:/tmp/setup_all.sql
+      - ./scripts/db-init.sh:/tmp/db-init.sh
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'SELECT 1 FROM DUAL;' | sqlplus -S / as sysdba"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 90s
+    networks: [vdbas]
+
+  artemis:
+    image: apache/activemq-artemis:2.33.0-alpine
+    container_name: vdbas-artemis
+    environment:
+      ARTEMIS_USER: admin
+      ARTEMIS_PASSWORD: admin
+    ports:
+      - "61616:61616"
+      - "8161:8161"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8161 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks: [vdbas]
+
+  # ─── Database init (runs once after Oracle is healthy) ─
+  db-init:
+    image: gvenzl/oracle-free:23-slim-faststart
+    container_name: vdbas-db-init
+    depends_on:
+      oracle:
+        condition: service_healthy
+    volumes:
+      - ./workspaces/sa/db/migrations/setup_all.sql:/tmp/setup_all.sql
+      - ./scripts/db-init.sh:/tmp/db-init.sh
+    entrypoint: ["bash", "/tmp/db-init.sh"]
+    networks: [vdbas]
+
+  # ─── Backend Services ──────────────────────────────────
+  ltt-service:
+    build:
+      context: ./workspaces/dev-be
+      dockerfile: Dockerfile
+      args:
+        SERVICE: ltt-service
+    container_name: vdbas-ltt
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      artemis:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:oracle:thin:@//oracle:1521/FREEPDB1
+      SPRING_DATASOURCE_USERNAME: vdbas_app
+      SPRING_DATASOURCE_PASSWORD: changeme
+      SPRING_ARTEMIS_BROKER_URL: tcp://artemis:61616
+      SPRING_ARTEMIS_USER: admin
+      SPRING_ARTEMIS_PASSWORD: admin
+    ports:
+      - "8081:8081"
+    networks: [vdbas]
+
+  bff:
+    build:
+      context: ./workspaces/dev-be
+      dockerfile: Dockerfile
+      args:
+        SERVICE: bff
+    container_name: vdbas-bff
+    depends_on:
+      - ltt-service
+    environment:
+      LTT_SERVICE_URL: http://ltt-service:8081
+    ports:
+      - "8080:8080"
+    networks: [vdbas]
+
+  gateway-service:
+    build:
+      context: ./workspaces/dev-be
+      dockerfile: Dockerfile
+      args:
+        SERVICE: gateway-service
+    container_name: vdbas-gateway
+    depends_on:
+      artemis:
+        condition: service_healthy
+    environment:
+      SPRING_ARTEMIS_BROKER_URL: tcp://artemis:61616
+      SPRING_ARTEMIS_USER: admin
+      SPRING_ARTEMIS_PASSWORD: admin
+    ports:
+      - "8082:8082"
+    networks: [vdbas]
+
+  audit-service:
+    build:
+      context: ./workspaces/dev-be
+      dockerfile: Dockerfile
+      args:
+        SERVICE: audit-service
+    container_name: vdbas-audit
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      artemis:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:oracle:thin:@//oracle:1521/FREEPDB1
+      SPRING_DATASOURCE_USERNAME: vdbas_audit
+      SPRING_DATASOURCE_PASSWORD: changeme
+      SPRING_ARTEMIS_BROKER_URL: tcp://artemis:61616
+      SPRING_ARTEMIS_USER: admin
+      SPRING_ARTEMIS_PASSWORD: admin
+    ports:
+      - "8083:8083"
+    networks: [vdbas]
+
+  # ─── Frontend ──────────────────────────────────────────
+  frontend:
+    build:
+      context: ./workspaces/dev-fe
+      dockerfile: Dockerfile
+    container_name: vdbas-frontend
+    depends_on:
+      - bff
+    ports:
+      - "3000:80"
+    networks: [vdbas]
+
+networks:
+  vdbas:
+    driver: bridge
+
+volumes:
+  oracle-data:

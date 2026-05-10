@@ -21,7 +21,7 @@ public class LttServiceClient {
 
     private final WebClient lttWebClient;
 
-    private static final String BASE_URL = "http://localhost:8081/api/internal/v1";
+    private static final String API_PATH = "/api/internal/v1";
 
     // =========================================================================
     // CRUD
@@ -35,7 +35,7 @@ public class LttServiceClient {
 
         return lttWebClient.get()
                 .uri(uriBuilder -> uriBuilder
-                        .path(BASE_URL + "/payment-orders")
+                        .path(API_PATH + "/payment-orders")
                         .queryParam("page", page)
                         .queryParam("size", size)
                         .queryParam("sort", sort)
@@ -63,7 +63,7 @@ public class LttServiceClient {
             PaymentOrderCreateRequest request) {
 
         return lttWebClient.post()
-                .uri(BASE_URL + "/payment-orders")
+                .uri(API_PATH + "/payment-orders")
                 .header("Idempotency-Key", idempotencyKey.toString())
                 .header("X-User-Id", userId)
                 .header("X-User-Role", userRole)
@@ -76,7 +76,7 @@ public class LttServiceClient {
 
     public PaymentOrderResponse getPaymentOrder(UUID id, String userId, String userRole) {
         return lttWebClient.get()
-                .uri(BASE_URL + "/payment-orders/{id}", id)
+                .uri(API_PATH + "/payment-orders/{id}", id)
                 .header("X-User-Id", userId)
                 .header("X-User-Role", userRole)
                 .retrieve()
@@ -89,7 +89,7 @@ public class LttServiceClient {
             PaymentOrderUpdateRequest request) {
 
         return lttWebClient.put()
-                .uri(BASE_URL + "/payment-orders/{id}", id)
+                .uri(API_PATH + "/payment-orders/{id}", id)
                 .header("If-Match", "\"" + version + "\"")
                 .header("X-User-Id", userId)
                 .header("X-User-Role", userRole)
@@ -105,7 +105,7 @@ public class LttServiceClient {
             DeleteRequest request) {
 
         return lttWebClient.method(org.springframework.http.HttpMethod.DELETE)
-                .uri(BASE_URL + "/payment-orders/{id}", id)
+                .uri(API_PATH + "/payment-orders/{id}", id)
                 .header("If-Match", "\"" + version + "\"")
                 .header("X-User-Id", userId)
                 .header("X-User-Role", userRole)
@@ -165,7 +165,7 @@ public class LttServiceClient {
 
     public List<RefDataItem> getChannels(String userId) {
         return lttWebClient.get()
-                .uri(BASE_URL + "/dm/channels")
+                .uri(API_PATH + "/dm/channels")
                 .header("X-User-Id", userId)
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<List<RefDataItem>>() {})
@@ -175,7 +175,7 @@ public class LttServiceClient {
     public Object getCoaSegments(String segmentType, String keyword, String userId) {
         return lttWebClient.get()
                 .uri(uriBuilder -> {
-                    var builder = uriBuilder.path(BASE_URL + "/dm/coa-segments");
+                    var builder = uriBuilder.path(API_PATH + "/dm/coa-segments");
                     if (segmentType != null) builder.queryParam("segmentType", segmentType);
                     if (keyword != null) builder.queryParam("keyword", keyword);
                     return builder.build();
@@ -193,7 +193,7 @@ public class LttServiceClient {
     public BalanceResponse getBalance(String accountNumber, String currency, String asOfDate, String userId) {
         return lttWebClient.get()
                 .uri(uriBuilder -> {
-                    var builder = uriBuilder.path(BASE_URL + "/balance")
+                    var builder = uriBuilder.path(API_PATH + "/balance")
                             .queryParam("accountNumber", accountNumber)
                             .queryParam("currency", currency);
                     if (asOfDate != null) builder.queryParam("asOfDate", asOfDate);
@@ -211,7 +211,7 @@ public class LttServiceClient {
 
     public PaymentCallbackResponse processCallback(UUID correlationId, PaymentCallbackRequest request) {
         return lttWebClient.post()
-                .uri(BASE_URL + "/callback/payment-status")
+                .uri(API_PATH + "/callback/payment-status")
                 .header("X-Correlation-Id", correlationId.toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
@@ -227,7 +227,7 @@ public class LttServiceClient {
     public AuditTrailResponse getAuditTrail(UUID id, int page, int size, String userId, String userRole) {
         return lttWebClient.get()
                 .uri(uriBuilder -> uriBuilder
-                        .path(BASE_URL + "/payment-orders/{id}/audit-trail")
+                        .path(API_PATH + "/payment-orders/{id}/audit-trail")
                         .queryParam("page", page)
                         .queryParam("size", size)
                         .build(id))
@@ -245,7 +245,7 @@ public class LttServiceClient {
     private PaymentOrderResponse postAction(String path, UUID id, UUID idempotencyKey,
                                              String userId, String userRole) {
         return lttWebClient.post()
-                .uri(BASE_URL + path, id)
+                .uri(API_PATH + path, id)
                 .header("Idempotency-Key", idempotencyKey.toString())
                 .header("X-User-Id", userId)
                 .header("X-User-Role", userRole)
@@ -257,7 +257,7 @@ public class LttServiceClient {
     private PaymentOrderResponse postActionWithBody(String path, UUID id, UUID idempotencyKey,
                                                      String userId, String userRole, Object body) {
         return lttWebClient.post()
-                .uri(BASE_URL + path, id)
+                .uri(API_PATH + path, id)
                 .header("Idempotency-Key", idempotencyKey.toString())
                 .header("X-User-Id", userId)
                 .header("X-User-Role", userRole)

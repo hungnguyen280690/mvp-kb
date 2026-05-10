@@ -2,7 +2,6 @@
 // StatusBadge — colored badge for LTT state
 // ============================================================================
 
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LttState, STATE_COLORS } from '@/types';
 

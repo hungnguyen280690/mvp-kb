@@ -26,7 +26,7 @@ public class LttStateMachine {
 
     public LttStateMachine() {
         // DRAFT
-        Map<String, String> draftTransitions = new EnumMap<>(LttState.class);
+        Map<String, String> draftTransitions = new java.util.HashMap<>();
         // Gia lap key-value thay vi dung enum cho event
         putTransition(draftTransitions, "SUBMIT", "SUBMITTED");
         putTransition(draftTransitions, "EDIT", "DRAFT");

@@ -31,6 +31,7 @@ export function LoginPage() {
           {roleConfig.map((config) => (
             <button
               key={config.userId}
+              data-testid={`btn-login-${config.role.toLowerCase()}`}
               onClick={() => login(config.role)}
               className={`w-full flex items-center gap-4 p-4 rounded-lg text-white ${config.color} transition-colors shadow-md`}
             >

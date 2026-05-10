@@ -142,7 +142,6 @@ const vi = {
         status: 'Trang thai',
         channel: 'Kenh',
         orderType: 'Loai lenh',
-        senderBankCode: 'NH/KB chuyen',
         receiverBankCode: 'NH/KB nhan',
         paymentDate: 'Ngay thanh toan',
         amount: 'So tien chuyen',

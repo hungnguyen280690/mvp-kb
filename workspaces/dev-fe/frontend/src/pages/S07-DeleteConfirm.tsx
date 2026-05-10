@@ -3,7 +3,7 @@
 // Two-step confirmation: Reason + Checkbox
 // ============================================================================
 
-import React, { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { deleteConfirmSchema } from '@/lib/validation-rules';
 
@@ -109,6 +109,7 @@ export function S07DeleteConfirm({ isOpen, lttRequestNumber, onConfirm, onCancel
               </label>
               <textarea
                 id="delete-reason"
+                data-testid="input-delete-reason"
                 value={reason}
                 onChange={(e) => {
                   setReason(e.target.value);
@@ -162,6 +163,7 @@ export function S07DeleteConfirm({ isOpen, lttRequestNumber, onConfirm, onCancel
               <label className="flex items-start gap-2 cursor-pointer">
                 <input
                   type="checkbox"
+                  data-testid="checkbox-confirm-delete"
                   checked={confirmed}
                   onChange={(e) => {
                     setConfirmed(e.target.checked);
@@ -186,6 +188,7 @@ export function S07DeleteConfirm({ isOpen, lttRequestNumber, onConfirm, onCancel
               </button>
               <button
                 type="button"
+                data-testid="btn-confirm-delete"
                 onClick={handleConfirm}
                 disabled={!confirmed || loading}
                 className="px-4 py-2 text-sm font-medium text-white bg-danger-600 rounded-md hover:bg-danger-700 disabled:opacity-50"

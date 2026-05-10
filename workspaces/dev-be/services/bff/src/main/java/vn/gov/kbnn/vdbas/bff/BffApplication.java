@@ -13,7 +13,8 @@ public class BffApplication {
     }
 
     @Bean
-    public WebClient lttWebClient(WebClient.Builder builder) {
-        return builder.build();
+    public WebClient lttWebClient(WebClient.Builder builder,
+                                   @org.springframework.beans.factory.annotation.Value("${ltt-service.url:http://localhost:8081}") String lttUrl) {
+        return builder.baseUrl(lttUrl).build();
     }
 }

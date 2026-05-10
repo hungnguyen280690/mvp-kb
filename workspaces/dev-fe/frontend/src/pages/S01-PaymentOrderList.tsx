@@ -6,11 +6,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import { PaymentOrderFilter } from '@/components/payment/PaymentOrderFilter';
 import { PaymentOrderTable } from '@/components/payment/PaymentOrderTable';
 import { Pagination } from '@/components/common/Pagination';
 import { listPaymentOrders, deletePaymentOrder } from '@/lib/api-client';
-import { useAuth } from '@/auth';
 import { useNotification } from '@/lib/notification-context';
 import type { PaymentOrderListParams, PaymentOrderSummary, DeleteRequest } from '@/types';
 
@@ -129,10 +130,42 @@ export function S01PaymentOrderList() {
     [navigate]
   );
 
-  const handleExport = useCallback(() => {
-    // TODO: Implement Excel export
-    notify('info', 'Chuc nang ket xuat Excel dang phat trien');
-  }, [notify]);
+  const handleExport = useCallback(async () => {
+    try {
+      const allData: PaymentOrderSummary[] = [];
+      let page = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const res = await listPaymentOrders({ ...currentParams, page, size: 100, sort: 'paymentDate,desc' });
+        allData.push(...res.content);
+        hasMore = res.content.length === 100 && allData.length < 10000;
+        page++;
+      }
+
+      const rows = allData.map((item) => ({
+        [t('s01.table.requestNumber')]: item.requestNumber,
+        [t('s01.table.paymentDate')]: item.paymentDate ? new Date(item.paymentDate).toLocaleDateString('vi-VN') : '',
+        [t('s01.table.channel')]: item.channel,
+        [t('s01.table.orderType')]: item.orderType,
+        [t('s01.table.senderBank')]: item.senderBankName || item.senderBankCode,
+        [t('s01.table.receiverBank')]: item.receiverBankName || item.receiverBankCode,
+        [t('s01.table.amount')]: item.amount,
+        [t('s01.table.status')]: item.status,
+        [t('s01.table.makerName')]: item.makerName,
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws['!cols'] = [{ wch: 20 }, { wch: 14 }, { wch: 8 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 18 }, { wch: 16 }, { wch: 20 }];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'LTT');
+      const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      saveAs(new Blob([buf], { type: 'application/octet-stream' }), `LTT_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      notify('success', t('app.success'));
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      notify('error', err.message || t('app.error'));
+    }
+  }, [currentParams, notify, t]);
 
   return (
     <div className="space-y-4">
@@ -144,6 +177,7 @@ export function S01PaymentOrderList() {
             type="button"
             onClick={() => navigate('/payment-orders/new')}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700"
+            data-testid="btn-create-ltt"
           >
             + {t('s01.actions.new')}
           </button>

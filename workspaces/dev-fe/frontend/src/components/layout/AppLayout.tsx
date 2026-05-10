@@ -2,9 +2,9 @@
 // AppLayout — sidebar nav + main content area
 // ============================================================================
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import { Outlet, NavLink } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { useAuth } from '@/auth';
 import { UserRole } from '@/types';
@@ -12,7 +12,6 @@ import { UserRole } from '@/types';
 export function AppLayout() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (!user) return null;

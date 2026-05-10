@@ -3,7 +3,7 @@
 // Modal with required reason field, predefined reasons + free text
 // ============================================================================
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { reasonSchema } from '@/lib/validation-rules';
 
@@ -100,6 +100,7 @@ export function S05RejectDialog({ isOpen, lttRequestNumber, onConfirm, onCancel,
           </label>
           <textarea
             id="reject-reason-text"
+            data-testid="input-reject-reason"
             value={reason}
             onChange={(e) => handleReasonChange(e.target.value)}
             className={`w-full border rounded-md px-3 py-2 text-sm focus:ring-primary-500 focus:border-primary-500 ${
@@ -133,6 +134,7 @@ export function S05RejectDialog({ isOpen, lttRequestNumber, onConfirm, onCancel,
           </button>
           <button
             type="button"
+            data-testid="btn-confirm-reject"
             onClick={handleSubmit}
             disabled={reason.length < 10 || loading}
             className="px-4 py-2 text-sm font-medium text-white bg-danger-600 rounded-md hover:bg-danger-700 disabled:opacity-50"

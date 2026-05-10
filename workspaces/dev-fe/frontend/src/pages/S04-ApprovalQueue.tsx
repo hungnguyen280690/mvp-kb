@@ -3,28 +3,25 @@
 // List of LTT pending checker/approver action
 // ============================================================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { PaymentOrderTable } from '@/components/payment/PaymentOrderTable';
 import { Pagination } from '@/components/common/Pagination';
-import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { listPaymentOrders, approvePaymentOrder, rejectPaymentOrder } from '@/lib/api-client';
 import { useAuth } from '@/auth';
 import { useNotification } from '@/lib/notification-context';
-import { UserRole, LttState } from '@/types';
+import { UserRole } from '@/types';
 import type { PaymentOrderSummary } from '@/types';
 
 export function S04ApprovalQueue() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { notify } = useNotification();
 
   const [data, setData] = useState<PaymentOrderSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize] = useState(20);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -181,7 +178,7 @@ export function S04ApprovalQueue() {
         data={data}
         loading={loading}
         onApprove={handleApprove}
-        onReject={handleReject}
+        onReject={(id: string) => { handleReject(id, ''); }}
         selectable
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}

@@ -7,17 +7,7 @@
 
 import { test, expect } from '@playwright/test';
 import { users, createPaymentOrder, uiText, apiEndpoints, invalidOrders } from './fixtures/test-data';
-
-// ---------------------------------------------------------------------------
-// Helper: Login as user
-// ---------------------------------------------------------------------------
-async function loginAs(page: any, user: typeof users.maker) {
-  await page.goto('/login');
-  await page.fill('[data-testid="input-username"]', user.id);
-  await page.fill('[data-testid="input-password"]', user.password);
-  await page.click('[data-testid="btn-login"]');
-  await page.waitForURL('**/dashboard');
-}
+import { loginAs } from './fixtures/auth';
 
 test.describe('LTT CRUD — Create', () => {
 

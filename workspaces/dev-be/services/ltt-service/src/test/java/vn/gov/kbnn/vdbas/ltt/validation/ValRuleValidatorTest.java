@@ -38,6 +38,7 @@ class ValRuleValidatorTest {
                 .amount(new BigDecimal("150000000.00"))
                 .currency("VND")
                 .paymentContent("Thanh toan hop dong 001/2026")
+                .txnType("TX-LCC")
                 .senderName("KBNN Ha Noi")
                 .senderAccount("1121001000001")
                 .receiverName("NHNN Chi nhanh Ha Noi")

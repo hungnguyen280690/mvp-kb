@@ -24,6 +24,6 @@ public enum LttState {
      * Trang thai cuoi cung — khong cho phep chuyen tiep.
      */
     public boolean isFinal() {
-        return this == POSTED || this == CANCELLED || this == REVERSED;
+        return this == CANCELLED || this == REVERSED;
     }
 }

@@ -2,7 +2,6 @@
 // Pagination component — phan trang voi chon so dong/trang
 // ============================================================================
 
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface PaginationProps {
@@ -111,6 +110,7 @@ export function Pagination({
           value={pageSize}
           onChange={(e) => onPageSizeChange(Number(e.target.value))}
           className="border border-gray-300 rounded px-2 py-1 text-sm"
+          data-testid="page-size-selector"
         >
           {PAGE_SIZE_OPTIONS.map((size) => (
             <option key={size} value={size}>

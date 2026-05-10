@@ -20,21 +20,21 @@ public class SpMessageTransformer {
 
     public String transform(Map<String, Object> eventPayload) {
         try {
-            Map<String, Object> spMessage = Map.of(
-                    "correlationId", eventPayload.getOrDefault("correlationId", ""),
-                    "requestId", eventPayload.getOrDefault("requestNumber", ""),
-                    "channel", "SP",
-                    "toBankCode", eventPayload.getOrDefault("receiverBankCode", ""),
-                    "toBankName", eventPayload.getOrDefault("receiverBankName", ""),
-                    "fromAccount", eventPayload.getOrDefault("senderAccount", ""),
-                    "toAccount", eventPayload.getOrDefault("receiverAccount", ""),
-                    "amount", eventPayload.getOrDefault("amount", 0),
-                    "currency", eventPayload.getOrDefault("currency", "VND"),
-                    "originalDocNo", eventPayload.getOrDefault("originalDocNo", ""),
-                    "originalDocDate", eventPayload.getOrDefault("originalDocDate", ""),
-                    "narrative", eventPayload.getOrDefault("paymentContent", ""),
-                    "signedJson", eventPayload.getOrDefault("signedJson", ""),
-                    "signature", eventPayload.getOrDefault("signature", "")
+            Map<String, Object> spMessage = Map.ofEntries(
+                    Map.entry("correlationId", eventPayload.getOrDefault("correlationId", "")),
+                    Map.entry("requestId", eventPayload.getOrDefault("requestNumber", "")),
+                    Map.entry("channel", "SP"),
+                    Map.entry("toBankCode", eventPayload.getOrDefault("receiverBankCode", "")),
+                    Map.entry("toBankName", eventPayload.getOrDefault("receiverBankName", "")),
+                    Map.entry("fromAccount", eventPayload.getOrDefault("senderAccount", "")),
+                    Map.entry("toAccount", eventPayload.getOrDefault("receiverAccount", "")),
+                    Map.entry("amount", eventPayload.getOrDefault("amount", 0)),
+                    Map.entry("currency", eventPayload.getOrDefault("currency", "VND")),
+                    Map.entry("originalDocNo", eventPayload.getOrDefault("originalDocNo", "")),
+                    Map.entry("originalDocDate", eventPayload.getOrDefault("originalDocDate", "")),
+                    Map.entry("narrative", eventPayload.getOrDefault("paymentContent", "")),
+                    Map.entry("signedJson", eventPayload.getOrDefault("signedJson", "")),
+                    Map.entry("signature", eventPayload.getOrDefault("signature", ""))
             );
             return objectMapper.writeValueAsString(spMessage);
         } catch (Exception e) {

@@ -2,7 +2,7 @@
 // ApprovalActions — action buttons for approval workflow
 // ============================================================================
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserRole, LttState } from '@/types';
 import { useAuth } from '@/auth';
@@ -48,7 +48,7 @@ export function ApprovalActions({
   const canApprove = canTransition(currentStatus, 'APPROVE_CHECK', role) ||
                      canTransition(currentStatus, 'APPROVE', role);
   const canRejectAction = canTransition(currentStatus, 'REJECT', role);
-  const canSignAction = canSign && canTransition(currentStatus, 'SIGN', role);
+  const canSignAction = onSign && canTransition(currentStatus, 'SIGN', role);
   const canSendAction = onSend && canTransition(currentStatus, 'SEND', role);
   const canCancelAction = onCancel && canTransition(currentStatus, 'CANCEL', role);
   const canReverseAction = onReverse && canTransition(currentStatus, 'REVERSE', role);
@@ -88,6 +88,7 @@ export function ApprovalActions({
             onClick={handleApprove}
             disabled={loading}
             className="px-4 py-2 text-sm font-medium text-white bg-success-600 rounded-md hover:bg-success-700 disabled:opacity-50"
+            data-testid="btn-approve"
           >
             {t('app.approve')}
           </button>
@@ -98,6 +99,7 @@ export function ApprovalActions({
             type="button"
             onClick={() => setShowRejectDialog(true)}
             className="px-4 py-2 text-sm font-medium text-white bg-danger-600 rounded-md hover:bg-danger-700"
+            data-testid="btn-reject"
           >
             {t('app.reject')}
           </button>
@@ -109,6 +111,7 @@ export function ApprovalActions({
             onClick={() => onSign?.(paymentOrderId)}
             disabled={loading}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50"
+            data-testid="btn-sign"
           >
             {t('app.sign')}
           </button>
@@ -120,6 +123,7 @@ export function ApprovalActions({
             onClick={() => onSend?.(paymentOrderId)}
             disabled={loading}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50"
+            data-testid="btn-send"
           >
             {t('app.send')}
           </button>
@@ -130,6 +134,7 @@ export function ApprovalActions({
             type="button"
             onClick={() => onCancel?.(paymentOrderId, '')}
             className="px-4 py-2 text-sm font-medium text-white bg-danger-600 rounded-md hover:bg-danger-700"
+            data-testid="btn-cancel"
           >
             {t('app.cancel')}
           </button>
@@ -140,6 +145,7 @@ export function ApprovalActions({
             type="button"
             onClick={() => onReverse?.(paymentOrderId, '')}
             className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700"
+            data-testid="btn-reverse"
           >
             {t('app.reverse')}
           </button>

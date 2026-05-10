@@ -2,7 +2,7 @@
 // CoaGrid — COA segment input grid for S02
 // ============================================================================
 
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LineItem } from '@/types';
 import { createEmptyLineItem, calculateTotalAmount } from '@/lib/coa-validator';
@@ -41,7 +41,7 @@ export function CoaGrid({ lineItems, onChange, readOnly = false, errors }: CoaGr
 
   const totalAmount = calculateTotalAmount(lineItems);
 
-  const columns = [
+  const columns: { key: keyof LineItem; label: string; width: string; maxLength?: number; isAmount?: boolean }[] = [
     { key: 'fundCode', label: t('s02.fields.fundCode'), width: 'w-20', maxLength: 2 },
     { key: 'naturalAccount', label: t('s02.fields.naturalAccount'), width: 'w-24', maxLength: 4 },
     { key: 'dvqhns', label: t('s02.fields.dvqhns'), width: 'w-28', maxLength: 7 },
@@ -56,7 +56,7 @@ export function CoaGrid({ lineItems, onChange, readOnly = false, errors }: CoaGr
     { key: 'reserve', label: t('s02.fields.reserve'), width: 'w-20', maxLength: 3 },
     { key: 'description', label: t('s02.fields.itemDescription'), width: 'w-40', maxLength: 250 },
     { key: 'itemAmount', label: t('s02.fields.itemAmount'), width: 'w-32', isAmount: true },
-  ] as const;
+  ];
 
   return (
     <div className="space-y-3">

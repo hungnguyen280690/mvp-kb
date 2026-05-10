@@ -2,19 +2,12 @@
 // PaymentOrderTable — data table for S01 and S04
 // ============================================================================
 
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import type { PaymentOrderSummary } from '@/types';
 import { UserRole } from '@/types';
 import { StatusBadge } from './StatusBadge';
 import { useAuth } from '@/auth';
-
-/** Mask account number: 1234****5678 */
-function maskAccountNumber(account: string): string {
-  if (!account || account.length < 8) return account;
-  return account.substring(0, 4) + '****' + account.substring(account.length - 4);
-}
 
 /** Format currency */
 function formatAmount(amount: number, currency: string = 'VND'): string {
@@ -53,10 +46,10 @@ export function PaymentOrderTable({
   onEdit,
   onDelete,
   onApprove,
-  onReject,
-  onCancel,
+  onReject: _onReject,
+  onCancel: _onCancel,
   onClone,
-  onPrint,
+  onPrint: _onPrint,
   selectable,
   selectedIds = [],
   onSelectionChange,
@@ -159,6 +152,7 @@ export function PaymentOrderTable({
                 onClick={() => handleRowClick(item.id)}
                 role="row"
                 tabIndex={0}
+                data-testid="ltt-row"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -180,17 +174,17 @@ export function PaymentOrderTable({
                 <td className="px-4 py-3 text-sm font-medium text-primary-600 whitespace-nowrap">
                   {item.requestNumber}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" data-testid="row-payment-date">
                   {formatDate(item.paymentDate)}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">{item.channel}</td>
+                <td className="px-4 py-3 text-sm text-gray-600" data-testid="row-channel">{item.channel}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">{item.orderType}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">{item.senderBankName || item.senderBankCode}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">{item.receiverBankName || item.receiverBankCode}</td>
                 <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium whitespace-nowrap">
                   {formatAmount(item.amount, item.currency)}
                 </td>
-                <td className="px-4 py-3 text-center">
+                <td className="px-4 py-3 text-center" data-testid="row-status">
                   <StatusBadge status={item.status} />
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">{item.makerName}</td>

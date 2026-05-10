@@ -10,7 +10,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { getPaymentOrder, cancelPaymentOrder, reversePaymentOrder } from '@/lib/api-client';
-import { useAuth } from '@/auth';
 import { useNotification } from '@/lib/notification-context';
 import { LttState } from '@/types';
 import type { PaymentOrder } from '@/types';
@@ -19,7 +18,6 @@ export function S06CancelReverse() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
   const { notify } = useNotification();
 
   const [mode, setMode] = useState<'cancel' | 'reverse'>('cancel');
@@ -126,6 +124,7 @@ export function S06CancelReverse() {
           </label>
           <textarea
             id="s06-reason"
+            data-testid={isCancelMode ? 'input-cancel-reason' : 'input-reverse-reason'}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-primary-500 focus:border-primary-500"
@@ -176,6 +175,7 @@ export function S06CancelReverse() {
           </button>
           <button
             type="button"
+            data-testid={isCancelMode ? 'btn-confirm-cancel' : 'btn-confirm-reverse'}
             onClick={handleSubmit}
             disabled={!isValid || loading}
             className={`px-4 py-2 text-sm font-medium text-white rounded-md disabled:opacity-50 ${

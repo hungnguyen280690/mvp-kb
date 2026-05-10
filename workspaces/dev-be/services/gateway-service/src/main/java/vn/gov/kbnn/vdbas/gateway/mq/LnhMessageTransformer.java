@@ -27,22 +27,22 @@ public class LnhMessageTransformer {
      */
     public String transform(Map<String, Object> eventPayload) {
         try {
-            Map<String, Object> lnhMessage = Map.of(
-                    "correlationId", eventPayload.getOrDefault("correlationId", ""),
-                    "requestId", eventPayload.getOrDefault("requestNumber", ""),
-                    "channel", "LNH",
-                    "orderType", eventPayload.getOrDefault("orderType", ""),
-                    "fromBank", eventPayload.getOrDefault("senderBankCode", ""),
-                    "toBank", eventPayload.getOrDefault("receiverBankCode", ""),
-                    "fromAccount", eventPayload.getOrDefault("senderAccount", ""),
-                    "toAccount", eventPayload.getOrDefault("receiverAccount", ""),
-                    "amount", eventPayload.getOrDefault("amount", 0),
-                    "currency", eventPayload.getOrDefault("currency", "VND"),
-                    "valueDate", eventPayload.getOrDefault("paymentDate", ""),
-                    "remark", eventPayload.getOrDefault("paymentContent", ""),
-                    "signedXml", eventPayload.getOrDefault("signedXml", ""),
-                    "signature", eventPayload.getOrDefault("signature", ""),
-                    "signerCert", eventPayload.getOrDefault("signerCert", "")
+            Map<String, Object> lnhMessage = Map.ofEntries(
+                    Map.entry("correlationId", eventPayload.getOrDefault("correlationId", "")),
+                    Map.entry("requestId", eventPayload.getOrDefault("requestNumber", "")),
+                    Map.entry("channel", "LNH"),
+                    Map.entry("orderType", eventPayload.getOrDefault("orderType", "")),
+                    Map.entry("fromBank", eventPayload.getOrDefault("senderBankCode", "")),
+                    Map.entry("toBank", eventPayload.getOrDefault("receiverBankCode", "")),
+                    Map.entry("fromAccount", eventPayload.getOrDefault("senderAccount", "")),
+                    Map.entry("toAccount", eventPayload.getOrDefault("receiverAccount", "")),
+                    Map.entry("amount", eventPayload.getOrDefault("amount", 0)),
+                    Map.entry("currency", eventPayload.getOrDefault("currency", "VND")),
+                    Map.entry("valueDate", eventPayload.getOrDefault("paymentDate", "")),
+                    Map.entry("remark", eventPayload.getOrDefault("paymentContent", "")),
+                    Map.entry("signedXml", eventPayload.getOrDefault("signedXml", "")),
+                    Map.entry("signature", eventPayload.getOrDefault("signature", "")),
+                    Map.entry("signerCert", eventPayload.getOrDefault("signerCert", ""))
             );
             return objectMapper.writeValueAsString(lnhMessage);
         } catch (Exception e) {

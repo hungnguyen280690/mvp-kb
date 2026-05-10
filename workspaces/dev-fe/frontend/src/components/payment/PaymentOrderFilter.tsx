@@ -54,6 +54,7 @@ export function PaymentOrderFilter({ onSearch, onReset, loading }: PaymentOrderF
             value={filters.channel || ''}
             onChange={(e) => handleChange('channel', e.target.value)}
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+            data-testid="filter-channel"
           >
             <option value="">-- Tat ca --</option>
             <option value="LNH">LNH - Lien ngan hang</option>
@@ -87,6 +88,7 @@ export function PaymentOrderFilter({ onSearch, onReset, loading }: PaymentOrderF
             value={filters.status || ''}
             onChange={(e) => handleChange('status', e.target.value)}
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+            data-testid="filter-status"
           >
             <option value="">-- Tat ca --</option>
             <option value="DRAFT">Nhap</option>
@@ -132,6 +134,7 @@ export function PaymentOrderFilter({ onSearch, onReset, loading }: PaymentOrderF
             value={filters.paymentDateFrom || ''}
             onChange={(e) => handleChange('paymentDateFrom', e.target.value)}
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+            data-testid="filter-date-from"
           />
         </div>
 
@@ -146,6 +149,7 @@ export function PaymentOrderFilter({ onSearch, onReset, loading }: PaymentOrderF
             value={filters.paymentDateTo || ''}
             onChange={(e) => handleChange('paymentDateTo', e.target.value)}
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+            data-testid="filter-date-to"
           />
         </div>
 
@@ -238,6 +242,7 @@ export function PaymentOrderFilter({ onSearch, onReset, loading }: PaymentOrderF
           onClick={handleSearch}
           disabled={loading}
           className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50"
+          data-testid="btn-search"
         >
           {loading ? t('app.loading') : t('app.search')}
         </button>

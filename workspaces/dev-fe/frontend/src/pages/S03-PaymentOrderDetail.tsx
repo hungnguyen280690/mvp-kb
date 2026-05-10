@@ -13,7 +13,7 @@ import { ApprovalActions } from '@/components/approval/ApprovalActions';
 import { getPaymentOrder, getAuditTrail, approvePaymentOrder, rejectPaymentOrder, cancelPaymentOrder, reversePaymentOrder } from '@/lib/api-client';
 import { useAuth } from '@/auth';
 import { useNotification } from '@/lib/notification-context';
-import { EDITABLE_STATES, UserRole } from '@/types';
+import { EDITABLE_STATES, LttState, UserRole } from '@/types';
 import { formatAmount, formatDate, formatDateTime, maskAccountNumber } from '@/lib/utils';
 import type { PaymentOrder, AuditEntry } from '@/types';
 
@@ -137,13 +137,14 @@ export function S03PaymentOrderDetail() {
           <h2 className="text-xl font-semibold text-gray-900">
             {t('s03.title')} — {data.requestNumber}
           </h2>
-          <StatusBadge status={data.status} size="md" />
+          <StatusBadge status={data.status} size="md" data-testid="field-status" />
         </div>
         <div className="flex items-center gap-2">
           {canEdit && (
             <button
               onClick={() => navigate(`/payment-orders/${data.id}/edit?mode=edit`)}
               className="px-4 py-2 text-sm font-medium text-primary-600 border border-primary-300 rounded-md hover:bg-primary-50"
+              data-testid="btn-edit"
             >
               {t('app.edit')}
             </button>
@@ -165,6 +166,7 @@ export function S03PaymentOrderDetail() {
             onReject={handleReject}
             onCancel={handleCancel}
             onReverse={handleReverse}
+            data-testid="approval-actions"
           />
         </div>
       </div>
@@ -193,6 +195,7 @@ export function S03PaymentOrderDetail() {
                 ? 'border-primary-500 text-primary-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
+            data-testid="tab-audit-history"
           >
             {t('s03.sections.audit')}
           </button>
@@ -218,10 +221,10 @@ export function S03PaymentOrderDetail() {
               {data.transactionType && <div><span className={labelClass}>{t('s02.fields.transactionType')}:</span> <span className={infoClass}>{data.transactionType}</span></div>}
               {data.originalDocNo && <div><span className={labelClass}>{t('s02.fields.originalDocNo')}:</span> <span className={infoClass}>{data.originalDocNo}</span></div>}
               <div className="md:col-span-2 lg:col-span-3"><span className={labelClass}>{t('s02.fields.paymentContent')}:</span> <span className={infoClass}>{data.paymentContent}</span></div>
-              <div><span className={labelClass}>{t('s02.fields.makerName')}:</span> <span className={infoClass}>{data.makerName}</span></div>
-              <div><span className={labelClass}>{t('s02.fields.createdAt')}:</span> <span className={infoClass}>{formatDateTime(data.createdAt)}</span></div>
-              {data.checkerName && <div><span className={labelClass}>Nguoi kiem soat:</span> <span className={infoClass}>{data.checkerName} ({formatDateTime(data.checkedAt!)})</span></div>}
-              {data.approverName && <div><span className={labelClass}>Nguoi phe duyet:</span> <span className={infoClass}>{data.approverName} ({formatDateTime(data.approvedAt!)})</span></div>}
+              <div><span className={labelClass}>{t('s02.fields.makerName')}:</span> <span className={infoClass} data-testid="field-maker-name">{data.makerName}</span></div>
+              <div><span className={labelClass}>{t('s02.fields.createdAt')}:</span> <span className={infoClass} data-testid="field-created-at">{formatDateTime(data.createdAt)}</span></div>
+              {data.checkerName && <div><span className={labelClass}>Nguoi kiem soat:</span> <span className={infoClass} data-testid="field-checker">{data.checkerName} ({formatDateTime(data.checkedAt!)})</span></div>}
+              {data.approverName && <div><span className={labelClass}>Nguoi phe duyet:</span> <span className={infoClass} data-testid="field-approver">{data.approverName} ({formatDateTime(data.approvedAt!)})</span></div>}
               {data.signedAt && <div><span className={labelClass}>Ngay ky so:</span> <span className={infoClass}>{formatDateTime(data.signedAt)}</span></div>}
               {data.rejectReason && <div className="md:col-span-2"><span className={labelClass}>Ly do tu choi:</span> <span className="text-sm text-danger-600">{data.rejectReason}</span></div>}
             </div>
@@ -241,7 +244,7 @@ export function S03PaymentOrderDetail() {
               <div><span className={labelClass}>Dia chi:</span> <span className={infoClass}>{data.senderInfo.address}</span></div>
               <div><span className={labelClass}>Tai khoan:</span> <span className={infoClass}>{maskAccountNumber(data.senderInfo.accountNumber)}</span></div>
               <div><span className={labelClass}>NH/KB:</span> <span className={infoClass}>{data.senderInfo.bankName} ({data.senderInfo.bankCode})</span></div>
-              {data.senderInfo.identityDoc && <div><span className={labelClass}>Giay to:</span> <span className={infoClass}>{data.senderInfo.identityDoc}</span></div>}
+              {data.senderInfo.identityDoc && <div><span className={labelClass}>Giay to:</span> <span className={infoClass} data-testid="field-sender-identity-doc">{data.senderInfo.identityDoc}</span></div>}
               {data.senderInfo.tpcpCode && <div><span className={labelClass}>Ma TPCP:</span> <span className={infoClass}>{data.senderInfo.tpcpCode}</span></div>}
             </div>
           </div>
@@ -278,7 +281,7 @@ export function S03PaymentOrderDetail() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {auditEntries.map((entry) => (
-                <tr key={entry.id} className="hover:bg-gray-50">
+                <tr key={entry.id} className="hover:bg-gray-50" data-testid="audit-entry">
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">{entry.action}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{entry.userName}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{entry.userRole}</td>
