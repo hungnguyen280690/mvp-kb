@@ -62,7 +62,71 @@ public class LttInternalController {
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String userRole,
-            @RequestBody Ltt ltt) {
+            @RequestBody CreateLttRequest request) {
+
+        Ltt ltt = new Ltt();
+        // Map fields from request DTO to Ltt entity
+        ltt.setChannel(request.channel());
+        ltt.setOrderType(request.orderType());
+        ltt.setTxnType(request.transactionType());
+        ltt.setReceiverBankCode(request.receiverBankCode());
+        ltt.setPaymentDate(request.paymentDate());
+        ltt.setAmount(request.amount());
+        ltt.setCurrency(request.currency());
+        ltt.setOrigDocNo(request.originalDocNo());
+        ltt.setOrigDocDate(request.originalDocDate());
+        ltt.setFeeType(request.feeType());
+        ltt.setPaymentContent(request.paymentContent());
+
+        // Map SenderInfo
+        if (request.senderInfo() != null) {
+            ltt.setSenderName(request.senderInfo().name());
+            ltt.setSenderAddress(request.senderInfo().address());
+            ltt.setSenderAccount(request.senderInfo().accountNumber());
+            ltt.setSenderCustomerCode(request.senderInfo().customerCode());
+            ltt.setSenderBankCode(request.senderInfo().bankCode());
+            ltt.setSenderBankName(request.senderInfo().bankName());
+            ltt.setSenderIdNumber(request.senderInfo().identityDoc());
+            ltt.setSenderIdIssueDate(request.senderInfo().identityDocIssueDate());
+            ltt.setSenderIdIssuePlace(request.senderInfo().identityDocIssuePlace());
+            ltt.setTpcpCode(request.senderInfo().tpcpCode());
+        }
+
+        // Map ReceiverInfo
+        if (request.receiverInfo() != null) {
+            ltt.setReceiverName(request.receiverInfo().name());
+            ltt.setReceiverAddress(request.receiverInfo().address());
+            ltt.setReceiverAccount(request.receiverInfo().accountNumber());
+            ltt.setReceiverBankName(request.receiverInfo().bankName());
+            ltt.setReceiverAccountName(request.receiverInfo().accountName());
+            ltt.setReceiverIdNumber(request.receiverInfo().identityDoc());
+            ltt.setReceiverIdIssueDate(request.receiverInfo().identityDocIssueDate());
+            ltt.setReceiverIdIssuePlace(request.receiverInfo().identityDocIssuePlace());
+        }
+
+        // Map LineItems
+        if (request.lineItems() != null) {
+            List<LttLineItem> lineItems = request.lineItems().stream().map(dto -> {
+                LttLineItem item = new LttLineItem();
+                item.setLtt(ltt); // Set back-reference
+                item.setFundCode(dto.fundCode());
+                item.setNaturalAccount(dto.naturalAccount());
+                item.setDvqhns(dto.dvqhns());
+                item.setBudgetLevel(dto.budgetLevel());
+                item.setChapter(dto.chapter());
+                item.setCoaIndustry(dto.economicSector());
+                item.setCoaNdkt(dto.ndkt());
+                item.setCoaArea(dto.area());
+                item.setCoaProgram(dto.program());
+                item.setCoaFundSource(dto.fundSource());
+                item.setCoaTreasury(dto.treasuryCode());
+                item.setCoaReserve(dto.reserve());
+                item.setDescription(dto.description());
+                item.setAmount(dto.itemAmount());
+                return item;
+            }).collect(Collectors.toList());
+            ltt.setLineItems(lineItems);
+        }
 
         Ltt created = lttService.create(ltt, idempotencyKey.toString(), userId, userRole);
         return new ResponseEntity<>(created, HttpStatus.CREATED);

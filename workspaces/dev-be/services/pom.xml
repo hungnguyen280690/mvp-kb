@@ -45,6 +45,7 @@
         <oracle-driver.version>23.6.0.24.10</oracle-driver.version>
         <ibm-mq-client.version>9.4.0.0</ibm-mq-client.version>
         <spring-ai.version>1.0.0-M4</spring-ai.version>
+        <spring-cloud.version>2023.0.0</spring-cloud.version>
     </properties>
 
     <dependencyManagement>
