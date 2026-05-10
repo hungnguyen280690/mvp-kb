@@ -8,12 +8,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.gov.kbnn.vdbas.ltt.domain.entity.Ltt;
 import vn.gov.kbnn.vdbas.ltt.domain.entity.LttAudit;
+import vn.gov.kbnn.vdbas.ltt.domain.entity.LttLineItem;
 import vn.gov.kbnn.vdbas.ltt.service.LttService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Internal API controller — duoc goi boi BFF.
