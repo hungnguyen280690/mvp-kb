@@ -235,7 +235,7 @@ jobs:
           """
 
           payload = {
-              "model": "glm-5.1",
+              "model": "glm-4",
               "messages": [{"role": "user", "content": prompt}],
               "max_tokens": 4096,
               "temperature": 0.1
