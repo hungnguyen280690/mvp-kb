@@ -2,48 +2,16 @@
 set -e
 echo "=== VDBAS DB Init ==="
 
-# Wait for Oracle listener
-for i in $(seq 1 30); do
-  if echo "SELECT 1 FROM DUAL;" | sqlplus -S / as sysdba 2>/dev/null | grep -q "1"; then
-    echo "Oracle is ready."
-    break
-  fi
-  echo "Waiting for Oracle... ($i/30)"
+# Wait for Oracle listener to be ready
+echo "Waiting for Oracle listener..."
+while ! tnsping oracle:1521/FREEPDB1 > /dev/null 2>&1; do
+  echo "Oracle listener not available yet. Retrying in 5 seconds..."
   sleep 5
 done
+echo "Oracle listener is ready."
 
-# Create users and tablespace (ignore errors if already exists)
-sqlplus -S / as sysdba <<'EOSQL'
-ALTER SESSION SET CONTAINER = FREEPDB1;
-BEGIN
-  EXECUTE IMMEDIATE 'CREATE TABLESPACE users DATAFILE ''/opt/oracle/oradata/FREE/FREEPDB1/users01.dbf'' SIZE 100M AUTOEXTEND ON NEXT 10M MAXSIZE UNLIMITED';
-EXCEPTION WHEN OTHERS THEN NULL;
-END;
-/
-BEGIN
-  EXECUTE IMMEDIATE 'CREATE USER vdbas_app IDENTIFIED BY "changeme" DEFAULT TABLESPACE users QUOTA UNLIMITED ON users';
-EXCEPTION WHEN OTHERS THEN
-  EXECUTE IMMEDIATE 'ALTER USER vdbas_app IDENTIFIED BY "changeme"';
-END;
-/
-GRANT CONNECT, RESOURCE, CREATE VIEW, CREATE PROCEDURE, CREATE SEQUENCE, CREATE TRIGGER TO vdbas_app;
-GRANT EXECUTE ON SYS.DBMS_CRYPTO TO vdbas_app;
+# Wait a bit more for the database to be fully open
+sleep 10
 
-BEGIN
-  EXECUTE IMMEDIATE 'CREATE USER vdbas_audit IDENTIFIED BY "changeme" DEFAULT TABLESPACE users QUOTA UNLIMITED ON users';
-EXCEPTION WHEN OTHERS THEN
-  EXECUTE IMMEDIATE 'ALTER USER vdbas_audit IDENTIFIED BY "changeme"';
-END;
-/
-GRANT CONNECT, RESOURCE TO vdbas_audit;
-GRANT SELECT, INSERT, UPDATE, DELETE ON vdbas_app.LTT_AUDIT_HASH TO vdbas_audit;
-GRANT SELECT, INSERT, UPDATE, DELETE ON vdbas_app.OUTBOX TO vdbas_audit;
-GRANT SELECT ON vdbas_app.LTT TO vdbas_audit;
-GRANT EXECUTE ON SYS.DBMS_CRYPTO TO vdbas_audit;
-EXIT;
-EOSQL
-
-echo "Running schema migrations..."
-sqlplus -S vdbas_app/changeme@FREEPDB1 @/tmp/setup_all.sql
-
-echo "=== DB Init Complete ==="
+# Now connect and run setup
+echo "Connecting to Oracle to run setup scripts..."
