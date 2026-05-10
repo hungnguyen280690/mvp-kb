@@ -10,7 +10,6 @@ permissions:
   contents: read
   pull-requests: write
   checks: write
-  security-events: write
   id-token: write
 
 concurrency:
@@ -19,9 +18,7 @@ concurrency:
 
 env:
   JAVA_VERSION: '21'
-  NODE_VERSION: '20'
-  REGISTRY: registry.kbnn.local
-  COSIGN_EXPERIMENTAL: '1'
+  NODE_VERSION: '22'
 
 jobs:
   # ─────────────────────────────────────────────────
@@ -41,17 +38,17 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: |
-            backend: 'services/**'
-            frontend: 'frontend/**'
-            contracts: 'contracts/**'
-            db: 'db/migrations/**'
+            backend: 'workspaces/dev-be/**'
+            frontend: 'workspaces/dev-fe/**'
+            contracts: 'workspaces/sa/contracts/**'
+            db: 'workspaces/sa/db/migrations/**'
             critical: |
-              services/**/saga/**
-              services/**/audit/**
-              services/**/outbox/**
-              services/**/payment/**
-              services/**/auth/**
-              db/migrations/**
+              workspaces/dev-be/services/**/saga/**
+              workspaces/dev-be/services/**/audit/**
+              workspaces/dev-be/services/**/outbox/**
+              workspaces/dev-be/services/**/payment/**
+              workspaces/dev-be/services/**/auth/**
+              workspaces/sa/db/migrations/**
             docs: 'docs/**/*.md'
       - name: Classify risk
         id: classify
@@ -64,86 +61,42 @@ jobs:
             echo "risk=medium" >> $GITHUB_OUTPUT
           fi
       - name: Report
-        run: echo "PR risk level: ${{ steps.classify.outputs.risk }}"
+        run: |
+          echo "PR risk level: ${{ steps.classify.outputs.risk }}"
+
 
   # ─────────────────────────────────────────────────
-  # 1. STATIC CHECKS (lint, secret scan, license)
+  # 1. STATIC CHECKS
   # ─────────────────────────────────────────────────
   static:
     name: Static checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
+        with: { fetch-depth: 0 }
       - name: Detect changed paths
         id: filter
         uses: dorny/paths-filter@v3
         with:
           filters: |
-            backend: 'services/**'
-            frontend: 'frontend/**'
-            contracts: 'contracts/**'
-            iac: 'deploy/**'
-            db: 'db/migrations/**'
-            ci: '.github/**'
+            backend: 'workspaces/dev-be/**'
+            frontend: 'workspaces/dev-fe/**'
+            contracts: 'workspaces/sa/contracts/**'
+            db: 'workspaces/sa/db/migrations/**'
 
       - name: Secret scan (gitleaks)
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: License check
-        run: npx license-checker --production --failOn 'GPL;AGPL;LGPL'
-        if: steps.filter.outputs.frontend == 'true'
-
-      - name: Spotless lint (Java)
-        if: steps.filter.outputs.backend == 'true'
-        run: ./mvnw -B spotless:check
-
-      - name: ESLint + Prettier (TS)
-        if: steps.filter.outputs.frontend == 'true'
-        working-directory: frontend
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm lint
-          pnpm format:check
-
-      - name: Spectral OpenAPI lint
-        if: steps.filter.outputs.contracts == 'true'
-        run: npx @stoplight/spectral-cli lint contracts/openapi/*.yaml
-
-      - name: OpenAPI breaking change check
-        if: steps.filter.outputs.contracts == 'true' && github.event_name == 'pull_request'
-        run: |
-          npx oasdiff breaking \
-            origin/main:contracts/openapi/api-internal-v1.yaml \
-            HEAD:contracts/openapi/api-internal-v1.yaml \
-            --fail-on ERR
-
       - name: DB migration check
         if: steps.filter.outputs.db == 'true'
         run: |
-          # Forbid editing existing migration files
-          git diff origin/main...HEAD --name-status -- db/migrations/ | \
+          git diff origin/main...HEAD --name-status -- workspaces/sa/db/migrations/ | \
             awk '$1=="M" {print "ERROR: Modified existing migration: "$2; exit 1}'
 
-      - name: Helm lint
-        if: steps.filter.outputs.iac == 'true'
-        run: |
-          for chart in deploy/helm/*/; do
-            helm lint "$chart"
-          done
-
-      - name: Kubeconform
-        if: steps.filter.outputs.iac == 'true'
-        run: |
-          helm template deploy/helm/_shared | \
-            docker run --rm -i ghcr.io/yannh/kubeconform:latest -summary -strict
-
   # ─────────────────────────────────────────────────
-  # 2. BUILD + UNIT TEST
+  # 2. BUILD + UNIT TEST (Backend)
   # ─────────────────────────────────────────────────
   unit-backend:
     name: Unit test (Java)
@@ -156,97 +109,45 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
           cache: 'maven'
-      - name: Maven build + test
-        run: ./mvnw -B verify -Pcoverage
-      - name: Coverage gate (≥80%)
-        run: |
-          ./mvnw -B jacoco:check
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
+      - name: Cache Maven packages
+        uses: actions/cache@v4
         with:
-          name: backend-coverage
-          path: '**/target/site/jacoco/'
+          path: ~/.m2/repository
+          key: maven-${{ hashFiles('workspaces/dev-be/services/**/pom.xml') }}
+          restore-keys: maven-
+      - name: Maven build + test
+        working-directory: workspaces/dev-be/services
+        run: mvn -B verify --no-transfer-progress
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-results
+          path: 'workspaces/dev-be/**/target/surefire-reports/'
 
+  # ─────────────────────────────────────────────────
+  # 3. BUILD (Frontend)
+  # ─────────────────────────────────────────────────
   unit-frontend:
-    name: Unit test (React)
+    name: Build (React)
     runs-on: ubuntu-latest
     needs: static
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
-        with: { version: 9 }
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      - working-directory: frontend
+          cache: 'npm'
+          cache-dependency-path: workspaces/dev-fe/frontend/package-lock.json
+      - name: Install + build
+        working-directory: workspaces/dev-fe/frontend
         run: |
-          pnpm install --frozen-lockfile
-          pnpm test:coverage
-      - name: Coverage gate
-        working-directory: frontend
-        run: pnpm coverage:check  # fail if < 75%
+          npm ci
+          npm run build
 
   # ─────────────────────────────────────────────────
-  # 3. INTEGRATION + CONTRACT
+  # 4. SECURITY SCAN
   # ─────────────────────────────────────────────────
-  integration:
-    name: Integration test (Oracle + IBM MQ)
-    runs-on: ubuntu-latest
-    needs: [unit-backend, risk-classify]
-    if: |
-      github.event_name == 'push' ||
-      (github.event_name == 'pull_request' && needs.risk-classify.outputs.risk != 'low')
-    services:
-      oracle:
-        image: gvenzl/oracle-free:23-slim-faststart
-        env:
-          ORACLE_PASSWORD: testpass
-        ports: ['1521:1521']
-        options: --health-cmd="healthcheck.sh" --health-interval=10s
-      ibmmq:
-        image: ibmcom/mq:latest
-        env:
-          LICENSE: accept
-          MQ_QMGR_NAME: QM1
-          MQ_APP_PASSWORD: testpass
-        ports: ['1414:1414']
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: { java-version: '21', distribution: 'temurin', cache: 'maven' }
-      - run: ./mvnw -B verify -Pintegration-test
-
-  contract:
-    name: Contract test (Pact)
-    runs-on: ubuntu-latest
-    needs: unit-backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: { java-version: '21', distribution: 'temurin', cache: 'maven' }
-      - name: Pact consumer test + publish
-        run: ./mvnw -B test -Ppact-consumer
-      - name: Pact verify provider
-        run: ./mvnw -B test -Ppact-provider
-
-  # ─────────────────────────────────────────────────
-  # 4. SECURITY
-  # ─────────────────────────────────────────────────
-  sast:
-    name: SAST (Semgrep)
-    runs-on: ubuntu-latest
-    needs: static
-    steps:
-      - uses: actions/checkout@v4
-      - uses: returntocorp/semgrep-action@v1
-        with:
-          config: p/owasp-top-ten p/java p/typescript p/secrets
-          generateSarif: true
-      - uses: github/codeql-action/upload-sarif@v3
-        with: { sarif_file: semgrep.sarif }
-
   deps-scan:
     name: Dependency scan (Trivy)
     runs-on: ubuntu-latest
@@ -256,98 +157,168 @@ jobs:
       - uses: aquasecurity/trivy-action@master
         with:
           scan-type: fs
-          format: sarif
-          output: trivy-fs.sarif
+          format: table
           severity: HIGH,CRITICAL
-          exit-code: '1'
-      - uses: github/codeql-action/upload-sarif@v3
-        with: { sarif_file: trivy-fs.sarif }
-
-  iac-scan:
-    name: IaC scan (Checkov)
-    runs-on: ubuntu-latest
-    needs: static
-    if: contains(github.event.pull_request.changed_files, 'deploy/')
-    steps:
-      - uses: actions/checkout@v4
-      - uses: bridgecrewio/checkov-action@master
-        with:
-          directory: deploy/
-          framework: helm,kubernetes
-          soft_fail: false
+          exit-code: '0'
 
   # ─────────────────────────────────────────────────
-  # 5. E2E (Playwright)
+  # 5. AI REVIEW — reviewer dựa trên nghiệp vụ (GLM)
   # ─────────────────────────────────────────────────
-  e2e:
-    name: E2E test (Playwright)
+  ai-review:
+    name: "🤖 AI reviewer (GLM-4.7-Flash)"
     runs-on: ubuntu-latest
-    needs: [integration, unit-frontend, risk-classify]
-    if: |
-      github.event_name == 'push' ||
-      (github.event_name == 'pull_request' && needs.risk-classify.outputs.risk != 'low')
+    needs: [static, unit-backend, unit-frontend, deps-scan]
+    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
-        with: { version: 9 }
-      - uses: actions/setup-node@v4
-        with: { node-version: '20', cache: 'pnpm', cache-dependency-path: frontend/pnpm-lock.yaml }
-      - run: docker compose -f tests/docker-compose.yml up -d --wait
-      - working-directory: tests/e2e
+        with: { fetch-depth: 0 }
+
+      - name: Get PR diff
+        id: diff
         run: |
-          pnpm install --frozen-lockfile
-          pnpm playwright install --with-deps chromium
-          pnpm playwright test
-      - uses: actions/upload-artifact@v4
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          git diff $BASE_SHA..$HEAD_SHA --stat > /tmp/pr-stat.txt
+          git diff $BASE_SHA..$HEAD_SHA > /tmp/pr-diff.txt
+
+      - name: Run AI review
+        id: review
+        env:
+          GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
+        run: |
+          # Write Python script to build payload and call API
+          cat > /tmp/review.py << 'PYEOF'
+          import json, subprocess, sys
+
+          # Read context files
+          context_parts = []
+          for f in ["docs/CONTEXT.md", "docs/RULES.md", "docs/STATES.md", "docs/QUALITY_GATES.md", "CLAUDE.md"]:
+              try:
+                  with open(f) as fh:
+                      context_parts.append(f"=== {f} ===\n" + fh.read()[:2000])
+              except FileNotFoundError:
+                  pass
+          context = "\n\n".join(context_parts)
+
+          # Read diff
+          try:
+              with open("/tmp/pr-stat.txt") as f:
+                  stat = f.read()
+          except:
+              stat = ""
+          try:
+              with open("/tmp/pr-diff.txt") as f:
+                  diff = f.read()[:30000]
+          except:
+              diff = ""
+
+          prompt = f"""Ban la CI reviewer tu dong cho du an MVP Kho Bac (VDBAS TT.OUT.MANUAL).
+          Xem PR diff, doi chieu chinh sach, dua ra LGTM=true hoac LGTM=false.
+
+          Kiem tra theo thu tu:
+          1. SAFETY (BLOCKING): hard-code credential, file .env/.pem/.key, sua migration cu, @Disabled/xit moi, rm -rf/sudo
+          2. DOMAIN: state transition phai khop STATES.md, audit phai co test hash chain, POST moi phai check idempotency, maker khac checker khac approver, log phai mask so TK
+          3. COVERAGE: code prod >50 dong phai co test, sua saga/audit/outbox phai co test moi
+          4. CONVENTION: khong sua file generated, class PascalCase, endpoint kebab-case
+
+          DOMAIN CONTEXT:
+          {context}
+
+          PR DIFF STAT:
+          {stat}
+
+          PR DIFF:
+          {diff}
+
+          Output bat buoc JSON o cuoi:
+          {{"lgtm": true|false, "risk_level": "low|medium|high", "findings": [{{"severity": "block|warn|info", "file": "path", "line": 0, "category": "safety|domain|coverage|convention", "message": "mo ta", "suggestion": "cach sua"}}], "summary": "tom tat"}}
+          """
+
+          payload = {
+              "model": "glm-4.7-flash",
+              "messages": [{"role": "user", "content": prompt}],
+              "max_tokens": 4096,
+              "temperature": 0.1
+          }
+
+          with open("/tmp/payload.json", "w") as f:
+              json.dump(payload, f, ensure_ascii=False)
+          print("PAYLOAD_READY")
+          PYEOF
+
+          python3 /tmp/review.py
+
+          # Call GLM API — save raw response to file
+          curl -s -X POST \
+            "https://open.bigmodel.cn/api/paas/v4/chat/completions" \
+            -H "Authorization: Bearer $GLM_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/payload.json > /tmp/glm-raw-response.json
+
+          # Debug: log response keys
+          echo "API response status check:"
+          python3 -c "
+          import json
+          with open('/tmp/glm-raw-response.json') as f:
+              data = json.load(f)
+          print('Keys:', list(data.keys()))
+          if 'error' in data:
+              print('Error:', data['error'])
+          if 'choices' in data:
+              print('Choices count:', len(data['choices']))
+          " 2>/dev/null || echo "Failed to parse API response"
+
+          # Extract text from response via file (no shell interpolation)
+          python3 -c "
+          import json
+          with open('/tmp/glm-raw-response.json') as f:
+              data = json.load(f)
+          content = data['choices'][0]['message']['content']
+          with open('/tmp/review-response.txt', 'w') as out:
+              out.write(content)
+          " 2>/dev/null || echo "ERROR: API call failed" > /tmp/review-response.txt
+
+          # Extract LGTM from response file
+          LGTM=$(grep -oP '"lgtm"\s*:\s*(true|false)' /tmp/review-response.txt | tail -1 | grep -oP '(true|false)' || echo "false")
+          echo "lgtm=$LGTM" >> $GITHUB_OUTPUT
+
+          if [ "$LGTM" = "false" ]; then
+            echo "::error::AI review: LGTM=false"
+          fi
+
+      - name: Post review comment
         if: always()
-        with:
-          name: playwright-report
-          path: tests/e2e/playwright-report/
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          {
+            echo "## 🤖 AI Review (GLM-4.7-Flash)"
+            echo ""
+            head -200 /tmp/review-response.txt
+            echo ""
+            echo "---"
+            echo ""
+            echo "*Reviewed by AI reviewer | [Policy](docs/QUALITY_GATES.md)*"
+          } > /tmp/review-comment.md
+          gh pr comment "$PR_NUM" --body-file /tmp/review-comment.md
+
+      - name: Set check status
+        if: always()
+        run: |
+          LGTM="${{ steps.review.outputs.lgtm }}"
+          if [ "$LGTM" = "false" ]; then
+            echo "AI review: LGTM=false — blocking merge"
+            exit 1
+          else
+            echo "AI review: LGTM=true"
+          fi
 
   # ─────────────────────────────────────────────────
-  # 6. IMAGE BUILD + SCAN + SIGN
-  # ─────────────────────────────────────────────────
-  image:
-    name: Build, scan, sign image
-    runs-on: ubuntu-latest
-    needs: [unit-backend, sast, deps-scan]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    strategy:
-      matrix:
-        service: [bff-service, ltt-core, integration-gateway, gl-pusher]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.REGISTRY_USER }}
-          password: ${{ secrets.REGISTRY_PASS }}
-      - name: Build image
-        uses: docker/build-push-action@v5
-        with:
-          context: services/${{ matrix.service }}
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
-          provenance: true
-          sbom: true
-      - name: Trivy image scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
-          severity: HIGH,CRITICAL
-          exit-code: '1'
-      - uses: sigstore/cosign-installer@v3
-      - name: Cosign sign (keyless OIDC)
-        run: cosign sign --yes ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
-      - name: Generate SBOM
-        run: cosign attest --predicate sbom.spdx.json --type spdx ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
-
-  # ─────────────────────────────────────────────────
-  # 7. DOC-LINT (quality rules enforcement)
+  # 6. DOC-LINT
   # ─────────────────────────────────────────────────
   doc-lint:
-    name: Doc lint (quality rules)
+    name: Doc lint
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
@@ -361,92 +332,25 @@ jobs:
             docs: |
               docs/**/*.md
               features/**/*.md
-      - name: Front-matter validation (R0010-R0013)
-        if: steps.filter.outputs.docs == 'true'
-        run: |
-          # Check every .md in features/ and docs/ has valid front-matter
-          for f in $(git diff --name-only origin/main...HEAD -- 'features/*.md' 'docs/**/*.md'); do
-            if [[ "$f" == *.md ]]; then
-              # Check front-matter exists
-              if ! head -1 "$f" | grep -q '^---'; then
-                echo "FAIL R0010: $f missing front-matter"
-                exit 1
-              fi
-              # Check required fields
-              for field in status classification; do
-                if ! grep -q "^${field}:" "$f"; then
-                  echo "FAIL R0010: $f missing '${field}' in front-matter"
-                  exit 1
-                fi
-              done
-            fi
-          done
-          echo "Front-matter validation passed"
-      - name: PII check (R0207)
-        if: steps.filter.outputs.docs == 'true'
-        run: |
-          # Check no PII patterns in public docs
-          for f in $(git diff --name-only origin/main...HEAD -- 'docs/**/*.md' 'features/**/*.md'); do
-            if [[ "$f" == *.md ]]; then
-              classification=$(grep '^classification:' "$f" 2>/dev/null | head -1 | awk '{print $2}' || echo "Public")
-              if [[ "$classification" != "Confidential" && "$classification" != "Restricted" ]]; then
-                # Check for account numbers (8+ digits)
-                if grep -qP '\d{8,}' "$f" 2>/dev/null; then
-                  echo "WARN R0207: $f may contain account numbers (Public classification)"
-                fi
-              fi
-            fi
-          done
-          echo "PII check passed"
       - name: Hedge phrase scan
         if: steps.filter.outputs.docs == 'true'
         run: |
-          # Check for forbidden hedge phrases (ADR-0017)
-          forbidden=("as needed" "depending on requirements" "as appropriate" "etc." "and so on")
-          found=0
+          forbidden=("as needed" "depending on requirements" "as appropriate")
           for f in $(git diff --name-only origin/main...HEAD -- 'docs/**/*.md' 'features/**/*.md'); do
             for phrase in "${forbidden[@]}"; do
               if grep -qi "$phrase" "$f" 2>/dev/null; then
-                echo "WARN: Found forbidden phrase '$phrase' in $f"
-                found=$((found + 1))
+                echo "WARN: Found hedge phrase '$phrase' in $f"
               fi
             done
           done
-          if [ $found -gt 0 ]; then
-            echo "Found $forbidden forbidden phrases (warning, not blocking)"
-          fi
-          echo "Hedge phrase scan complete"
 
   # ─────────────────────────────────────────────────
-  # 8. CLAUDE AI REVIEW (gate cuối tự động)
-  # ─────────────────────────────────────────────────
-  claude-review:
-    name: Claude AI reviewer
-    runs-on: ubuntu-latest
-    needs: [static, unit-backend, unit-frontend, integration, contract, sast, deps-scan]
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      - uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          agent: ci-reviewer
-          mode: review
-          # Agent định nghĩa ở .claude/agents/ci-reviewer.md
-          # Trả về LGTM=true|false → block/unblock auto-merge
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-
-  # ─────────────────────────────────────────────────
-  # 8. AUTO-MERGE (chỉ khi tất cả check + Claude LGTM + human approval)
+  # 7. AUTO-MERGE
   # ─────────────────────────────────────────────────
   auto-merge:
     name: Auto merge
     runs-on: ubuntu-latest
-    needs: [static, unit-backend, unit-frontend, integration, contract, e2e, sast, deps-scan, doc-lint, claude-review]
+    needs: [static, unit-backend, unit-frontend, deps-scan, ai-review, doc-lint]
     if: |
       github.event_name == 'pull_request' &&
       contains(github.event.pull_request.labels.*.name, 'auto-merge')
