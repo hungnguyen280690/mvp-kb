@@ -274,4 +274,107 @@ public class LttServiceClient {
                 .block();
         return mapToPaymentOrderResponse(raw);
     }
+
+    @SuppressWarnings("unchecked")
+    private PaymentOrderResponse mapToPaymentOrderResponse(Map<String, Object> raw) {
+        if (raw == null) return null;
+        PaymentOrderResponse r = new PaymentOrderResponse();
+        r.setId(toLong(raw.get("id")));
+        r.setVersion(toLong(raw.get("version")));
+        r.setStatus(str(raw.get("state")));
+        r.setChannel(str(raw.get("channel")));
+        r.setOrderType(str(raw.get("orderType")));
+        r.setTransactionType(str(raw.get("txnType")));
+        r.setSenderBankCode(str(raw.get("senderBankCode")));
+        r.setSenderBankName(str(raw.get("senderBankName")));
+        r.setReceiverBankCode(str(raw.get("receiverBankCode")));
+        r.setReceiverBankName(str(raw.get("receiverBankName")));
+        r.setPaymentContent(str(raw.get("paymentContent")));
+        r.setCurrency(str(raw.get("currency")));
+        r.setFeeType(str(raw.get("feeType")));
+        r.setOriginalDocNo(str(raw.get("origDocNo")));
+        r.setRejectReason(str(raw.get("rejectReason")));
+        r.setMakerId(str(raw.get("makerId")));
+        r.setMakerName(str(raw.get("makerName")));
+        r.setCheckerId(str(raw.get("checkerId")));
+        r.setCheckerName(str(raw.get("checkerName")));
+        r.setApproverId(str(raw.get("approverId")));
+        r.setApproverName(str(raw.get("approverName")));
+        r.setGlVoucherNo(str(raw.get("glVoucherNo")));
+
+        if (raw.get("paymentDate") != null) r.setPaymentDate(java.time.LocalDate.parse(str(raw.get("paymentDate"))));
+        if (raw.get("amount") != null) r.setAmount(new java.math.BigDecimal(str(raw.get("amount"))));
+        if (raw.get("exchangeRate") != null) r.setExchangeRate(new java.math.BigDecimal(str(raw.get("exchangeRate"))));
+        if (raw.get("createdAt") != null) r.setCreatedAt(java.time.OffsetDateTime.parse(str(raw.get("createdAt"))));
+        if (raw.get("updatedAt") != null) r.setUpdatedAt(java.time.OffsetDateTime.parse(str(raw.get("updatedAt"))));
+        if (raw.get("checkedAt") != null) r.setCheckedAt(java.time.OffsetDateTime.parse(str(raw.get("checkedAt"))));
+        if (raw.get("approvedAt") != null) r.setApprovedAt(java.time.OffsetDateTime.parse(str(raw.get("approvedAt"))));
+
+        // Map sender info from flat fields
+        SenderInfoDto sender = new SenderInfoDto();
+        sender.setName(str(raw.get("senderName")));
+        sender.setAddress(str(raw.get("senderAddress")));
+        sender.setAccountNumber(str(raw.get("senderAccount")));
+        sender.setCustomerCode(str(raw.get("senderCustomerCode")));
+        sender.setBankCode(str(raw.get("senderBankCode")));
+        sender.setBankName(str(raw.get("senderBankName")));
+        sender.setIdentityDoc(str(raw.get("senderIdNumber")));
+        sender.setTpcpCode(str(raw.get("tpcpCode")));
+        if (raw.get("senderIdIssueDate") != null)
+            sender.setIdentityDocIssueDate(java.time.LocalDate.parse(str(raw.get("senderIdIssueDate"))));
+        r.setSenderInfo(sender);
+
+        // Map receiver info from flat fields
+        ReceiverInfoDto receiver = new ReceiverInfoDto();
+        receiver.setName(str(raw.get("receiverName")));
+        receiver.setAddress(str(raw.get("receiverAddress")));
+        receiver.setAccountNumber(str(raw.get("receiverAccount")));
+        receiver.setBankCode(str(raw.get("receiverBankCode")));
+        receiver.setBankName(str(raw.get("receiverBankName")));
+        receiver.setAccountName(str(raw.get("receiverAccountName")));
+        receiver.setIdentityDoc(str(raw.get("receiverIdNumber")));
+        if (raw.get("receiverIdIssueDate") != null)
+            receiver.setIdentityDocIssueDate(java.time.LocalDate.parse(str(raw.get("receiverIdIssueDate"))));
+        r.setReceiverInfo(receiver);
+
+        // Map line items
+        Object rawItems = raw.get("lineItems");
+        if (rawItems instanceof java.util.List<?> list) {
+            java.util.List<LineItemDto> items = new ArrayList<>();
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> m) {
+                    LineItemDto li = new LineItemDto();
+                    li.setFundCode(str(m.get("coaFund")));
+                    li.setNaturalAccount(str(m.get("coaNaturalAccount")));
+                    li.setDvqhns(str(m.get("coaDvqhns")));
+                    li.setBudgetLevel(str(m.get("coaBudgetLevel")));
+                    li.setChapter(str(m.get("coaChapter")));
+                    li.setEconomicSector(str(m.get("coaIndustry")));
+                    li.setNdkt(str(m.get("coaNdkt")));
+                    li.setArea(str(m.get("coaArea")));
+                    li.setProgram(str(m.get("coaProgram")));
+                    li.setFundSource(str(m.get("coaFundSource")));
+                    li.setTreasuryCode(str(m.get("coaTreasury")));
+                    li.setReserve(str(m.get("coaReserve")));
+                    li.setDescription(str(m.get("description")));
+                    if (m.get("lineAmount") != null) li.setItemAmount(new java.math.BigDecimal(str(m.get("lineAmount"))));
+                    items.add(li);
+                }
+            }
+            r.setLineItems(items);
+        }
+
+        r.setAttachments(java.util.List.of());
+        return r;
+    }
+
+    private static String str(Object val) {
+        return val != null ? val.toString() : null;
+    }
+
+    private static Long toLong(Object val) {
+        if (val == null) return null;
+        if (val instanceof Number n) return n.longValue();
+        return Long.parseLong(val.toString());
+    }
 }

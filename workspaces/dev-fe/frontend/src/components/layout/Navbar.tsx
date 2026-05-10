@@ -28,26 +28,12 @@ export function Navbar() {
           </h1>
         </div>
 
-        {/* Right: User info + role switcher */}
+        {/* Right: User info + logout */}
         <div className="flex items-center gap-4">
-          {/* Role switcher (dev only) */}
-          <div className="flex items-center gap-2">
-            <label htmlFor="role-switcher" className="text-xs text-gray-500">
-              {t('nav.switchRole')}:
-            </label>
-            <select
-              id="role-switcher"
-              value={user.role}
-              onChange={(e) => switchRole(e.target.value)}
-              className="text-sm border border-gray-300 rounded px-2 py-1 bg-yellow-50"
-            >
-              {availableUsers.map((u) => (
-                <option key={u.userId} value={u.role}>
-                  {roleLabels[u.role] || u.role}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Role badge */}
+          <span className="text-xs font-medium px-2 py-1 rounded bg-primary-100 text-primary-700">
+            {roleLabels[user.role] || user.role}
+          </span>
 
           {/* User info */}
           <div className="text-right">
