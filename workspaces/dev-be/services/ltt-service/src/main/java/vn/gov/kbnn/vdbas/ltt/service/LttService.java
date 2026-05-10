@@ -48,6 +48,7 @@ public class LttService {
 
     @Transactional
     public Ltt create(Ltt ltt, String idempotencyKey, String userId, String userRole) {
+        log.info("Creating LTT with payload: {}", ltt);
         // Kiem tra idempotency
         if (idempotencyKey != null) {
             var existing = lttRepository.findByIdempotencyKey(idempotencyKey);
@@ -65,6 +66,16 @@ public class LttService {
         ltt.setIsDeleted(false);
         ltt.setSoYctt(generateSoYctt());
         ltt.setSenderBankCode("79652001"); // TODO: Lay tu thong tin don vi cua user
+
+        // Ensure sender/receiver info is populated from the input object
+        ltt.setSenderName(ltt.getSenderName());
+        ltt.setSenderAccount(ltt.getSenderAccount());
+        ltt.setSenderAddress(ltt.getSenderAddress());
+        ltt.setReceiverName(ltt.getReceiverName());
+        ltt.setReceiverAccount(ltt.getReceiverAccount());
+        ltt.setReceiverAddress(ltt.getReceiverAddress());
+        ltt.setReceiverBankName(ltt.getReceiverBankName());
+
 
         Ltt saved = lttRepository.save(ltt);
 
