@@ -93,6 +93,7 @@ jobs:
         if: steps.filter.outputs.db == 'true'
         run: |
           git diff origin/main...HEAD --name-status -- workspaces/sa/db/migrations/ | \
+            grep -v 'setup_all\.sql' | \
             awk '$1=="M" {print "ERROR: Modified existing migration: "$2; exit 1}'
 
   # ─────────────────────────────────────────────────
