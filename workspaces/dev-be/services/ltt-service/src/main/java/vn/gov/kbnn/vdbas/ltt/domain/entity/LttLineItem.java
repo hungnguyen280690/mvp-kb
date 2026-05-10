@@ -29,6 +29,7 @@ public class LttLineItem {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "LTT_ID", nullable = false)
     @JsonIgnore
+    @ToString.Exclude
     private Ltt ltt;
 
     @Column(name = "LINE_NO", nullable = false)

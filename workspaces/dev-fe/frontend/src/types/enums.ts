@@ -29,10 +29,11 @@ export enum Channel {
   LKB = 'LKB',
 }
 
-/** Loai giao dich (chi LNH) */
+/** Loai giao dich (chi LNH) — max 6 ky tu theo DB */
 export enum TransactionType {
-  INTERNAL = 'INTERNAL',
-  CROSS_BORDER = 'CROSS_BORDER',
+  TX_INT = 'TX-INT',
+  TX_LCC = 'TX-LCC',
+  TX_LCT = 'TX-LCT',
 }
 
 /** Vai tro nguoi dung */
