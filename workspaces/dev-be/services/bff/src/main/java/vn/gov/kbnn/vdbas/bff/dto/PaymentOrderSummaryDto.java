@@ -5,11 +5,10 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 @Data
 public class PaymentOrderSummaryDto {
-    private UUID id;
+    private Long id;
     private String requestNumber;
     private String channel;
     private String orderType;
