@@ -73,13 +73,7 @@ verification:
 
 # Plugin nội bộ (agent .md trong workspaces/<role>/.claude/agents/)
 internal_agents:
-  shared:
-    - ci-reviewer        # .claude/agents/ci-reviewer.md
-    - orchestrator       # .claude/agents/orchestrator.md
   per_workspace:
-    ba: [ba-parser]
-    sa: [sa-designer, threat-modeler]
-    dev-be: [service-builder]
-    dev-fe: [react-builder]
-    qa: [test-writer]
-    devops: [devops-builder]
+    ba: [ba-parser]            # parse đặc tả features/*.md
+    sa: [sa-designer]          # thiết kế OpenAPI contracts
+    dev: [service-builder]     # fullstack code (Java + React)

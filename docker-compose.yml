@@ -1,5 +1,5 @@
 # VDBAS LTT - Minimal Infrastructure
-# Start: docker compose up --build
+# Start: docker compose up
 
 services:
   # Database: Oracle Free (23c slim)
@@ -31,36 +31,6 @@ services:
     ports:
       - "61616:61616"
       - "8161:8161"
-    networks: [vdbas]
-
-  # Backend: Spring Boot App (Root)
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: vdbas-backend
-    depends_on:
-      oracle:
-        condition: service_healthy
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:oracle:thin:@//oracle:1521/FREEPDB1
-      SPRING_DATASOURCE_USERNAME: sys as sysdba
-      SPRING_DATASOURCE_PASSWORD: changeme
-      SPRING_ARTEMIS_BROKER_URL: tcp://artemis:61616
-    ports:
-      - "8080:8080"
-    networks: [vdbas]
-
-  # Frontend: React App (Root)
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: vdbas-frontend
-    depends_on:
-      - backend
-    ports:
-      - "3000:80"
     networks: [vdbas]
 
 networks:

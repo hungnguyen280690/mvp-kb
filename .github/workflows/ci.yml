@@ -17,8 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  JAVA_VERSION: '21'
-  NODE_VERSION: '22'
+  JAVA_VERSION: "21"
+  NODE_VERSION: "22"
 
 jobs:
   # ─────────────────────────────────────────────────
@@ -38,17 +38,17 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: |
-            backend: 'workspaces/dev-be/**'
-            frontend: 'workspaces/dev-fe/**'
-            contracts: 'workspaces/sa/contracts/**'
-            db: 'workspaces/sa/db/migrations/**'
+            backend: 'backend/**'
+            frontend: 'frontend/**'
+            contracts: 'contracts/**'
+            db: 'backend/db/migrations/**'
             critical: |
-              workspaces/dev-be/services/**/saga/**
-              workspaces/dev-be/services/**/audit/**
-              workspaces/dev-be/services/**/outbox/**
-              workspaces/dev-be/services/**/payment/**
-              workspaces/dev-be/services/**/auth/**
-              workspaces/sa/db/migrations/**
+              backend/**/saga/**
+              backend/**/audit/**
+              backend/**/outbox/**
+              backend/**/payment/**
+              backend/**/auth/**
+              backend/db/migrations/**
             docs: 'docs/**/*.md'
       - name: Classify risk
         id: classify
@@ -64,7 +64,6 @@ jobs:
         run: |
           echo "PR risk level: ${{ steps.classify.outputs.risk }}"
 
-
   # ─────────────────────────────────────────────────
   # 1. STATIC CHECKS
   # ─────────────────────────────────────────────────
@@ -79,10 +78,10 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: |
-            backend: 'workspaces/dev-be/**'
-            frontend: 'workspaces/dev-fe/**'
-            contracts: 'workspaces/sa/contracts/**'
-            db: 'workspaces/sa/db/migrations/**'
+            backend: 'backend/**'
+            frontend: 'frontend/**'
+            contracts: 'contracts/**'
+            db: 'backend/db/migrations/**'
 
       - name: Secret scan (gitleaks)
         uses: gitleaks/gitleaks-action@v2
@@ -92,7 +91,7 @@ jobs:
       - name: DB migration check
         if: steps.filter.outputs.db == 'true'
         run: |
-          git diff origin/main...HEAD --name-status -- workspaces/sa/db/migrations/ | \
+          git diff origin/main...HEAD --name-status -- backend/db/migrations/ | \
             grep -v 'setup_all\.sql' | \
             awk '$1=="M" {print "ERROR: Modified existing migration: "$2; exit 1}'
 
@@ -108,23 +107,23 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: 'maven'
+          distribution: "temurin"
+          cache: "maven"
       - name: Cache Maven packages
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
-          key: maven-${{ hashFiles('workspaces/dev-be/services/**/pom.xml') }}
+          key: maven-${{ hashFiles('backend/**/pom.xml') }}
           restore-keys: maven-
       - name: Maven build + test
-        working-directory: workspaces/dev-be/services
+        working-directory: backend
         run: mvn -B verify --no-transfer-progress
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: backend-test-results
-          path: 'workspaces/dev-be/**/target/surefire-reports/'
+          path: "backend/**/target/surefire-reports/"
 
   # ─────────────────────────────────────────────────
   # 3. BUILD (Frontend)
@@ -138,10 +137,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: workspaces/dev-fe/frontend/package-lock.json
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
       - name: Install + build
-        working-directory: workspaces/dev-fe/frontend
+        working-directory: frontend
         run: |
           npm ci
           npm run build
@@ -160,7 +159,7 @@ jobs:
           scan-type: fs
           format: table
           severity: HIGH,CRITICAL
-          exit-code: '0'
+          exit-code: "0"
 
   # ─────────────────────────────────────────────────
   # 5. AI REVIEW — reviewer dựa trên nghiệp vụ (GLM)
@@ -193,7 +192,7 @@ jobs:
 
           # Read context files
           context_parts = []
-          for f in ["docs/CONTEXT.md", "docs/RULES.md", "docs/STATES.md", "docs/QUALITY_GATES.md", "CLAUDE.md"]:
+          for f in ["docs/CONTEXT.md", "docs/RULES.md", "CLAUDE.md"]:
               try:
                   with open(f) as fh:
                       context_parts.append(f"=== {f} ===\n" + fh.read()[:2000])
@@ -217,13 +216,13 @@ jobs:
           Nhiệm vụ của bạn là đảm bảo PR tuân thủ các quy tắc "vệ sinh" mã nguồn, bảo vệ các file quan trọng và giữ ranh giới giữa các Stage.
 
           Kiểm tra theo thứ tự ưu tiên:
-          1. SAFETY (BLOCKING): 
-             - Chặn xóa/sửa file Signoff (gates/G*-signoff.md) hoặc quy tắc lõi (docs/SAFETY.md).
+          1. SAFETY (BLOCKING):
+             - Chặn xóa/sửa file Signoff (gates/G*-signoff.md) hoặc quy tắc lõi (docs/RULES.md).
              - Chặn sửa file DB migration cũ (db/migrations/V*__*.sql đã tồn tại).
              - Chặn lệnh nguy hiểm (rm -rf, sudo), lộ secret (.env, .pem), bypass test (@Disabled).
-          2. STAGE FREEZING: Kiểm tra PR có vi phạm ranh giới Stage (VD: Stage 2 không được sửa code services/, Stage 3 không được sửa contracts/).
+          2. STAGE FREEZING: Kiểm tra PR có vi phạm ranh giới Stage (VD: Stage 2 không được sửa code backend/, Stage 3 không được sửa contracts/).
           3. DOCUMENT CONTROL: File .md phải có front-matter đầy đủ; Chặn hedge phrases ("as needed", "TBD"); PR Stage 1-2 phải có diagram (.pml/.mmd).
-          4. NAMING & CODE: 
+          4. NAMING & CODE:
              - Java: PascalCase (Class), camelCase (Method). DB: snake_case. API: kebab-case.
              - Chặn debug code (console.log, printStackTrace).
              - Code thêm > 50 dòng phải có test đi kèm.
@@ -306,7 +305,7 @@ jobs:
             echo ""
             echo "---"
             echo ""
-            echo "*Reviewed by AI reviewer | [Policy](docs/QUALITY_GATES.md)*"
+            echo "*Reviewed by AI reviewer | [Policy](docs/RULES.md)*"
           } > /tmp/review-comment.md
           gh pr comment "$PR_NUM" --body-file /tmp/review-comment.md
 
