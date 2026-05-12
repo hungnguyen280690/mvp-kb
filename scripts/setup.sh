@@ -21,7 +21,7 @@ echo
 # ─────────────────────────────────────────────────
 # 0. Prerequisites check
 # ─────────────────────────────────────────────────
-cyan "[0/7] Prerequisites check"
+cyan "[0/8] Prerequisites check"
 
 PREREQ_FAIL=0
 
@@ -76,14 +76,14 @@ echo
 # ─────────────────────────────────────────────────
 # 1. mise — language/tool version manager
 # ─────────────────────────────────────────────────
-cyan "[1/7] Check mise"
+cyan "[1/8] Check mise"
 green "✅ mise: $(mise --version)"
 echo
 
 # ─────────────────────────────────────────────────
 # 2. Cài tools theo .mise.toml
 # ─────────────────────────────────────────────────
-cyan "[2/7] Install tools từ .mise.toml"
+cyan "[2/8] Install tools từ .mise.toml"
 mise install
 green "✅ Tools installed"
 echo
@@ -91,7 +91,7 @@ echo
 # ─────────────────────────────────────────────────
 # 3. Frontend deps (nếu có)
 # ─────────────────────────────────────────────────
-cyan "[3/7] Frontend dependencies"
+cyan "[3/8] Frontend dependencies"
 if [[ -d frontend ]] && [[ -f frontend/pnpm-lock.yaml ]]; then
     (cd frontend && pnpm install --frozen-lockfile)
     green "✅ pnpm install done"
@@ -105,7 +105,7 @@ echo
 # ─────────────────────────────────────────────────
 # 4. Maven warmup (nếu có)
 # ─────────────────────────────────────────────────
-cyan "[4/7] Maven dependencies"
+cyan "[4/8] Maven dependencies"
 if [[ -f backend/pom.xml ]]; then
     (cd backend && mvn -B dependency:resolve -DskipTests -q) || yellow "→ Maven warmup gặp warning (bỏ qua được)"
     green "✅ Maven deps ready"
@@ -117,7 +117,7 @@ echo
 # ─────────────────────────────────────────────────
 # 5. Pre-commit hooks
 # ─────────────────────────────────────────────────
-cyan "[5/7] Pre-commit hooks"
+cyan "[5/8] Pre-commit hooks"
 if command -v pre-commit >/dev/null 2>&1; then
     if [[ -d .git ]]; then
         pre-commit install
@@ -132,9 +132,24 @@ fi
 echo
 
 # ─────────────────────────────────────────────────
-# 6. Verify
+# 6. Plugin install (npm auto)
 # ─────────────────────────────────────────────────
-cyan "[6/7] Verify"
+cyan "[6/8] Plugin install (mattpocock/skills)"
+if command -v npx >/dev/null 2>&1; then
+    if npx -y skills@latest add mattpocock/skills 2>&1; then
+        green "mattpocock/skills installed"
+    else
+        yellow "mattpocock/skills cài thất败 — có thể cài lại sau"
+    fi
+else
+    yellow "npx chưa có — bỏ qua plugin install. Chạy mise install trước."
+fi
+echo
+
+# ─────────────────────────────────────────────────
+# 7. Verify
+# ─────────────────────────────────────────────────
+cyan "[7/8] Verify"
 "$SCRIPT_DIR/verify-env.sh" || true
 echo
 
@@ -144,7 +159,13 @@ echo
 cyan "🎉 Setup done"
 echo
 echo "Next steps:"
-echo "  1. Cài Claude Code plugin:    ./scripts/install-claude-plugins.sh"
+echo "  1. Cài marketplace plugins (interactive — trong Claude Code session):"
+echo "     /plugin marketplace add obra/superpowers"
+echo "     /plugin install superpowers"
+echo "     /plugin marketplace add wshobson/agents"
+echo "     /plugin install kubernetes-operations"
+echo "     /plugin install security-scanning"
+echo ""
 echo "  2. Khởi động infra:           make up"
 echo "  3. Mở workspace của bạn:       cd workspaces/<role> && claude code ."
 echo "     <role> ∈ {ba, sa, dev}"
