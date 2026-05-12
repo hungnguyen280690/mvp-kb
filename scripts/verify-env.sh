@@ -50,8 +50,8 @@ check "Java 21" "java -version 2>&1" "21"
 check "Node 22" "node --version" "v22"
 check "pnpm 9" "pnpm --version" "9"
 check "Maven 3.9" "mvn --version" "3.9"
-check "Docker" "docker --version"
-check "gh CLI" "gh --version"
+check "Docker" "command -v docker"
+check "gh CLI" "command -v gh"
 check "Claude Code CLI" "claude --version"
 check "pre-commit" "pre-commit --version"
 echo
@@ -75,11 +75,11 @@ if [[ -d "$PLUGIN_DIR" ]]; then
         if compgen -G "$PLUGIN_DIR/*$plugin*" >/dev/null 2>&1; then
             check_pass "Plugin: $plugin"
         else
-            check_warn "Plugin missing: $plugin (chạy install-claude-plugins.sh)"
+            check_fail "Plugin missing: $plugin (chạy install-claude-plugins.sh)"
         fi
     done
 else
-    check_warn "Plugin dir chưa có — Claude Code chưa khởi động lần đầu hoặc chưa cài plugin"
+    check_fail "Plugin dir chưa có — chạy install-claude-plugins.sh hoặc mở Claude Code lần đầu"
 fi
 echo
 
