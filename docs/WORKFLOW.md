@@ -1,159 +1,70 @@
-# Quy trình 5 Giai đoạn — BA → SA → Dev → Test → DevOps
+# Quy trình 3 Bước: BA (Review) -> SA (OpenAPI) -> Dev (Code)
 
-Mọi công việc đều phải trải qua 5 giai đoạn tuần tự. Đầu ra của giai đoạn trước là đầu vào của giai đoạn sau. Mỗi giai đoạn đều có người gác cổng riêng (xem [GATEKEEPERS.md](GATEKEEPERS.md)).
+Mọi công việc đều phải tuân thủ cơ chế **"Kế hoạch trước - Hành động sau" (Plan-First)** và **"Viết Test trước - Code sau" (TDD)**.
 
 ## Tổng quan luồng công việc
 
-```
-SRS xlsx (Tài liệu gốc)
-    │
-    ▼
-┌─────────────────────────────────────────────────────────┐
-│ GIAI ĐOẠN 1 — BA (AI phân tích SRS)     ✋ Cổng G1: BA  │
-│ Đầu ra: domain/glossary, states, rules, *.feature       │
-└─────────────────┬───────────────────────────────────────┘
-                  ▼
-┌─────────────────────────────────────────────────────────┐
-│ GIAI ĐOẠN 2 — SA + DBA + Bảo mật + UI   ✋ Cổng G2: SA  │
-│ (AI tạo thiết kế, 4 vai chạy song song) ✋ Cổng G-DBA   │
-│ Đầu ra: contracts, DDL, threat model, UI spec           │
-│                                         ✋ Cổng G-SEC   │
-│                                         ✋ Cổng G-UI    │
-└─────────────────┬───────────────────────────────────────┘
-                  ▼
-┌─────────────────────────────────────────────────────────┐
-│ GIAI ĐOẠN 3 — Dev (AI lập trình)        ✋ Cổng G3: BE  │
-│                                         ✋ Cổng G3': FE │
-│ Đầu ra: 4 dịch vụ Java + Giao diện React                │
-└─────────────────┬───────────────────────────────────────┘
-                  ▼
-┌─────────────────────────────────────────────────────────┐
-│ GIAI ĐOẠN 4 — Test (AI kiểm thử)        ✋ Cổng G4: QA  │
-│ Đầu ra: Unit + Contract + Integration + E2E + Perf + Sec│
-└─────────────────┬───────────────────────────────────────┘
-                  ▼
-┌─────────────────────────────────────────────────────────┐
-│ GIAI ĐOẠN 5 — DevOps (AI triển khai)    ✋ Cổng G5: SRE │
-│ Đầu ra: Tekton + ArgoCD + Helm + OTel + runbook         │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A[BA Người: MD Files] -->|Push| B(BA Agent: G1 Review)
+    B -->|Lỗi| A
+    B -->|Ký G1| C(SA Agent: G2 OpenAPI)
+    C -->|Sinh Plan| D{Duyệt SA Plan?}
+    D -->|Duyệt| E[Gen OpenAPI + Ký G2]
+    E --> F(Dev Agent: G3 Code)
+    F -->|Sinh Plan + Test| G{Duyệt Dev Plan?}
+    G -->|Duyệt| H[Gen Code BE/FE + Pass Test]
+    H -->|Ký G3| I[Hoàn thành Task]
 ```
 
 ---
 
-## GIAI ĐOẠN 1 — BA (Phân tích Nghiệp vụ)
+## GIAI ĐOẠN 1 — BA (Review Đặc tả)
 
-**Đầu vào**: File SRS xlsx
+**Đầu vào**: Các file đặc tả `.md` do BA (con người) viết trong thư mục `features/`.
 
-**AI thực hiện**:
+**BA Agent thực hiện**:
 
-- Phân tích 22 sheet thành **mô hình nghiệp vụ YAML** (máy đọc được).
-- Sinh `domain/glossary.md` (Từ điển nghiệp vụ đầy đủ).
-- Sinh `domain/states.yaml` — 15 trạng thái và các bước chuyển.
-- Sinh `domain/business-rules.yaml` — 29 quy tắc nghiệp vụ (BIZ).
-- Sinh `domain/validation-rules.yaml` — 36 quy tắc kiểm soát (VAL).
-- Sinh `domain/permissions.yaml` — Phân quyền và 5 quy tắc SoD.
-- Sinh `domain/user-stories/*.feature` — Các kịch bản kiểm thử Gherkin.
-- Sinh `domain/scope.yaml` — Phạm vi MVP đã chốt.
-- Phát hiện các điểm mâu thuẫn trong SRS.
+- Kiểm tra tính đầy đủ: Phải có mô tả luồng, các trạng thái, và danh sách quy tắc nghiệp vụ (Business Rules).
+- Kiểm tra logic: Phát hiện các mâu thuẫn giữa các file MD.
+- **Kết quả**:
+  E --> F(Dev Agent: G3 Code)
+  F -->|Sinh Plan + Test| G{Duyệt Dev Plan?}
+  G -->|Duyệt| H[Gen Code Root BE/FE + Pass Test]
+  H -->|Ký G3| I[Hoàn thành Task]
 
-**Cổng G1 soát xét**:
+  ```
 
-- Chốt phạm vi MVP (Ví dụ: Chỉ kênh LNH).
-- Kiểm tra ma trận trạng thái và các quy tắc nghiệp vụ quan trọng.
-- Ký duyệt: `gates/G1-ba-signoff.md`.
+  ---
 
----
+  ## GIAI ĐOẠN 2 — SA (Thiết kế Contract)
 
-## GIAI ĐOẠN 2 — Thiết kế (SA + DBA + Bảo mật + UI/UX)
+  **Đầu vào**: Gate G1 và Database Schema hiện có (mô tả trong `docs/ARCHITECTURE.md`).
 
-**Đầu vào**: Toàn bộ nội dung trong thư mục `domain/` từ Giai đoạn 1.
+  **SA Agent thực hiện**:
+  1. **Lập kế hoạch**: Sinh file `../../gates/SA-Plan.md`.
+  2. **Dừng lại**: Chờ con người kiểm tra Plan.
+  3. **Thực thi**: Sau khi được duyệt, sinh file `OpenAPI.yaml` trong `../../contracts/`.
+  4. **Ký duyệt**: Ký duyệt `../../gates/G2-sa-signoff.md`.
 
-4 vai trò chạy song song:
+  ---
 
-### Kiến trúc sư (SA)
+  ## GIAI ĐOẠN 3 — Dev (Lập trình & TDD)
 
-- Sinh hợp đồng OpenAPI và AsyncAPI.
-- Sinh sơ đồ kiến trúc C4 (Context, Container, Component).
-- Sinh các Quyết định Kiến trúc (ADR).
-- Ký duyệt: `gates/G2-sa-signoff.md`.
+  **Đầu vào**: Gate G2 và đặc tả MD từ G1.
 
-### Quản trị dữ liệu (DBA)
+  **Dev Agent thực hiện**:
+  1. **Lập kế hoạch & Viết Test (TDD)**:
+  - Sinh file `../../gates/Dev-Plan.md`.
+  2. **Dừng lại**: Chờ con người kiểm tra Plan/Test.
+  3. **Thực thi**:
+  - Sinh mã nguồn BE (`../../backend/`) và FE (`../../frontend/`).
+  - Chạy test local (`mvn test` / `npm test`).
+  4. **Ký duyệt**: Ký duyệt `../../gates/G3-dev-signoff.md`.
+  ```
 
-- Sinh các kịch bản tạo bảng (DDL) cho Oracle.
-- Sinh kịch bản cho bảng Outbox và Audit (kiểm toán).
-- Sinh kịch bản hoàn tác (rollback).
-- Ký duyệt: `gates/G-DBA-signoff.md`.
+## Quy tắc "Trói chân AI" (AI Constraint)
 
-### Bảo mật (Security)
-
-- Sinh mô hình hóa mối đe dọa (Threat model).
-- Sinh chính sách kiểm soát truy cập và phân loại dữ liệu.
-- Ký duyệt: `gates/G-SEC-signoff.md`.
-
-### Giao diện (UI/UX)
-
-- Sinh đặc tả chi tiết cho 7 màn hình (S01-S07).
-- Sinh hệ thống thiết kế (Design system).
-- Ký duyệt: `gates/G-UI-signoff.md`.
-
----
-
-## GIAI ĐOẠN 3 — Lập trình (Dev)
-
-**Đầu vào**: Hợp đồng API và cấu trúc DB từ Giai đoạn 2.
-
-**AI thực hiện**:
-
-- Sinh 4 dịch vụ Backend Java (Core, Gateway, GL Pusher, BFF).
-- Sinh giao diện Frontend React.
-- Mỗi Agent tự sinh: Mã nguồn, Unit test, Dockerfile, Helm values.
-
-**Cổng G3 soát xét**:
-
-- Tập trung vào các quy tắc nghiệp vụ cốt lõi: Phân tách Maker-Checker, Giữ chỗ nguồn vốn, Kiểm toán chuỗi Hash.
-- Kiểm tra tính nhất quán của giao diện và luồng phê duyệt.
-
----
-
-## GIAI ĐOẠN 4 — Kiểm thử (QA)
-
-**Đầu vào**: Mã nguồn từ Giai đoạn 3 và kịch bản Gherkin từ Giai đoạn 1.
-
-**AI thực hiện**:
-
-- Sinh và chạy kiểm thử 5 tầng: Unit, Contract, Integration, E2E ( Playwright), Perf (k6), Security.
-- Đảm bảo độ bao phủ mã nguồn (coverage) ≥ 80%.
-
-**Cổng G4 soát xét**:
-
-- Kiểm tra ma trận truy xuất nguồn gốc: Đảm bảo mọi quy tắc BIZ/VAL đều có ít nhất 1 ca kiểm thử thành công.
-- Ký duyệt: `gates/G4-test-signoff.md`.
-
----
-
-## GIAI ĐOẠN 5 — Triển khai (DevOps)
-
-**Đầu vào**: Các dịch vụ và Helm chart từ Giai đoạn 3.
-
-**AI thực hiện**:
-
-- Thiết lập pipeline Tekton (Build → Test → Scan → Push).
-- Cấu hình ArgoCD để đồng bộ môi trường.
-- Thiết lập hệ thống quan sát (Grafana, Loki, OTel).
-- Sinh tài liệu vận hành (Runbook).
-
-**Cổng G5 soát xét**:
-
-- Phê duyệt đồng bộ lên môi trường thực tế (Prod).
-- Kiểm tra khả năng hoàn tác (rollback) và các kịch bản xử lý sự cố.
-- Ký duyệt: `gates/G5-devops-signoff.md`.
-
----
-
-## Các quy tắc chung
-
-1. **Không nhảy giai đoạn**: Không lập trình (Gđ 3) khi thiết kế (Gđ 2) chưa được ký duyệt.
-2. **Đóng băng sản phẩm**: Sản phẩm sau khi ký duyệt sẽ được đóng băng để giai đoạn sau sử dụng.
-3. **Cập nhật lan tỏa (Ripple Update)**: Khi giai đoạn trước thay đổi, phải soát xét và cập nhật lại toàn bộ các sản phẩm bị ảnh hưởng ở các giai đoạn sau.
-4. **Mọi thay đổi đều qua Git**: Không trao đổi miệng, mọi quyết định phải nằm trong mã nguồn hoặc tài liệu Markdown.
-5. **Con người là người quyết định cuối**: AI thực hiện các công việc nặng nhọc, con người tập trung vào việc soát xét và ký duyệt tại các cổng chất lượng.
+1. **Không nhảy bước**: Không được viết code/contract khi chưa có Plan được con người duyệt bằng chữ "Duyệt".
+2. **TDD tuyệt đối**: AI tự code tự test sẽ gây thiên vị. Con người duyệt kịch bản test trước khi AI viết logic code.
+3. **Mọi thay đổi qua Git**: Mọi trao đổi và phê duyệt đều phải thể hiện qua các file trong thư mục `gates/`.
