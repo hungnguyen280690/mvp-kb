@@ -38,6 +38,9 @@ yarn-error.log*
 # ─────────── Frontend build ───────────
 dist/
 build/
+*.tsbuildinfo
+vite.config.d.ts
+vite.config.js
 .next/
 .nuxt/
 .cache/
