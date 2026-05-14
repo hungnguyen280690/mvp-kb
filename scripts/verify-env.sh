@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify môi trường dev khớp tiêu chuẩn dự án mvp-kho-bac
+# Verify môi trường dev khớp tiêu chuẩn dự án mvp-kho-bac (3-Agent MVP)
 # Chạy: ./scripts/verify-env.sh
 
 set -uo pipefail
@@ -39,17 +39,18 @@ check() {
     fi
 }
 
-echo "🔍 Verify môi trường dev — mvp-kho-bac"
-echo "======================================"
+echo "🔍 Verify môi trường dev — mvp-kho-bac (3-Agent MVP)"
+echo "======================================================"
 echo
 
 # ─────────────────────────────────────────────────
 echo "[Tool versions]"
 check "mise installed" "mise --version"
 check "Java 21" "java -version 2>&1" "21"
-check "Node 22" "node --version" "v22"
+check "Node 26" "node --version" "v26"
 check "pnpm 9" "pnpm --version" "9"
 check "Maven 3.9" "mvn --version" "3.9"
+check "Git" "git --version"
 check "Docker" "command -v docker"
 check "gh CLI" "command -v gh"
 check "Claude Code CLI" "claude --version"
@@ -57,7 +58,7 @@ check "pre-commit" "pre-commit --version"
 echo
 
 # ─────────────────────────────────────────────────
-echo "[Claude Code]"
+echo "[Claude Code Plugins]"
 check "claude CLI" "command -v claude"
 
 CLAUDE_DIR="$HOME/.claude"
@@ -65,21 +66,30 @@ PLUGIN_DIR="$CLAUDE_DIR/plugins"
 
 if [[ -d "$PLUGIN_DIR" ]]; then
     check_pass "Plugin directory exists ($PLUGIN_DIR)"
-    PLUGIN_COUNT=$(find "$PLUGIN_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l)
-    echo "      Installed: $PLUGIN_COUNT plugin"
-    find "$PLUGIN_DIR" -mindepth 1 -maxdepth 1 -type d -printf '        • %f\n' 2>/dev/null
 
-    # Check expected plugins from plugins.lock
-    EXPECTED=("superpowers" "kubernetes-operations" "security-scanning")
+    INSTALLED_JSON="$PLUGIN_DIR/installed_plugins.json"
+    LOCK_FILE="$PROJECT_ROOT/.claude/plugins.lock"
+
+    # Hardcoded list — single source of truth cho team
+    EXPECTED=("superpowers" "security-scanning")
+
+    # Cross-check: nếu plugins.lock có nhiều hơn list trên → cảnh báo
+    if [[ -f "$LOCK_FILE" ]]; then
+        LOCK_COUNT=$(grep -c "^  - name:" "$LOCK_FILE" 2>/dev/null || echo 0)
+        if [[ "$LOCK_COUNT" -ne "${#EXPECTED[@]}" ]]; then
+            check_warn "plugins.lock có $LOCK_COUNT plugin nhưng verify chỉ check ${#EXPECTED[@]} — cần update verify-env.sh"
+        fi
+    fi
+
     for plugin in "${EXPECTED[@]}"; do
-        if compgen -G "$PLUGIN_DIR/*$plugin*" >/dev/null 2>&1; then
+        if [[ -f "$INSTALLED_JSON" ]] && grep -q "\"$plugin@" "$INSTALLED_JSON" 2>/dev/null; then
             check_pass "Plugin: $plugin"
         else
-            check_fail "Plugin missing: $plugin (chạy install-claude-plugins.sh)"
+            check_fail "Plugin missing: $plugin (chạy scripts/install-claude-plugins.sh)"
         fi
     done
 else
-    check_fail "Plugin dir chưa có — chạy install-claude-plugins.sh hoặc mở Claude Code lần đầu"
+    check_fail "Plugin dir chưa có — chạy scripts/setup.sh hoặc mở Claude Code lần đầu"
 fi
 echo
 
@@ -105,7 +115,15 @@ done
 echo
 
 # ─────────────────────────────────────────────────
-echo "[Workspaces]"
+echo "[3-Agent directories]"
+check "features/" "test -d features"
+check "features/TEMPLATE.md" "test -f features/TEMPLATE.md"
+check "contracts/" "test -d contracts"
+check "gates/" "test -d gates"
+echo
+
+# ─────────────────────────────────────────────────
+echo "[Workspaces — 3 Agent roles]"
 for role in ba sa dev; do
     check "workspaces/$role/CLAUDE.md" "test -f workspaces/$role/CLAUDE.md"
 done
@@ -131,6 +149,6 @@ fi
 echo
 
 # ─────────────────────────────────────────────────
-echo "======================================"
+echo "======================================================"
 printf "✅ Pass: %d   ⚠️  Warn: %d   ❌ Fail: %d\n" "$PASS" "$WARN" "$FAIL"
 [[ $FAIL -eq 0 ]] && exit 0 || exit 1

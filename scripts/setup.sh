@@ -132,41 +132,60 @@ fi
 echo
 
 # ─────────────────────────────────────────────────
-# 6. Plugin install (npm auto)
+# 6. Plugin install (bắt buộc cho đồng nhất team)
 # ─────────────────────────────────────────────────
-cyan "[6/8] Plugin install (mattpocock/skills)"
-if command -v npx >/dev/null 2>&1; then
-    if npx -y skills@latest add mattpocock/skills 2>&1; then
-        green "mattpocock/skills installed"
-    else
-        yellow "mattpocock/skills cài thất败 — có thể cài lại sau"
-    fi
+cyan "[6/8] Plugin install"
+if command -v claude >/dev/null 2>&1; then
+    "$SCRIPT_DIR/install-claude-plugins.sh"
 else
-    yellow "npx chưa có — bỏ qua plugin install. Chạy mise install trước."
+    yellow "Claude Code CLI chưa cài — bỏ qua. Cài xong chạy: ./scripts/install-claude-plugins.sh"
 fi
 echo
 
 # ─────────────────────────────────────────────────
-# 7. Verify
+# 7. Workspace initialization (3-agent: BA, SA, Dev)
 # ─────────────────────────────────────────────────
-cyan "[7/8] Verify"
-"$SCRIPT_DIR/verify-env.sh" || true
+cyan "[7/8] Initialize workspaces"
+
+mkdir -p workspaces/ba workspaces/sa workspaces/dev
+mkdir -p gates features contracts
+
+for role in ba sa dev; do
+    if [[ -f "workspaces/$role/CLAUDE.md" ]]; then
+        green "✅ workspaces/$role/CLAUDE.md exists"
+    else
+        red "❌ workspaces/$role/CLAUDE.md missing — cần commit file này vào repo"
+    fi
+done
+
+green "✅ Directories ready"
 echo
 
 # ─────────────────────────────────────────────────
-# Done
+# 8. Verify
 # ─────────────────────────────────────────────────
-cyan "🎉 Setup done"
+cyan "[8/8] Verify"
+if "$SCRIPT_DIR/verify-env.sh"; then
+    echo
+    cyan "🎉 Setup done — môi trường sẵn sàng."
+    echo
+    echo "Mở workspace theo vai trò:"
+    echo "  cd workspaces/ba  && claude   (BA Agent — thẩm định nghiệp vụ)"
+    echo "  cd workspaces/sa  && claude   (SA Agent — thiết kế OpenAPI)"
+    echo "  cd workspaces/dev && claude   (Dev Agent — lập trình logic)"
+    echo ""
+    echo "Đọc thêm: docs/WORKFLOW.md"
+else
+    echo
+    red "❌ Setup KHÔNG hoàn tất. Xem danh sách Fail ở trên và khắc phục."
+    echo "   Sau khi fix, chạy lại: ./scripts/verify-env.sh"
+    exit 1
+fi
 echo
 echo "Next steps:"
-echo "  1. Cài marketplace plugins (interactive — trong Claude Code session):"
-echo "     /plugin marketplace add obra/superpowers"
-echo "     /plugin install superpowers"
-echo "     /plugin marketplace add wshobson/agents"
-echo "     /plugin install kubernetes-operations"
-echo "     /plugin install security-scanning"
+echo "  Mở workspace theo vai trò:"
+echo "    cd workspaces/ba  && claude   (BA Agent — thẩm định nghiệp vụ)"
+echo "    cd workspaces/sa  && claude   (SA Agent — thiết kế OpenAPI)"
+echo "    cd workspaces/dev && claude   (Dev Agent — lập trình logic)"
 echo ""
-echo "  2. Mở workspace: cd workspaces/<role> && claude code ."
-echo "     <role> ∈ {ba, sa, dev}"
-echo
-echo "Đọc thêm: README.md hoặc docs/WORKFLOW.md"
+echo "Đọc thêm: docs/WORKFLOW.md"

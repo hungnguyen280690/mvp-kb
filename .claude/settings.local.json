@@ -11,7 +11,12 @@
       "Bash(kill *)",
       "Bash(uuidgen)",
       "Bash(E2E_BASE_URL=http://localhost:3000 npx playwright test --config tests/e2e/playwright.config.ts --project=chromium --reporter=list)",
-      "mcp__ccs-websearch__WebSearch"
+      "mcp__ccs-websearch__WebSearch",
+      "Bash(head -n 2 ~/Documents/vpn/pass.txt)",
+      "Bash(chmod 600 ~/Documents/vpn/auth.txt)",
+      "Bash(timedatectl status *)",
+      "Bash(bash *)",
+      "Bash(claude plugin *)"
     ]
   }
 }
