@@ -84,9 +84,6 @@ secrets/
 # ─────────── Dev Container ───────────
 .devcontainer/*.log
 
-# ─────────── SRS xlsx local copy (giữ tại shared/specs/ commit, không cho vô bừa) ───────────
-specs/*.xlsx
-shared/specs/*.xlsx.local
 
 # ─────────── Generated artifacts ───────────
 **/generated-sources/
@@ -103,9 +100,3 @@ src/main/generated/
 *.tmp
 .tmp/
 
-# ─────────── KHÔNG ignore (giữ trong git làm nguồn sự thật) ───────────
-# domain/ (Stage 1 output)
-# contracts/ (Stage 2 output)
-# db/migrations/ (Stage 2 output)
-# gates/ (signoff)
-# docs/
