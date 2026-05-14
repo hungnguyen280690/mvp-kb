@@ -1,85 +1,46 @@
-# CODEOWNERS — Phân vai review tự động theo path
-# Tham chiếu: docs/GATEKEEPERS.md
-# Cú pháp: <pattern> <@user1> <@user2> <@team>
-# Reviewer được tag tự động khi PR đụng path tương ứng.
+# CODEOWNERS — 3-Agent MVP review theo path
+# Luồng: BA (G1) → SA (G2) → Dev (G3)
+# Cú pháp: <pattern> <@user/team>
 
 # ─────────────────────────────────────────────────
-# Default — mọi file chưa match → Tech Lead
+# Default — mọi file chưa match
 # ─────────────────────────────────────────────────
-*                                @tech-lead
+*                                @hungnguyen280690
 
 # ─────────────────────────────────────────────────
-# Domain & contracts — High risk, cần G2 (SA)
+# Gate 1 — BA Agent: đặc tả nghiệp vụ
 # ─────────────────────────────────────────────────
-/domain/**                       @ba-lead @sa-lead
-/contracts/**                    @sa-lead @tech-lead
-/contracts/openapi/**            @sa-lead @backend-lead
-/contracts/asyncapi/**           @sa-lead @backend-lead
-/contracts/schemas/**            @sa-lead @backend-lead @ba-lead
-/db/migrations/**                @sa-lead @dba-lead
+/features/**                     @hungnguyen280690
 
 # ─────────────────────────────────────────────────
-# Backend services — G3 (Java Lead)
+# Gate 2 — SA Agent: API contracts + kiến trúc
 # ─────────────────────────────────────────────────
-/services/bff-service/**         @backend-lead
-/services/ltt-core/**            @backend-lead @sa-lead
-/services/integration-gateway/** @backend-lead @sa-lead
-/services/gl-pusher/**           @backend-lead @sa-lead
-
-# Critical paths — đòi 2 reviewer
-/services/ltt-core/saga/**       @backend-lead @sa-lead
-/services/ltt-core/audit/**      @backend-lead @sa-lead @security-lead
-/services/ltt-core/outbox/**     @backend-lead @sa-lead
-/services/**/auth/**             @backend-lead @security-lead
-/services/**/signature/**        @backend-lead @security-lead
-/services/**/idempotency/**      @backend-lead @sa-lead
+/contracts/**                    @hungnguyen280690
+/docs/ARCHITECTURE.md            @hungnguyen280690
+/docs/CONTEXT.md                 @hungnguyen280690
 
 # ─────────────────────────────────────────────────
-# Frontend — G3' (Frontend Lead)
+# Gate 3 — Dev Agent: backend + frontend
 # ─────────────────────────────────────────────────
-/frontend/**                     @frontend-lead
-/frontend/src/auth/**            @frontend-lead @security-lead
-/frontend/src/components/payment/** @frontend-lead @backend-lead
+/backend/**                      @hungnguyen280690
+/frontend/**                     @hungnguyen280690
 
 # ─────────────────────────────────────────────────
-# Tests — G4 (QA Lead)
+# CI/CD + tooling
 # ─────────────────────────────────────────────────
-/tests/**                        @qa-lead
-/tests/e2e/**                    @qa-lead @frontend-lead
-/tests/perf/**                   @qa-lead @sre-lead
-/tests/security/**               @qa-lead @security-lead
+/.github/**                      @hungnguyen280690
+/scripts/**                      @hungnguyen280690
+/.pre-commit-config.yaml         @hungnguyen280690
+/.mise.toml                      @hungnguyen280690
+/.claude/**                      @hungnguyen280690
 
 # ─────────────────────────────────────────────────
-# DevOps & Infrastructure — G5 (SRE)
+# Safety, gates, policy — repo admin only
 # ─────────────────────────────────────────────────
-/deploy/**                       @sre-lead
-/deploy/helm/**                  @sre-lead @backend-lead
-/deploy/argocd/apps/*-prod.yaml  @sre-lead @tech-lead
-/deploy/argocd/apps/*-uat.yaml   @sre-lead
-/.tekton/**                      @sre-lead
-/observability/**                @sre-lead
-/observability/runbook/**        @sre-lead @backend-lead
-
-# ─────────────────────────────────────────────────
-# CI/CD — Tech Lead + SRE
-# ─────────────────────────────────────────────────
-/.github/workflows/**            @sre-lead @tech-lead
-/.github/CODEOWNERS              @tech-lead @repo-admin
-/.github/branch-protection*      @tech-lead @repo-admin
-
-# ─────────────────────────────────────────────────
-# Safety, policy, gates — Repo admin only
-# ─────────────────────────────────────────────────
-/docs/SAFETY.md                  @repo-admin @security-lead
-/docs/QUALITY_GATES.md           @repo-admin @qa-lead @sre-lead
-/docs/GATEKEEPERS.md             @repo-admin @tech-lead
-/.claude/settings.json           @repo-admin @security-lead
-/.claude/agents/**               @tech-lead
-/gates/**                        @repo-admin
-
-# ─────────────────────────────────────────────────
-# Docs
-# ─────────────────────────────────────────────────
-/docs/**                         @tech-lead
-/CLAUDE.md                       @tech-lead
-/README.md                       @tech-lead
+/gates/**                        @hungnguyen280690
+/docs/PROJECT-STRUCTURE.md       @hungnguyen280690
+/docs/RULES.md                   @hungnguyen280690
+/docs/SAFETY.md                  @hungnguyen280690
+/docs/WORKFLOW.md                @hungnguyen280690
+/docs/CONVENTIONS.md             @hungnguyen280690
+/CLAUDE.md                       @hungnguyen280690

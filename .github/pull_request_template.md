@@ -9,8 +9,7 @@ PR template — hệ thống tự kiểm các mục dưới qua CI.
 
 ## Liên kết
 
-- Ticket Linear / Jira:
-- Stage trong pipeline (BA / SA / Dev / Test / DevOps):
+- Stage trong pipeline (BA / SA / Dev):
 - ADR / docs liên quan:
 
 ## Phân loại rủi ro
@@ -19,14 +18,14 @@ PR template — hệ thống tự kiểm các mục dưới qua CI.
 
 - [ ] 🟢 Low-risk (docs, comment, test only, dependency patch)
 - [ ] 🟡 Medium-risk (logic thường, UI không touch tiền/auth)
-- [ ] 🔴 High-risk (LTT/outbox/audit/saga/payment/auth/signature/idempotency, DB migration, prod config)
+- [ ] 🔴 High-risk (DB migration, contracts/ changes, gates/ signoff, prod config, security)
 
 ## Self-check (xác nhận đã làm)
 
 - [ ] Đã đọc [SAFETY.md](../docs/SAFETY.md), không vi phạm cấp 1
 - [ ] Đã chạy `./mvnw verify` / `pnpm test` local — xanh
 - [ ] Đã viết unit test, coverage không giảm
-- [ ] Đã cập nhật `domain/*` / `contracts/*` nếu thay đổi nghiệp vụ / API
+- [ ] Đã cập nhật `features/*` / `contracts/*` nếu thay đổi nghiệp vụ / API
 - [ ] Không hard-code credential, không log số TK / CMND đầy đủ
 - [ ] Migration mới (không sửa file đã merge)
 - [ ] OpenAPI khớp với code (nếu có endpoint mới)
@@ -40,12 +39,6 @@ PR template — hệ thống tự kiểm các mục dưới qua CI.
 - [ ]
 
 ## Screenshot / log (nếu UI hoặc logging thay đổi)
-
-## Auto-merge?
-
-<!-- Đặt label `auto-merge` nếu muốn merge tự động sau khi all check + Claude LGTM + 1 human approval. KHÔNG đặt nếu cần review tay. -->
-
-- [ ] Đặt label `auto-merge`
 
 ---
 

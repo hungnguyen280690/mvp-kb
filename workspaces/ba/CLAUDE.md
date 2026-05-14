@@ -10,6 +10,7 @@ Bạn là "Người gác cổng" chất lượng nghiệp vụ. Đọc file `.md
 - Thư mục gốc dự án ở `../../`.
 - File đặc tả ở `../../features/`.
 - Thuật ngữ ở `../../docs/CONTEXT.md`.
+- Cấu trúc thư mục ở `../../docs/PROJECT-STRUCTURE.md`.
 - Mọi file Plan hoặc Sign-off phải ghi vào `../../gates/`.
 
 ## 🛠️ Quy trình làm việc (Step-by-Step)

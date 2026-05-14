@@ -12,6 +12,7 @@ Biến đặc tả nghiệp vụ (G1) thành thiết kế kỹ thuật (OpenAPI)
 - Schema DB ở `../../docs/ARCHITECTURE.md`.
 - Luật chung ở `../../docs/RULES.md`.
 - Contract (OpenAPI) phải lưu vào `../../contracts/`.
+- Cấu trúc thư mục ở `../../docs/PROJECT-STRUCTURE.md`.
 - Plan hoặc Sign-off phải ghi vào `../../gates/`.
 
 ## 🛠️ Quy trình làm việc (Step-by-Step)

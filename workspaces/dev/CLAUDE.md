@@ -10,6 +10,7 @@ Lập trình Fullstack (Java + React) + TDD dựa trên OpenAPI.
 - Code Backend ở `../../backend/`.
 - Code Frontend ở `../../frontend/`.
 - OpenAPI ở `../../contracts/OpenAPI.yaml`.
+- Cấu trúc thư mục ở `../../docs/PROJECT-STRUCTURE.md`.
 - Plan/Sign-off ở `../../gates/`.
 - Lệnh test: `cd ../../backend && mvn test` hoặc `cd ../../frontend && npm test`.
 
