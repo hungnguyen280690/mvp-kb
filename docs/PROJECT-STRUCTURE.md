@@ -20,7 +20,6 @@ owner: repo-admin
 | `frontend/`                 | Dev   | G3   | no       | React app (sinh sau G2)                  |
 | `gates/`                    | All   | All  | yes      | Gate plans + signoffs                    |
 | `docs/`                     | Human | —    | yes      | Tài liệu cốt lõi, không tự sửa bởi agent |
-| `docs/CONTEXT.md`           | All   | —    | yes      | Từ điển thuật ngữ nghiệp vụ              |
 | `docs/ARCHITECTURE.md`      | SA    | —    | yes      | Tech stack + DB Schema (frozen)          |
 | `docs/CONVENTIONS.md`       | All   | —    | yes      | Quy ước naming                           |
 | `docs/RULES.md`             | All   | —    | yes      | Luật chất lượng, bảo mật                 |
@@ -48,6 +47,5 @@ owner: repo-admin
 
 ## Change Log
 
-| Date       | Agent   | Change                          | Approved by      |
-| ---------- | ------- | ------------------------------- | ---------------- |
-| 2026-05-14 | Initial | Bootstrap 3-agent MVP structure | hungnguyen280690 |
+| Date | Agent | Change | Approved by |
+| ---- | ----- | ------ | ----------- |

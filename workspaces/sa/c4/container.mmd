@@ -1,0 +1,60 @@
+%% ============================================================================
+%% C4 Container Diagram — VDBAS TT.OUT.MANUAL
+%% Generated: 2026-05-10 | SA Stage 2
+%% ============================================================================
+%% Xem thu cong tai: https://mermaid.live/
+
+C4Container
+    title Container Diagram — VDBAS TT.OUT.MANUAL
+
+    Person(maker, "Người lập (Maker)")
+    Person(checker, "Người kiểm soát (Checker)")
+    Person(approver, "Người phê duyệt (Approver)")
+    Person(admin, "Quản trị viên (Admin)")
+
+    System_Boundary(vdbas, "VDBAS TT.OUT.MANUAL") {
+
+        Container(spa, "React SPA", "React 18 + Vite + TypeScript", "Giao diện người dùng 7 màn hình (S01-S07)\nshadcn/ui + Tailwind CSS\nPhân quyền theo vai trò Maker/Checker/Approver/Admin")
+
+        Container(bff, "BFF (Backend for Frontend)", "Java 21 + Spring Boot 3.3", "API Gateway nội bộ cho SPA\nAuthentication (JWT/OAuth2)\nRate limiting, request routing\nWebSocket cho real-time notification")
+
+        Container(ltt_service, "LTT Service", "Java 21 + Spring Boot 3.3", "Core business logic\nSaga Orchestrator — điều phối toàn bộ vòng đời LTT\nState Machine — 15 trạng thái + transitions\nCOA Validator — xác thực tổ hợp 18 segments\nFund Reserve Handler — giữ/giải phóng quỹ\nIdempotency Store — chống xử lý lặp")
+
+        Container(gateway_service, "Gateway Service", "Java 21 + Spring Boot 3.3", "MQ Integration — gửi/nhận tin nhắn IBM MQ\nMessage Transformation — map giữa internal model và NHNN/SP/LKB format\nRetry Logic — 3 lần, backoff 5/15/45s (BIZ-RETRY)\nCallback Handler — nhận và xử lý callback từ NHNN/KB\nChannel Routing — định tuyến LNH/SP/LKB")
+
+        Container(audit_service, "Audit Service", "Java 21 + Spring Boot 3.3", "Audit Hash Chain — SHA-256 chain, chống sửa lùi\nOutbox Publisher — polling 500ms, push to MQ\nAudit Verification — batch job verify chuỗi hash hàng ngày\nAudit Query API — tra cứu audit log cho UI")
+    }
+
+    System_Ext(nhnn, "NHNN/CITAD Gateway")
+    System_Ext(gl, "GL (Sổ cái)")
+    System_Ext(tadcomm, "TAD-COMM")
+    System_Ext(ecm, "ECM")
+    System_Ext(mq, "IBM MQ")
+    System_Ext(oracle_db, "Oracle 19c")
+    System_Ext(notif, "Email / Notification")
+
+    Rel(maker, spa, "HTTPS")
+    Rel(checker, spa, "HTTPS")
+    Rel(approver, spa, "HTTPS")
+    Rel(admin, spa, "HTTPS")
+
+    Rel(spa, bff, "REST API\nJWT Bearer Token")
+
+    Rel(bff, ltt_service, "gRPC / REST\nLTT CRUD, workflow, validation")
+    Rel(bff, audit_service, "REST\nAudit query, verification")
+
+    Rel(ltt_service, oracle_db, "JDBC / JPA\nLTT, version, idempotency, saga state")
+    Rel(ltt_service, gateway_service, "Internal event\nGửi LTT, nhận callback result")
+    Rel(ltt_service, tadcomm, "REST / gRPC\nKý số LTT")
+    Rel(ltt_service, gl, "REST (API-004)\nHạch toán GL")
+    Rel(ltt_service, audit_service, "Internal event\nGhi audit log")
+    Rel(ltt_service, notif, "Async\nGửi notification")
+
+    Rel(gateway_service, mq, "JMS / IBM MQ SDK\nPush LTT message, consume ACK")
+    Rel(gateway_service, nhnn, "REST (API-001/002/003)\nSubmit payment, receive callback (API-009)")
+    Rel(gateway_service, oracle_db, "JDBC\nOutbox events, processed messages")
+
+    Rel(audit_service, oracle_db, "JDBC\nAudit log, hash chain, outbox")
+    Rel(audit_service, mq, "JMS\nPublish events (via outbox)")
+
+    Rel(ltt_service, ecm, "REST (API-007)\nLưu chứng từ, chữ ký")

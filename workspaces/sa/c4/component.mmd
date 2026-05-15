@@ -1,0 +1,78 @@
+%% ============================================================================
+%% C4 Component Diagram — LTT Service (Core Business Logic)
+%% Generated: 2026-05-10 | SA Stage 2
+%% ============================================================================
+%% Xem thu cong tai: https://mermaid.live/
+
+C4Component
+    title Component Diagram — LTT Service
+
+    Container_Boundary(ltt_service, "LTT Service") {
+
+        Component(ltt_controller, "LTT Controller", "Spring @RestController", "REST API endpoints\nGET/POST/PUT/DELETE /api/internal/ltt/*\nIf-Match validation\nIdempotency-Key extraction")
+
+        Component(ltt_service_comp, "LTT Domain Service", "Spring @Service", "Business logic orchestration\nCRUD operations\nValidation coordination\nWorkflow trigger")
+
+        Component(coa_validator, "COA Validator", "Spring @Component", "Validate tổ hợp 18 COA segments\nL1 Cache: Caffeine (30 min TTL)\nL2 Cache: Redis (24h TTL, optional MVP)\nEvent-based cache invalidation")
+
+        Component(state_machine, "State Machine", "Spring @Component (StateMachine)", "Quản lý 15 trạng thái LTT\nGuard evaluation (VAL-*, BIZ-*)\nTransition validation\nAction execution on state change")
+
+        Component(outbox_writer, "Outbox Writer", "Spring @Component", "Ghi event vào outbox_events table\nTrong cùng transaction với LTT update\nAtomic DB + event write\nRefer: ADR-SA-0001")
+
+        Component(event_publisher, "Event Publisher", "Spring @Scheduled", "Polling outbox_events mỗi 500ms\nPush to IBM MQ via Gateway Service\nUpdate status PENDING → PUBLISHED\nRetry logic (max 5)")
+
+        Component(idempotency_store, "Idempotency Store", "Spring @Component", "Lưu và check Idempotency-Key\nDeduplicate REST POST requests\nDeduplicate MQ messages\nTTL cleanup (24h REST, 7d MQ)\nRefer: ADR-SA-0005")
+
+        Component(saga_orchestrator, "Saga Orchestrator", "Spring @Component", "Điều phối luồng đa bước LTT\nSaga state persistence (DB)\nCompensating actions khi fail\nStep tracking + audit\nRefer: ADR-SA-0002")
+
+        Component(fund_reserve, "Fund Reserve Handler", "Spring @Component", "Đặt hold số dư TK nguồn khi Submit\nRelease hold khi Reject/Cancel/Delete\nGọi QLHT.BAL API kiểm tra số dư\nGhi audit RESERVE/RELEASE")
+
+        Component(limit_checker, "Limit Checker", "Spring @Component", "Kiểm tra hạn mức theo\nKênh × Loại lệnh × Vai trò × Đơn vị\nCache từ DMHT cấu hình\nRefer: BIZ-LIMIT")
+
+        Component(notification_dispatcher, "Notification Dispatcher", "Spring @Component", "Gửi notification in-app + email\nCho user kế tiếp trong workflow\nPhát event qua outbox\nRefer: BIZ-NOTIFY")
+
+        Component(optimistic_lock, "Optimistic Lock Handler", "Spring @Component + JPA @Version", "Version column trên payment_order\nIf-Match header validation\n409 Conflict response\nVersion increment on update\nRefer: ADR-SA-0004")
+
+        Component(duplicate_detector, "Duplicate Detector", "Spring @Component", "Kiểm tra LTT trùng trong N phút\nCùng Đơn vị, NH nhận, Số tiền, Số CT\nTrả cảnh báo (warning), không block\nRefer: BIZ-DUPLICATE")
+    }
+
+    ContainerDb(oracle_db, "Oracle 19c", "Cơ sở dữ liệu chính", "payment_order\nline_item\noutbox_events\nidempotency_store\nprocessed_messages\nsaga_instance\naudit_log")
+
+    System_Ext(mq, "IBM MQ")
+    System_Ext(tadcomm, "TAD-COMM")
+    System_Ext(gl, "GL (Sổ cái)")
+    System_Ext(ecm, "ECM")
+    System_Ext(notif, "Email / Notification")
+    System_Ext(gateway_svc, "Gateway Service")
+    System_Ext(bff, "BFF (Backend for Frontend)")
+
+    Rel(bff, ltt_controller, "REST API")
+
+    Rel(ltt_controller, ltt_service_comp, "Call")
+    Rel(ltt_controller, optimistic_lock, "If-Match check")
+    Rel(ltt_controller, idempotency_store, "Idempotency-Key check (POST)")
+
+    Rel(ltt_service_comp, state_machine, "Transition request")
+    Rel(ltt_service_comp, coa_validator, "Validate COA segments")
+    Rel(ltt_service_comp, limit_checker, "Check hạn mức")
+    Rel(ltt_service_comp, duplicate_detector, "Check trùng lặp")
+    Rel(ltt_service_comp, fund_reserve, "Reserve/Release quỹ")
+    Rel(ltt_service_comp, saga_orchestrator, "Start/Continue saga")
+    Rel(ltt_service_comp, outbox_writer, "Write event")
+    Rel(ltt_service_comp, notification_dispatcher, "Send notification")
+
+    Rel(state_machine, ltt_service_comp, "Action callback")
+
+    Rel(saga_orchestrator, gateway_svc, "Send LTT to gateway")
+    Rel(saga_orchestrator, tadcomm, "Sign LTT")
+    Rel(saga_orchestrator, gl, "Post GL entry")
+    Rel(saga_orchestrator, ecm, "Archive document")
+    Rel(saga_orchestrator, fund_reserve, "Compensating: release fund")
+
+    Rel(outbox_writer, oracle_db, "INSERT outbox_events\n(same transaction)")
+    Rel(event_publisher, oracle_db, "UPDATE outbox_events status")
+    Rel(event_publisher, mq, "Push message")
+
+    Rel(idempotency_store, oracle_db, "SELECT/INSERT idempotency_store")
+    Rel(optimistic_lock, oracle_db, "SELECT version, UPDATE with version check")
+    Rel(coa_validator, oracle_db, "SELECT DMHT.COA-MATRIX (cache miss)")

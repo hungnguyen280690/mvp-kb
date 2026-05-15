@@ -16,7 +16,9 @@
       "Bash(chmod 600 ~/Documents/vpn/auth.txt)",
       "Bash(timedatectl status *)",
       "Bash(bash *)",
-      "Bash(claude plugin *)"
+      "Bash(claude plugin *)",
+      "Skill(superpowers:using-superpowers)",
+      "Skill(grill-me)"
     ]
   }
 }
