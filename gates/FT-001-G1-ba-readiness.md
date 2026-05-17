@@ -2,7 +2,7 @@
 
 ## Thông tin chung
 - **Tính năng**: FT-001
-- **File đặc tả**: `features/feature_1/01-business-spec.md`
+- **File đặc tả**: `features/FT-001/01-business-spec.md`
 - **Người review**: SA Agent
 - **Ngày review**: <!-- điền ngày -->
 

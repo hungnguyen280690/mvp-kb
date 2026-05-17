@@ -7,7 +7,7 @@
 
 | # | Tiêu chí | Xác nhận |
 |---|----------|----------|
-| 1 | File `features/feature_1/01-business-spec.md` đã tồn tại | |
+| 1 | File `features/FT-001/01-business-spec.md` đã tồn tại | |
 | 2 | Đặc tả dễ hiểu, ngôn ngữ nghiệp vụ rõ ràng | |
 | 3 | Glossary (`docs/domain/glossary.md`) đã được cập nhật | |
 | 4 | SA đã APPROVED readiness check | |
@@ -19,8 +19,8 @@
 - **Quyết định**: `<!-- APPROVED | REJECTED -->`
 
 ## Artifact đã bàn giao
-- `features/feature_1/01-business-spec.md`
-- `features/feature_1/01-po-requirement.md` (đầu vào gốc)
+- `features/FT-001/01-business-spec.md`
+- `features/FT-001/01-po-requirement.md` (đầu vào gốc)
 
 ---
 > **Lưu ý**: File này sau khi ký duyệt sẽ bị đóng băng (Frozen). Không ai được tự ý sửa.
