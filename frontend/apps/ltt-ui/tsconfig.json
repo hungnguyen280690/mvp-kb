@@ -14,7 +14,10 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@kb/core-utils": ["../../packages/core-utils/src/index.ts"]
+    }
   },
   "include": ["src"]
 }

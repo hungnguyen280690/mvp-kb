@@ -24,7 +24,12 @@
       "Read(//Users/khanhlinhnguyentran/.sdkman/candidates/**)",
       "Read(//usr/local/bin/**)",
       "Read(//opt/**)",
-      "Bash(brew list *)"
+      "Bash(brew list *)",
+      "Bash(/opt/homebrew/bin/gh run *)",
+      "Bash(/usr/local/bin/gh run *)",
+      "Read(//usr/local/**)",
+      "Bash(npm -v)",
+      "Bash(brew install *)"
     ]
   }
 }
