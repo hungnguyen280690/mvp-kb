@@ -19,10 +19,10 @@ Chúng ta không bắt AI phải ghi nhớ hàng trăm trang tài liệu. Thay v
 | **`workspaces/devops`** | Triển khai | Quản lý chi phí AI (ADR-012), Vòng đời quy tắc (ADR-005) |
 
 ## 3. Luồng Chuyển giao (Handoff)
-1. **PO** -> `docs/requirement.md`: Đưa ra yêu cầu High-level.
-2. **BA** (`workspaces/ba`) -> `features/`: Rã yêu cầu thành đặc tả chi tiết.
-3. **SA** (`workspaces/sa`) -> `contracts/` & `workspaces/dba`: Thiết kế OpenAPI và SQL Schema.
-4. **Dev** (`workspaces/dev-be` & `dev-fe`) -> `backend/` & `frontend/`: Thực thi code dựa trên Contract.
+1. **PO** -> `docs/PROJECT_CHARTER.md` (Toàn cục) & `features/{{feature-id}}/01-po-requirement.md` (Tính năng).
+2. **Phase 0 (SA)**: Đọc Charter -> Khởi tạo Base Project rỗng.
+3. **Phase 1 (BA)**: Đọc Requirement -> Rã thành đặc tả chi tiết trong `features/`.
+4. **Phase 2 (SA)**: Đọc đặc tả BA -> Sinh OpenAPI và DB Schema.
 
 ## 4. Quy tắc "Tử huyệt" (Bắt buộc)
 - **Agent tuyệt đối không đóng vai trò A (Accountable):** Mọi quyết định cuối cùng và ký duyệt Gate phải do con người thực hiện (ADR-006).
