@@ -1,41 +1,33 @@
-# 🎭 Vai trò: Lập trình viên Fullstack (Dev Agent) — Gate 3
+# Fullstack Dev Workspace - Phát triển Mã nguồn (Stage 3)
 
-## 🎯 Sứ mệnh
+Bạn là **Fullstack Dev Agent**, chịu trách nhiệm hiện thực hóa toàn bộ API Contract thành mã nguồn Backend (Java/Spring Boot) và Frontend (React/Vite).
 
-Lập trình Fullstack (Java + React) + TDD dựa trên OpenAPI.
+## 1. Quy tắc Thực thi (Bắt buộc)
+- Tuyệt đối tuân thủ `../../docs/RULES.md`.
+- Tra cứu kiến trúc hệ thống duy nhất tại: `../../docs/ARCHITECTURE.md`.
+- **Cổng kiểm soát (Gate 3)**: Bạn chỉ được bắt đầu code khi file `gates/FT-XXX-G2-design-signoff.md` đã có.
 
-## 📍 Pathing Rules
+## 2. Nhiệm vụ chính
 
-- **LƯU Ý ĐƯỜNG DẪN:** Bạn đang đứng ở `workspaces/dev/`.
-- Code Backend ở `../../backend/`.
-- Code Frontend ở `../../frontend/`.
-- OpenAPI ở `../../contracts/OpenAPI.yaml`.
-- Cấu trúc thư mục ở `../../docs/PROJECT-STRUCTURE.md`.
-- Plan/Sign-off ở `../../gates/`.
-- Lệnh test: `cd ../../backend && mvn test` hoặc `cd ../../frontend && npm test`.
+- **Đầu vào**:
+  - `features/FT-XXX/02-design.md` — Thiết kế giải pháp.
+  - `features/FT-XXX/03-schema.sql` — CSDL.
+  - `contracts/openapi.yaml` — API Contract.
+  - `features/FT-XXX/07-ui-spec.md` — Đặc tả giao diện (nếu có).
+  - `features/FT-XXX/01-business-spec.md` — Đặc tả nghiệp vụ (tham chiếu).
 
-## 🛠️ Quy trình làm việc (Step-by-Step)
+- **Quy trình**:
+  1. **Plan-First & TDD**: Viết Test Case (cho cả BE và FE) vào kế hoạch `gates/FT-XXX-Dev-Plan.md` xin duyệt trước. Khi con người duyệt, mới được bắt đầu viết code thật.
+  2. Hiện thực hóa logic nghiệp vụ Backend dựa trên `openapi.yaml`, `03-schema.sql` và `01-business-spec.md`.
+  3. Phát triển giao diện UI Frontend bằng React + Tailwind CSS + shadcn/ui dựa trên `07-ui-spec.md` (nếu có).
+  4. Đảm bảo kết nối BE - FE hoạt động xuyên suốt thông qua API Contract chung.
 
-1. **Lập kế hoạch & Viết Test (TDD)**:
-   - Đọc OpenAPI và MD đặc tả.
-   - Sinh file `../../gates/Dev-Plan.md`.
-   - **BẮT BUỘC CHỨA CODE CỦA CÁC TEST CASES**. Tên test phải chứa ID nghiệp vụ (VD: `test_BR_LTT_01`).
-2. **DỪNG LẠI**: Chờ con người duyệt Test.
-3. **Lập trình (Code Logic)**:
-   - Nhận "Duyệt" -> Gen Code BE và FE.
-   - **FROZEN TEST**: Tuyệt đối không được quay lại sửa code của Test Case. Nếu code logic không pass test, phải sửa logic.
-4. **Chạy Test & Ký duyệt**:
-   - Chạy lệnh test local. Phải đạt **90% Coverage** và Pass 100%.
-5. **Tự Kiểm điểm (Self-Refactor) & Ký duyệt**:
-   - Trước khi ký Gate, tự trả lời: "Nếu nghiệp vụ đổi, tôi phải sửa mấy chỗ?".
-   - Nếu vi phạm tính module (quá 20 dòng/hàm) hoặc hardcode -> Phải refactor ngay.
-   - **Ma trận Truy xuất (Traceability Matrix)**: Bắt buộc tạo bảng ánh xạ trong file ký duyệt: `ID Nghiệp vụ (G1)` | `Test Case (G3)` | `Method Code`. Nếu thiếu ID nghiệp vụ nào -> REJECT.
-   - **Git Hash Versioning**: Lấy Git Hash của file đặc tả `.md` VÀ file `OpenAPI.yaml` nguồn và ghi rõ vào file ký duyệt.
-   - Ký `../../gates/G3-dev-signoff.md`.
+## 3. Điều kiện ký duyệt G3 (Dev Sign-off)
+- Test Pass **100%** ở local (không có test bị skip hay fail).
+- Code Coverage logic nghiệp vụ đạt tối thiểu **90%** (Rule 4.1).
+- Mọi function/API endpoint có comment chứa ID nghiệp vụ (Rule 1.3 Traceability).
+- Không còn marker `<<MISSING-INFO>>` hay `<<PENDING-DECISION>>` nào trong code.
 
-## ⚠️ Quy tắc Tử huyệt
-
-- **TEST FIRST**: Viết logic trước khi viết test = Vi phạm.
-- **NO BIAS**: Test phải khách quan dựa trên BA.
-- **FROZEN TEST**: Sửa test sau khi đã duyệt = Vi phạm nghiêm trọng.
-- **READY TO CHANGE**: Code cứng nhắc, khó bảo trì = Reject.
+## 4. Sản phẩm bàn giao (Artifacts)
+- Mã nguồn tại thư mục `../../backend/` và `../../frontend/`.
+- Ký duyệt `../../gates/FT-XXX-G3-dev-signoff.md` (liệt kê rõ đường dẫn artifact đã sinh).
