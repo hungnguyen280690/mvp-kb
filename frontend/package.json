@@ -3,18 +3,10 @@
   "private": true,
   "version": "1.0.0",
   "description": "Root workspace for KBNN Micro-frontends",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
     "dev": "pnpm --filter @kb/shell dev",
     "build": "pnpm -r build",
     "preview": "pnpm --filter @kb/shell preview",
     "lint": "pnpm -r run lint"
-  },
-  "devDependencies": {
-    "typescript": "^5.2.2",
-    "vite": "^5.4.1"
   }
 }
