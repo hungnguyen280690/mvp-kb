@@ -18,7 +18,8 @@
 
     <modules>
         <module>ltt-core</module>
-        <!-- Future modules: integration-gateway, bff-service -->
+        <module>integration-gateway</module>
+        <!-- Future modules: bff-service -->
     </modules>
 
     <properties>
