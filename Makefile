@@ -1,24 +1,38 @@
+# MVP Kho Bạc - Orchestration Makefile
+
 .DEFAULT_GOAL := help
-.PHONY: help up down clean ba sa dev
+.PHONY: help setup verify dev test lint format clean stage0 stage1 stage2 stage3
 
-help: ## Hiển thị các lệnh hỗ trợ
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
+help: ## Hiển thị danh sách lệnh
+	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make \033[36m<target>\033[0m\n\nTargets:\n"} \
+		/^[a-zA-Z0-9_-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
-up: ## Khởi động hạ tầng Docker (Oracle, MQ)
-	docker compose up -d --build
+setup: ## Khởi tạo môi trường phát triển
+	@echo "🔧 Setting up environment..."
+	@mkdir -p backend frontend contracts docs features gates workspaces
 
-down: ## Dừng toàn bộ hạ tầng
-	docker compose down
+verify: ## Kiểm tra tính tuân thủ của cấu trúc
+	@echo "🔍 Verifying project structure..."
+	@test -f docs/PROJECT_STRUCTURE.md || (echo "❌ Missing PROJECT_STRUCTURE.md" && exit 1)
+	@echo "✅ Structure is valid"
 
-clean: ## Dọn dẹp build artifacts và node_modules
-	rm -rf backend/target frontend/dist frontend/node_modules
-	@echo "🧹 Cleaned."
+dev: ## Chạy hệ thống local (Placeholder)
+	@echo "🚀 Starting local stack (PostgreSQL/ActiveMQ)..."
 
-ba: ## Chạy Agent BA (Review đặc tả)
-	cd workspaces/ba && claude code .
+test: ## Chạy toàn bộ Unit Test
+	@cd backend && ./mvnw test
 
-sa: ## Chạy Agent SA (Thiết kế OpenAPI)
-	cd workspaces/sa && claude code .
+lint: ## Kiểm tra định dạng code
+	@cd backend && ./mvnw spotless:check
 
-dev: ## Chạy Agent Dev (Lập trình Fullstack & TDD)
-	cd workspaces/dev && claude code .
+stage0: ## [SA] Khởi tạo Base Project
+	@echo "→ cd workspaces/sa && gemini code ."
+
+stage1: ## [BA] Rã nghiệp vụ chi tiết
+	@echo "→ cd workspaces/ba && gemini code ."
+
+stage2: ## [SA] Thiết kế API & DB
+	@echo "→ cd workspaces/sa && gemini code ."
+
+stage3: ## [Dev] Thực thi mã nguồn
+	@echo "→ cd workspaces/dev-be && gemini code ."
