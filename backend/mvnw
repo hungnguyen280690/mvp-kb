@@ -1,1 +1,29 @@
-404: Not Found
+#!/bin/sh
+# Maven Wrapper script - bootstraps Maven if not installed
+# Based on https://github.com/apache/maven-wrapper
+
+set -e
+
+MAVEN_PROJECTBASEDIR="${MAVEN_BASEDIR:-$(cd "$(dirname "$0")" && pwd)}"
+MAVEN_WRAPPER_PROPERTIES="$MAVEN_PROJECTBASEDIR/.mvn/wrapper/maven-wrapper.properties"
+MAVEN_WRAPPER_JAR="$MAVEN_PROJECTBASEDIR/.mvn/wrapper/maven-wrapper.jar"
+
+# Read distributionUrl from properties
+if [ -f "$MAVEN_WRAPPER_PROPERTIES" ]; then
+    distributionUrl=$(grep "distributionUrl" "$MAVEN_WRAPPER_PROPERTIES" | cut -d'=' -f2-)
+fi
+distributionUrl="${distributionUrl:-https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.9/apache-maven-3.9.9-bin.zip}"
+
+MAVEN_HOME="${HOME}/.m2/wrapper/dists/apache-maven-3.9.9"
+
+# Download Maven if needed
+if [ ! -f "$MAVEN_HOME/bin/mvn" ]; then
+    echo "Downloading Maven..."
+    mkdir -p "$MAVEN_HOME"
+    TMPFILE=$(mktemp /tmp/maven-XXXXXX.zip)
+    curl -fsSL "$distributionUrl" -o "$TMPFILE"
+    unzip -q -o "$TMPFILE" -d "${HOME}/.m2/wrapper/dists/"
+    rm -f "$TMPFILE"
+fi
+
+exec "$MAVEN_HOME/bin/mvn" "$@"
