@@ -1,13 +1,17 @@
-# VDBAS LTT - Minimal Infrastructure
+# MVP Kho Bac - Infrastructure + Application Services
 # Start: docker compose up
+# Full stack: docker compose --profile app up
 
 services:
-  # Database: Oracle Free (23c slim)
+  # ── Infrastructure ──────────────────────────────────────
+
   oracle:
     image: gvenzl/oracle-free:23-slim-faststart
-    container_name: vdbas-oracle
+    container_name: kb-oracle
     environment:
       ORACLE_PASSWORD: changeme
+      APP_USER: kb
+      APP_USER_PASSWORD: kb
     ports:
       - "1521:1521"
     volumes:
@@ -19,22 +23,103 @@ services:
       timeout: 10s
       retries: 20
       start_period: 60s
-    networks: [vdbas]
+    networks: [kb-net]
 
-  # Messaging: ActiveMQ Artemis
   artemis:
     image: apache/activemq-artemis:2.33.0-alpine
-    container_name: vdbas-artemis
+    container_name: kb-artemis
     environment:
       ARTEMIS_USER: admin
       ARTEMIS_PASSWORD: admin
     ports:
       - "61616:61616"
       - "8161:8161"
-    networks: [vdbas]
+    networks: [kb-net]
+
+  # ── Application Services (profile: app) ─────────────────
+
+  bff-service:
+    build:
+      context: ./backend
+      dockerfile: bff-service/Dockerfile
+    container_name: kb-bff
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      BFF_UPSTREAM_LTT_CORE: http://ltt-core:8081
+      BFF_UPSTREAM_AUDIT_SERVICE: http://audit-service:8083
+    depends_on:
+      ltt-core:
+        condition: service_started
+    profiles: [app]
+    networks: [kb-net]
+
+  ltt-core:
+    build:
+      context: ./backend
+      dockerfile: ltt-core/Dockerfile
+    container_name: kb-ltt-core
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:oracle:thin:@//oracle:1521/FREEPDB1
+      SPRING_DATASOURCE_USERNAME: kb
+      SPRING_DATASOURCE_PASSWORD: kb
+      SPRING_ACTIVEMQ_BROKER_URL: tcp://artemis:61616
+    depends_on:
+      oracle:
+        condition: service_healthy
+    profiles: [app]
+    networks: [kb-net]
+
+  integration-gateway:
+    build:
+      context: ./backend
+      dockerfile: integration-gateway/Dockerfile
+    container_name: kb-gateway
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_ACTIVEMQ_BROKER_URL: tcp://artemis:61616
+    depends_on:
+      artemis:
+        condition: service_started
+    profiles: [app]
+    networks: [kb-net]
+
+  audit-service:
+    build:
+      context: ./backend
+      dockerfile: audit-service/Dockerfile
+    container_name: kb-audit
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:oracle:thin:@//oracle:1521/FREEPDB1
+      SPRING_DATASOURCE_USERNAME: kb
+      SPRING_DATASOURCE_PASSWORD: kb
+    depends_on:
+      oracle:
+        condition: service_healthy
+    profiles: [app]
+    networks: [kb-net]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: kb-frontend
+    ports:
+      - "3000:80"
+    profiles: [app]
+    networks: [kb-net]
 
 networks:
-  vdbas:
+  kb-net:
     driver: bridge
 
 volumes:

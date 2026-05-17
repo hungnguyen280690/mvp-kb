@@ -18,7 +18,13 @@
       "Bash(bash *)",
       "Bash(claude plugin *)",
       "Skill(superpowers:using-superpowers)",
-      "Skill(grill-me)"
+      "Skill(grill-me)",
+      "Bash(mise exec *)",
+      "Bash(mise ls *)",
+      "Read(//Users/khanhlinhnguyentran/.sdkman/candidates/**)",
+      "Read(//usr/local/bin/**)",
+      "Read(//opt/**)",
+      "Bash(brew list *)"
     ]
   }
 }

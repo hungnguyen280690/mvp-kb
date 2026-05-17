@@ -1,0 +1,17 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: bff-service
+
+bff:
+  upstream:
+    ltt-core: http://localhost:8081
+    audit-service: http://localhost:8083
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

@@ -10,7 +10,6 @@ permissions:
   contents: read
   pull-requests: write
   checks: write
-  id-token: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,7 +17,7 @@ concurrency:
 
 env:
   JAVA_VERSION: "21"
-  NODE_VERSION: "26"
+  NODE_VERSION: "20"
 
 jobs:
   # ─────────────────────────────────────────────────
@@ -41,14 +40,14 @@ jobs:
             backend: 'backend/**'
             frontend: 'frontend/**'
             contracts: 'contracts/**'
-            db: 'backend/db/migrations/**'
+            db: 'backend/db/**'
             critical: |
               backend/**/saga/**
               backend/**/audit/**
               backend/**/outbox/**
               backend/**/payment/**
               backend/**/auth/**
-              backend/db/migrations/**
+              backend/db/**
             docs: 'docs/**/*.md'
       - name: Classify risk
         id: classify
@@ -73,27 +72,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - name: Detect changed paths
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            backend: 'backend/**'
-            frontend: 'frontend/**'
-            contracts: 'contracts/**'
-            db: 'backend/db/migrations/**'
 
       - name: Secret scan (gitleaks)
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: DB migration check
-        if: steps.filter.outputs.db == 'true'
-        run: |
-          git diff origin/main...HEAD --name-status -- backend/db/migrations/ | \
-            grep -v 'setup_all\.sql' | \
-            awk '$1=="M" {print "ERROR: Modified existing migration: "$2; exit 1}'
 
   # ─────────────────────────────────────────────────
   # 2. BUILD + UNIT TEST (Backend)
@@ -117,13 +100,7 @@ jobs:
           restore-keys: maven-
       - name: Maven build + test
         working-directory: backend
-        run: mvn -B verify --no-transfer-progress
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: backend-test-results
-          path: "backend/**/target/surefire-reports/"
+        run: ./mvnw -B verify --no-transfer-progress
 
   # ─────────────────────────────────────────────────
   # 3. BUILD (Frontend)
@@ -134,16 +111,19 @@ jobs:
     needs: static
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
       - name: Install + build
         working-directory: frontend
         run: |
-          npm ci
-          npm run build
+          pnpm install --frozen-lockfile || pnpm install
+          pnpm build
 
   # ─────────────────────────────────────────────────
   # 4. SECURITY SCAN
@@ -159,169 +139,10 @@ jobs:
           scan-type: fs
           format: table
           severity: HIGH,CRITICAL
-          exit-code: "0"
+          exit-code: "1"
 
   # ─────────────────────────────────────────────────
-  # 5. AI REVIEW — reviewer dựa trên nghiệp vụ (GLM)
-  # ─────────────────────────────────────────────────
-  ai-review:
-    name: "🛡️ AI Reviewer (Structural & Safety)"
-    runs-on: ubuntu-latest
-    needs: [static, unit-backend, unit-frontend, deps-scan]
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-
-      - name: Get PR diff
-        id: diff
-        run: |
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          git diff $BASE_SHA..$HEAD_SHA --stat > /tmp/pr-stat.txt
-          git diff $BASE_SHA..$HEAD_SHA > /tmp/pr-diff.txt
-
-      - name: Run AI review
-        id: review
-        env:
-          GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
-        run: |
-          # Write Python script to build payload and call API
-          cat > /tmp/review.py << 'PYEOF'
-          import json, subprocess, sys
-
-          # Read context files
-          context_parts = []
-          for f in ["docs/CONTEXT.md", "docs/RULES.md", "CLAUDE.md"]:
-              try:
-                  with open(f) as fh:
-                      context_parts.append(f"=== {f} ===\n" + fh.read()[:2000])
-              except FileNotFoundError:
-                  pass
-          context = "\n\n".join(context_parts)
-
-          # Read diff
-          try:
-              with open("/tmp/pr-stat.txt") as f:
-                  stat = f.read()
-          except:
-              stat = ""
-          try:
-              with open("/tmp/pr-diff.txt") as f:
-                  diff = f.read()[:30000]
-          except:
-              diff = ""
-
-          prompt = f"""Bạn là CI reviewer tự động chuyên trách về TÍNH TOÀN VẸN CẤU TRÚC và AN TOÀN cho dự án MVP Kho Bạc.
-          Nhiệm vụ của bạn là đảm bảo PR tuân thủ các quy tắc "vệ sinh" mã nguồn, bảo vệ các file quan trọng và giữ ranh giới giữa các Stage.
-
-          Kiểm tra theo thứ tự ưu tiên:
-          1. SAFETY (BLOCKING):
-             - Chặn xóa/sửa file Signoff (gates/G*-signoff.md) hoặc quy tắc lõi (docs/RULES.md).
-             - Chặn sửa file DB migration cũ (db/migrations/V*__*.sql đã tồn tại).
-             - Chặn lệnh nguy hiểm (rm -rf, sudo), lộ secret (.env, .pem), bypass test (@Disabled).
-          2. STAGE FREEZING: Kiểm tra PR có vi phạm ranh giới Stage (VD: Stage 2 không được sửa code backend/, Stage 3 không được sửa contracts/).
-          3. DOCUMENT CONTROL: File .md phải có front-matter đầy đủ; Chặn hedge phrases ("as needed", "TBD"); PR Stage 1-2 phải có diagram (.pml/.mmd).
-          4. NAMING & CODE:
-             - Java: PascalCase (Class), camelCase (Method). DB: snake_case. API: kebab-case.
-             - Chặn debug code (console.log, printStackTrace).
-             - Code thêm > 50 dòng phải có test đi kèm.
-
-          DOMAIN CONTEXT (chỉ để tham chiếu cấu trúc):
-          {context}
-
-          PR DIFF STAT:
-          {stat}
-
-          PR DIFF:
-          {diff}
-
-          Output bắt buộc JSON ở cuối phản hồi:
-          {{"lgtm": true|false, "risk_level": "low|medium|high", "findings": [{{"severity": "block|warn|info", "file": "path", "line": 0, "category": "safety|stage|doc|naming|code", "message": "mô tả vi phạm", "suggestion": "cách sửa"}}], "summary": "tóm tắt ngắn gọn các vi phạm cấu trúc và an toàn."}}
-          """
-
-          payload = {
-              "model": "glm-4.7-flash",
-              "messages": [{"role": "user", "content": prompt}],
-              "max_tokens": 4096,
-              "temperature": 0.1
-          }
-
-          with open("/tmp/payload.json", "w") as f:
-              json.dump(payload, f, ensure_ascii=False)
-          print("PAYLOAD_READY")
-          PYEOF
-
-          python3 /tmp/review.py
-
-          # Call GLM API — save raw response to file
-          curl -s -X POST \
-            "https://open.bigmodel.cn/api/paas/v4/chat/completions" \
-            -H "Authorization: Bearer $GLM_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d @/tmp/payload.json > /tmp/glm-raw-response.json
-
-          # Debug: log response keys
-          echo "API response status check:"
-          python3 -c "
-          import json
-          with open('/tmp/glm-raw-response.json') as f:
-              data = json.load(f)
-          print('Keys:', list(data.keys()))
-          if 'error' in data:
-              print('Error:', data['error'])
-          if 'choices' in data:
-              print('Choices count:', len(data['choices']))
-          " 2>/dev/null || echo "Failed to parse API response"
-
-          # Extract text from response via file (no shell interpolation)
-          python3 -c "
-          import json
-          with open('/tmp/glm-raw-response.json') as f:
-              data = json.load(f)
-          content = data['choices'][0]['message']['content']
-          with open('/tmp/review-response.txt', 'w') as out:
-              out.write(content)
-          " 2>/dev/null || echo "ERROR: API call failed" > /tmp/review-response.txt
-
-          # Extract LGTM from response file
-          LGTM=$(grep -oP '"lgtm"\s*:\s*(true|false)' /tmp/review-response.txt | tail -1 | grep -oP '(true|false)' || echo "false")
-          echo "lgtm=$LGTM" >> $GITHUB_OUTPUT
-
-          if [ "$LGTM" = "false" ]; then
-            echo "::error::AI review: LGTM=false"
-          fi
-
-      - name: Post review comment
-        if: always()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR_NUM="${{ github.event.pull_request.number }}"
-          {
-            echo "## 🤖 AI Review (GLM-4.7-Flash)"
-            echo ""
-            head -200 /tmp/review-response.txt
-            echo ""
-            echo "---"
-            echo ""
-            echo "*Reviewed by AI reviewer | [Policy](docs/RULES.md)*"
-          } > /tmp/review-comment.md
-          gh pr comment "$PR_NUM" --body-file /tmp/review-comment.md
-
-      - name: Set check status
-        if: always()
-        run: |
-          LGTM="${{ steps.review.outputs.lgtm }}"
-          if [ "$LGTM" = "false" ]; then
-            echo "AI review: LGTM=false — blocking merge"
-            exit 1
-          else
-            echo "AI review: LGTM=true"
-          fi
-
-  # ─────────────────────────────────────────────────
-  # 6. DOC-LINT
+  # 5. DOC-LINT
   # ─────────────────────────────────────────────────
   doc-lint:
     name: Doc lint

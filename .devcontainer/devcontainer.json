@@ -7,14 +7,16 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
-  "postCreateCommand": "mise install && ./scripts/setup.sh",
+  "postCreateCommand": "mise install && ./scripts/setup.sh || true",
   "postStartCommand": "./scripts/verify-env.sh || true",
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-azuretools.vscode-docker",
         "redhat.vscode-yaml",
-        "anthropic.claude-code"
+        "anthropic.claude-code",
+        "vscjava.vscode-java-pack",
+        "esbenp.prettier-vscode"
       ]
     }
   },

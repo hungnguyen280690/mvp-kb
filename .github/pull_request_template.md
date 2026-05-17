@@ -1,55 +1,40 @@
 <!--
-PR template — hệ thống tự kiểm các mục dưới qua CI.
-Điền đủ giúp Claude reviewer + người duyệt xử lý nhanh.
+PR template — he thong tu kiem cac muc duoi qua CI.
+Dien du giup nguoi duyet xu ly nhanh.
 -->
 
-## Tóm tắt
+## Tom tat
 
-<!-- 1-3 câu: thay đổi gì, vì sao -->
+<!-- 1-3 cau: thay doi gi, vi sao -->
 
-## Liên kết
+## Lien ket
 
-- Stage trong pipeline (BA / SA / Dev):
-- ADR / docs liên quan:
+- Stage trong pipeline (BA / SA / Dev / QA):
+- ADR / docs lien quan:
 
-## Phân loại rủi ro
+## Phan loai rui ro
 
-<!-- Để Claude reviewer + branch protection áp dụng đúng quy tắc -->
+- [ ] Low-risk (docs, comment, test only, dependency patch)
+- [ ] Medium-risk (logic thuong, UI khong touch tien/auth)
+- [ ] High-risk (DB migration, contracts/ changes, gates/ signoff, prod config, security)
 
-- [ ] 🟢 Low-risk (docs, comment, test only, dependency patch)
-- [ ] 🟡 Medium-risk (logic thường, UI không touch tiền/auth)
-- [ ] 🔴 High-risk (DB migration, contracts/ changes, gates/ signoff, prod config, security)
+## Self-check (xac nhan da lam)
 
-## Self-check (xác nhận đã làm)
-
-- [ ] Đã đọc [SAFETY.md](../docs/SAFETY.md), không vi phạm cấp 1
-- [ ] Đã chạy `./mvnw verify` / `pnpm test` local — xanh
-- [ ] Đã viết unit test, coverage không giảm
-- [ ] Đã cập nhật `features/*` / `contracts/*` nếu thay đổi nghiệp vụ / API
-- [ ] Không hard-code credential, không log số TK / CMND đầy đủ
-- [ ] Migration mới (không sửa file đã merge)
-- [ ] OpenAPI khớp với code (nếu có endpoint mới)
-- [ ] Đã thêm/cập nhật runbook nếu có alert mới
+- [ ] Da doc [RULES.md](../docs/RULES.md), khong vi pham
+- [ ] Da chay `./mvnw verify` / `pnpm test` local — xanh
+- [ ] Da viet unit test, coverage khong giam
+- [ ] Da cap nhat `features/*` / `contracts/*` neu thay doi nghiep vu / API
+- [ ] Khong hard-code credential, khong log so TK / CMND day du
+- [ ] Migration moi (khong sua file da merge)
+- [ ] OpenAPI khop voi code (neu co endpoint moi)
 
 ## Test plan
 
-<!-- Reviewer cần biết check gì để đảm bảo PR không hỏng -->
-
 - [ ]
 - [ ]
 
-## Screenshot / log (nếu UI hoặc logging thay đổi)
+## Stage gate (neu ap dung)
 
----
-
-<!-- Phần dưới là cho Claude reviewer + maintainer, không xoá -->
-
-### Claude reviewer focus
-
-<!-- Hint cho Claude review tập trung vào đâu (optional) -->
-
-### Stage gate (nếu áp dụng)
-
-- [ ] G1 (BA) — `gates/G1-ba-signoff.md` đã ký
-- [ ] G2 (SA) — `gates/G2-sa-signoff.md` đã ký
-- [ ] G3 (DEV) — review xong
+- [ ] G1 (BA) — `gates/FT-XXX-G1-ba-signoff.md` da ky
+- [ ] G2 (SA) — `gates/FT-XXX-G2-design-signoff.md` da ky
+- [ ] G3 (Dev) — review xong
