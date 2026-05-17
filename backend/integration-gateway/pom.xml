@@ -26,7 +26,6 @@
         <dependency>
             <groupId>com.ibm.mq</groupId>
             <artifactId>mq-jms-spring-boot-starter</artifactId>
-            <version>3.3.4</version>
         </dependency>
         
         <dependency>
