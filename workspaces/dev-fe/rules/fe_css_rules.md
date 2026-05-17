@@ -1,3 +1,5 @@
+# Frontend Rules: CSS Guidelines
+```css
 /* ============================================================
    VDBAS Design System — v1.0 (theo VDBAS_UIUX_Rule.md)
    ============================================================ */
@@ -557,3 +559,4 @@ table.tbl td.center, table.tbl th.center { text-align: center; }
 .diff-row .field { color: var(--muted); }
 .diff-row .old { color: var(--inactive); text-decoration: line-through; }
 .diff-row .new { color: var(--active); font-weight: 500; }
+```
