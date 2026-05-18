@@ -131,3 +131,10 @@ repos:
         entry: "(as needed|depending on requirements|as appropriate|and so on)"
         types: [markdown]
         exclude: "^(docs/adr/|docs/quality-rules/)"
+
+      - id: build-check
+        name: "Build check (backend + frontend)"
+        language: system
+        entry: scripts/pre-commit-build-check.sh
+        pass_filenames: false
+        stages: [pre-commit]
