@@ -27,6 +27,7 @@ Các Agent khi thực thi công việc BẮT BUỘC phải chui vào thư mục 
 
 ## 4. Các Quy chuẩn Bắt buộc (Mandatory Conventions)
 
+- **BẮT BUỘC TẠO PLAN**: Mọi Agent (BA, SA, Dev, QA) phải tạo file Plan trong `gates/` (`BA-Plan`, `SA-Plan`, `Dev-Plan`, `QA-Plan`) và **chờ con người duyệt** trước khi thực hiện bất kỳ hành động nào.
 - **Kiến trúc phần mềm & Danh mục Services**: Tham chiếu tại `docs/ARCHITECTURE.md`.
 - **Quy tắc đặt tên & Cấu trúc Folder**: Tham chiếu tại `docs/conventions/naming-rules.md`.
 - **Từ điển Nền tảng (Hệ thống)**: Tham chiếu tại `docs/CONTEXT.md`.

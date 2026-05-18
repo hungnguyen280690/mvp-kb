@@ -71,9 +71,11 @@ features/FT-001/
 
 Để chống tình trạng AI chạy lung tung hoặc tạo rác:
 
-1. **Không nhảy cóc**: Không có file `G1` thì cấm SA làm việc. Không có file `G2` thì cấm Dev viết code.
-2. **Cam kết đủ File**: File `FT-XXX-G*-signoff.md` phải liệt kê rõ đường dẫn (path) của các file Artifact đã sinh ra. (Ví dụ Sign-off G2 phải ghi rõ: _Đã duyệt 02-design.md và 03-schema.sql_). Nếu thiếu file, không được ký.
-3. **Đóng băng**: File nào đã qua cổng Sign-off sẽ bị "đóng băng" (Frozen). Cấm các Agent tự ý lùi lại sửa file của Phase trước để lấp liếm lỗi. Muốn sửa, phải yêu cầu con người gỡ Sign-off.
+1. **Plan-First BẮT BUỘC**: Mọi Agent phải tạo Plan file trong `gates/` (`BA-Plan`, `SA-Plan`, `Dev-Plan`, `QA-Plan`) và **chờ con người duyệt** trước khi hành động. Không có Plan duyệt = cấm làm.
+2. **Không nhảy cóc**: Không có file `G1` thì cấm SA làm việc. Không có file `G2` thì cấm Dev viết code.
+3. **Cam kết đủ File**: File `FT-XXX-G*-signoff.md` phải liệt kê rõ đường dẫn (path) của các file Artifact đã sinh ra. (Ví dụ Sign-off G2 phải ghi rõ: _Đã duyệt 02-design.md và 03-schema.sql_). Nếu thiếu file, không được ký.
+4. **Verify trước Sign-off**: Dev phải chạy `scripts/smoke-test.sh` pass trước G3. QA phải chạy `scripts/smoke-api.sh` pass trước G4.
+5. **Đóng băng**: File nào đã qua cổng Sign-off sẽ bị "đóng băng" (Frozen). Cấm các Agent tự ý lùi lại sửa file của Phase trước để lấp liếm lỗi. Muốn sửa, phải yêu cầu con người gỡ Sign-off.
 
 ---
 

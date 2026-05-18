@@ -31,11 +31,19 @@ Tài liệu này chứa các quy tắc bắt buộc áp dụng cho mọi Agent v
 - **Rule 4.2: Frozen Test.** Kịch bản Test sau khi được duyệt tại Gate sẽ bị "đóng băng". Tuyệt đối không được sửa Test để lấp liếm lỗi code. Muốn sửa Test phải quay lại bước lập Plan.
 - **Rule 4.3: Isolation.** Unit Test không được kết nối database thật. Sử dụng Mocking/H2 Database.
 
-## 5. Quy tắc Bảo mật (Security Rules)
+## 5. Quy tắc Kiểm thử Cơ bản (Smoke Test Rules)
 
-- **Rule 5.1: No Secrets.** Tuyệt đối không commit API Key, Password vào mã nguồn. Sử dụng `.env` hoặc Secret Manager.
-- **Rule 5.2: Data Masking.** Các thông tin nhạy cảm (Số tài khoản, Số CMT) phải được che (masking) khi hiển thị trên UI hoặc ghi log.
+- **Rule 5.1: Smoke Test.** Mọi tính năng phải có `scripts/smoke-test.sh` pass (build + unit test) trước khi xin Dev Sign-off (Gate G3).
+- **Rule 5.2: API Smoke Test.** Khi service đang chạy, mọi endpoint phải phản hồi HTTP 2xx. Kiểm tra bằng `scripts/smoke-api.sh`. Bắt buộc cho QA Sign-off (Gate G4).
+- **Rule 5.3: Test Data.** Mọi tính năng phải có file `features/FT-XXX/08-test-data.md` chứa dữ liệu mẫu để chạy test (INSERT SQL hoặc JSON payload).
+- **Rule 5.4: Plan-First for ALL Agents.** Mọi Agent (BA, SA, Dev, QA) BẮT BUỘC tạo Plan file trong `gates/` (`BA-Plan`, `SA-Plan`, `Dev-Plan`, `QA-Plan`) và chờ con người duyệt trước khi hành động.
+
+## 6. Quy tắc Bảo mật (Security Rules)
+
+- **Rule 6.1: No Secrets.** Tuyệt đối không commit API Key, Password vào mã nguồn. Sử dụng `.env` hoặc Secret Manager.
+- **Rule 6.2: Data Masking.** Các thông tin nhạy cảm (Số tài khoản, Số CMT) phải được che (masking) khi hiển thị trên UI hoặc ghi log.
 
 ---
 ## Lịch sử Sửa đổi (Audit Log)
+- **2026-05-18** | **System** | Thêm Section 5: Smoke Test Rules (5.1-5.4). Đổi Security Rules thành Section 6.
 - **2026-05-17** | **System** | Cập nhật Rule 1.4 (Context Evolution), Rule 2.1 (Schema.sql), Rule 3.1 (Tailwind CSS).

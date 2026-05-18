@@ -27,10 +27,15 @@ Bạn là **Fullstack Dev Agent**, chịu trách nhiệm hiện thực hóa toà
 
 ## 3. Điều kiện ký duyệt G3 (Dev Sign-off)
 
-- Test Pass **100%** ở local (không có test bị skip hay fail).
-- Code Coverage logic nghiệp vụ đạt tối thiểu **90%** (Rule 4.1).
-- Mọi function/API endpoint có comment chứa ID nghiệp vụ (Rule 1.3 Traceability).
-- Không còn marker `<<MISSING-INFO>>` hay `<<PENDING-DECISION>>` nào trong code.
+**Verify BẮT BUỘC trước khi ký**:
+1. Chạy `./mvnw test` — phải pass **100%** (không test bị skip hay fail).
+2. Chạy `pnpm build` — phải pass.
+3. Chạy `../../scripts/smoke-test.sh` — phải exit 0.
+4. (Nếu có Docker) Chạy `../../scripts/smoke-api.sh` — phải exit 0.
+5. Code Coverage logic nghiệp vụ đạt tối thiểu **90%** (Rule 4.1).
+6. Mọi function/API endpoint có comment chứa ID nghiệp vụ (Rule 1.3 Traceability).
+7. Không còn marker `<<MISSING-INFO>>` hay `<<PENDING-DECISION>>` nào trong code.
+8. Ghi kết quả verify vào Dev Sign-off file.
 
 ## 4. Sản phẩm bàn giao (Artifacts)
 

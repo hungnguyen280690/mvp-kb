@@ -20,7 +20,14 @@ Nếu thiếu file HTML mẫu, BA phải yêu cầu PO cung cấp trước khi t
 
 ## Luồng công việc BẮT BUỘC
 
-**Bước 0 — Kiểm tra fast-track (Audit-Only)**:
+**Bước 0 — Tạo BA Plan (BẮT BUỘC)**:
+Tạo file `gates/FT-XXX-BA-Plan.md` liệt kê:
+- Danh sách file HTML mẫu cần phân tích.
+- Chế độ: fast-track audit-only hay sinh spec mới.
+- Danh sách artifact sẽ sinh/tra soát.
+- **CHỜ CON NGƯỜI DUYỆT** trước khi tiếp tục.
+
+**Bước 1 — Kiểm tra fast-track (Audit-Only)**:
 Nếu tính năng đã có đủ 3 file spec (`01_spec_field.md`, `01_spec_button.md`, `01_spec_function.md`) và file BDD (`01b-bdd-scenarios.md`), BA chỉ cần:
 1. Tra soát (audit) 3 file spec so với HTML mẫu — xác nhận không thiếu trường, nút bấm, quy tắc nào.
 2. Kiểm tra glossary đã cập nhật đủ thuật ngữ.

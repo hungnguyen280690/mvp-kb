@@ -67,8 +67,13 @@ gate_g1() {
   echo "=== G1 (BA Gate) verification for ${FT} ==="
   echo ""
 
-  # 1. Business spec exists and non-empty
-  check_file_exists_nonempty "${FEATURE_DIR}/01-business-spec.md" "Business spec"
+  # 0. BA Plan exists
+  check_file_exists_nonempty "${GATES_DIR}/${FT}-BA-Plan.md" "BA Plan"
+
+  # 1. Three spec files (replacing old single 01-business-spec.md)
+  check_file_exists_nonempty "${FEATURE_DIR}/01_spec_field.md" "Field spec"
+  check_file_exists_nonempty "${FEATURE_DIR}/01_spec_button.md" "Button spec"
+  check_file_exists_nonempty "${FEATURE_DIR}/01_spec_function.md" "Function spec"
 
   # 2. BDD scenarios exists and non-empty
   check_file_exists_nonempty "${FEATURE_DIR}/01b-bdd-scenarios.md" "BDD scenarios"
@@ -78,6 +83,15 @@ gate_g1() {
 
   # 4. No MISSING-INFO placeholders in feature .md files
   check_no_missing_info "${FEATURE_DIR}" "Feature .md files"
+
+  # 5. No PENDING-DECISION markers
+  local pd_count
+  pd_count=$(grep -rl '<<PENDING-DECISION>>' "${FEATURE_DIR}" --include='*.md' 2>/dev/null | wc -l || echo "0")
+  if [[ "$pd_count" -gt 0 ]]; then
+    fail "Found <<PENDING-DECISION>> markers in feature .md files"
+  else
+    pass "No <<PENDING-DECISION>> markers"
+  fi
 
   # 5. Gherkin syntax validation: at least 5 Scenario blocks, each with Given/When/Then
   local bdd_file="${FEATURE_DIR}/01b-bdd-scenarios.md"
@@ -143,16 +157,27 @@ gate_g2() {
   echo "=== G2 (Design Gate) verification for ${FT} ==="
   echo ""
 
-  # 1. Design doc
+  # 0. SA Plan exists
+  check_file_exists_nonempty "${GATES_DIR}/${FT}-SA-Plan.md" "SA Plan"
+
+  # 1. BA readiness check approved
+  local readiness_file="${GATES_DIR}/${FT}-G1-ba-readiness.md"
+  if [[ -f "$readiness_file" ]] && grep -q 'APPROVED' "$readiness_file"; then
+    pass "BA readiness check: APPROVED"
+  else
+    fail "BA readiness check not found or not APPROVED: ${readiness_file}"
+  fi
+
+  # 2. Design doc
   check_file_exists_nonempty "${FEATURE_DIR}/02-design.md" "Design document"
 
-  # 2. Schema SQL
+  # 3. Schema SQL
   check_file_exists_nonempty "${FEATURE_DIR}/03-schema.sql" "Schema SQL"
 
-  # 3. OpenAPI yaml
-  check_file_exists_nonempty "${FEATURE_DIR}/04-openapi.yaml" "OpenAPI spec"
+  # 4. OpenAPI yaml
+  check_file_exists_nonempty "${ROOT_DIR}/contracts/openapi.yaml" "OpenAPI spec"
 
-  # 4. No MISSING-INFO in design files
+  # 5. No MISSING-INFO in design files
   check_no_missing_info "${FEATURE_DIR}" "Design .md files"
 }
 
@@ -163,6 +188,9 @@ gate_g3() {
   echo ""
   echo "=== G3 (Dev Gate) verification for ${FT} ==="
   echo ""
+
+  # 0. Dev Plan exists
+  check_file_exists_nonempty "${GATES_DIR}/${FT}-Dev-Plan.md" "Dev Plan"
 
   local backend_dir="${ROOT_DIR}/backend"
   local frontend_dir="${ROOT_DIR}/frontend"
@@ -258,6 +286,9 @@ gate_g4() {
   echo "=== G4 (QA Gate) verification for ${FT} ==="
   echo ""
 
+  # 0. QA Plan exists
+  check_file_exists_nonempty "${GATES_DIR}/${FT}-QA-Plan.md" "QA Plan"
+
   # 1. All G3 checks must pass (run G3 first)
   gate_g3
 
@@ -266,6 +297,19 @@ gate_g4() {
 
   # 2. Dev signoff exists
   check_file_exists_nonempty "${GATES_DIR}/${FT}-G3-dev-signoff.md" "G3 dev signoff"
+
+  # 3. Test data file exists
+  check_file_exists_nonempty "${FEATURE_DIR}/08-test-data.md" "Test data"
+
+  # 4. Smoke test script pass
+  if [[ -x "${ROOT_DIR}/scripts/smoke-test.sh" ]]; then
+    echo "--- Smoke test ---"
+    if (bash "${ROOT_DIR}/scripts/smoke-test.sh" 2>&1); then
+      pass "smoke-test.sh passed"
+    else
+      fail "smoke-test.sh failed"
+    fi
+  fi
 }
 
 # ---------------------------------------------------------------------------
