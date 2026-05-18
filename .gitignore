@@ -100,3 +100,4 @@ src/main/generated/
 *.tmp
 .tmp/
 
+.claude/worktrees/

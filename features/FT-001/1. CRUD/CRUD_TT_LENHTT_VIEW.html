@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<title>TT_LENHTT.VIEW – Xem chi tiết Lệnh thanh toán</title>
+<link rel="stylesheet" href="vdbas.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">TT</div>
+  <div class="title">
+    <strong>VDBAS – Phân hệ Thanh toán</strong>
+    <small>Xem chi tiết Lệnh thanh toán</small>
+  </div>
+  <div class="spacer"></div>
+  <div class="user">
+    <div class="avatar">PT</div>
+    <div class="who"><span>Phong TD16</span><small>Maker · KBNN Hà Nội</small></div>
+  </div>
+</header>
+
+<nav class="crumb">
+  <a href="../6.%20Mockup/index.html">Trang chủ</a><span class="sep">›</span>
+  <a href="#">Thanh toán</a><span class="sep">›</span>
+  <a href="CRUD_TT_LENHTT_LIST.html">Danh sách</a><span class="sep">›</span>
+  <span class="cur">YCTT-2026-0001</span>
+</nav>
+
+<main class="page">
+  <h1 class="page-title">Xem chi tiết — YCTT-2026-0001
+    <span class="badge badge-active" style="margin-left:8px; vertical-align: middle;">Approved</span>
+  </h1>
+
+  <!-- Workflow status -->
+  <div class="workflow" aria-label="Trạng thái phê duyệt">
+    <span class="step done"><span class="dot"></span> Maker · phongtd16 · 12/05 09:12</span>
+    <span class="arrow">›</span>
+    <span class="step done"><span class="dot"></span> Checker · hieubt05 · 12/05 09:30</span>
+    <span class="arrow">›</span>
+    <span class="step done"><span class="dot"></span> Approver · hientt09 · 12/05 09:48</span>
+    <span class="arrow">›</span>
+    <span class="step current"><span class="dot"></span> Approved</span>
+  </div>
+
+  <section class="card">
+    <div class="card-header">
+      <h2>Thông tin Lệnh thanh toán</h2>
+      <span class="code">TT_LENHTT.VIEW</span>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active">Thông tin chung</div>
+      <div class="tab">Khoản mục (2)</div>
+      <div class="tab">Người chuyển</div>
+      <div class="tab">Người nhận</div>
+      <div class="tab"><a style="color:inherit;text-decoration:none;" href="../6.%20Mockup/TT_LENHTT_ATTACH.html">Đính kèm (3)</a></div>
+      <div class="tab"><a style="color:inherit;text-decoration:none;" href="../6.%20Mockup/TT_LENHTT_HISTORY.html">Lịch sử</a></div>
+      <div class="tab">Trạng thái phê duyệt</div>
+    </div>
+
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Kênh</label>
+          <input type="text" value="Liên ngân hàng" readonly />
+        </div>
+        <div class="form-group">
+          <label>Loại lệnh</label>
+          <input type="text" value="Lệnh thông thường" readonly />
+        </div>
+        <div class="form-group">
+          <label>Số YCTT / Số bút toán</label>
+          <input type="text" value="YCTT-2026-0001" readonly />
+        </div>
+
+        <div class="form-group">
+          <label>NH/KB chuyển</label>
+          <input type="text" value="01202001 – KBNN Hà Nội" readonly />
+        </div>
+        <div class="form-group">
+          <label>NH/KB nhận</label>
+          <input type="text" value="97041018 – Ngân hàng TMCP Ngoại thương VN" readonly />
+        </div>
+        <div class="form-group">
+          <label>Ngày thanh toán</label>
+          <input type="text" value="12/05/2026" readonly />
+        </div>
+
+        <div class="form-group">
+          <label>Số tiền chuyển</label>
+          <input type="text" value="2.450.000.000" readonly style="text-align:right;font-weight:600;color:var(--primary-dark);" />
+        </div>
+        <div class="form-group">
+          <label>Loại tiền</label>
+          <input type="text" value="VND" readonly />
+        </div>
+        <div class="form-group">
+          <label>Loại giao dịch</label>
+          <input type="text" value="Lệnh chuyển Có GT cao" readonly />
+        </div>
+
+        <div class="form-group span-3">
+          <label>Nội dung thanh toán</label>
+          <textarea readonly rows="2">Chuyển tiền thanh toán hợp đồng số 12/HĐ-KBNN ngày 05/05/2026 cho NCC Công ty CP Xây dựng số 1.</textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Người lập</label>
+          <input type="text" value="Phong TD16 (phongtd16)" readonly />
+        </div>
+        <div class="form-group">
+          <label>Ngày lập</label>
+          <input type="text" value="12/05/2026 09:12:34" readonly />
+        </div>
+        <div class="form-group">
+          <label>Phiên bản (F-VER)</label>
+          <input type="text" value="3" readonly />
+        </div>
+      </div>
+
+      <h3 class="section-title">Khoản mục (2 dòng)</h3>
+      <div class="table-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th class="num">STT</th>
+              <th>Mã quỹ</th><th>TK tự nhiên</th><th>DVQHNS</th><th>Chương</th>
+              <th>Ngành KT</th><th>NDKT</th><th>ĐB</th><th>CTMT</th><th>MN</th><th>Kho bạc</th><th>DP</th>
+              <th>Diễn giải</th>
+              <th class="right">Số tiền</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="num">1</td>
+              <td>01</td><td>1112</td><td>1059482</td><td>017</td>
+              <td>070</td><td>7012</td><td>00000</td><td>00000</td><td>13</td><td>0119</td><td>00</td>
+              <td class="wrap">Thanh toán đợt 1 — hạng mục san nền</td>
+              <td class="right">1.450.000.000</td>
+            </tr>
+            <tr>
+              <td class="num">2</td>
+              <td>01</td><td>1112</td><td>1059482</td><td>017</td>
+              <td>070</td><td>7012</td><td>00000</td><td>00000</td><td>13</td><td>0119</td><td>00</td>
+              <td class="wrap">Thanh toán đợt 1 — hạng mục móng cọc</td>
+              <td class="right">1.000.000.000</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="summary-strip"><span>Tổng số tiền dòng: <b>2.450.000.000 VND</b></span></div>
+
+      <h3 class="section-title">Thông tin người chuyển & người nhận</h3>
+      <div class="split-2">
+        <div>
+          <dl class="kv">
+            <dt>Tên</dt><dd>Kho bạc Nhà nước Hà Nội</dd>
+            <dt>Địa chỉ</dt><dd>32 Cát Linh, P. Cát Linh, Q. Đống Đa, TP Hà Nội</dd>
+            <dt>Tài khoản</dt><dd>1112-1059482</dd>
+            <dt>Mở tại</dt><dd>01202001 – KBNN Hà Nội</dd>
+          </dl>
+        </div>
+        <div>
+          <dl class="kv">
+            <dt>Tên</dt><dd>Công ty CP Xây dựng số 1 Hà Nội</dd>
+            <dt>Địa chỉ</dt><dd>59 Quang Trung, Q. Hai Bà Trưng, TP Hà Nội</dd>
+            <dt>Tài khoản</dt><dd>1020 1000 123456</dd>
+            <dt>Mở tại</dt><dd>970418 – Vietcombank CN Hà Nội</dd>
+            <dt>Mã DN</dt><dd>0100123456 (Sở KH&ĐT TP Hà Nội, 15/06/2018)</dd>
+          </dl>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="toolbar">
+      <a href="CRUD_TT_LENHTT_LIST.html" class="btn">Đóng <span class="kbd">Esc</span></a>
+      <a href="../6.%20Mockup/TT_LENHTT_HISTORY.html" class="btn btn-ghost">Lịch sử <span class="kbd">Alt+H</span></a>
+      <a href="../6.%20Mockup/TT_LENHTT_PRINT.html" class="btn btn-ghost">In phiếu <span class="kbd">Ctrl+P</span></a>
+      <button class="btn btn-ghost">Sao chép <span class="kbd">Ctrl+Shift+C</span></button>
+      <button class="btn" disabled title="Chỉ enable khi trạng thái ∈ {Draft, Returned_To_Maker}">Sửa <span class="kbd">F2</span></button>
+    </div>
+  </section>
+</main>
+</body>
+</html>
