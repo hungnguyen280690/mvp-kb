@@ -116,13 +116,13 @@ repos:
       - id: forbid-migration-edit
         name: "Block edit merged migration"
         language: system
-        entry: bash -c 'git diff --cached --name-status | awk "/^M/ && $2 ~ /db\/.*\.sql/ {print "Blocked: migration edit: " $2; exit 1}"'
+        entry: scripts/pre-commit-block-migration-edit.sh
         pass_filenames: false
 
       - id: forbid-gates-edit
         name: "Block edit gate signoff"
         language: system
-        entry: bash -c 'git diff --cached --name-status | awk "/^M/ && $2 ~ /gates\/FT.*-G[0-9].*-signoff\.md/ {print "Blocked: gate signoff edit: " $2; exit 1}"'
+        entry: scripts/pre-commit-block-gates-edit.sh
         pass_filenames: false
 
       - id: hedge-phrase-scan
@@ -130,4 +130,4 @@ repos:
         language: pygrep
         entry: "(as needed|depending on requirements|as appropriate|and so on)"
         types: [markdown]
-        exclude: '^(docs/adr/|docs/quality-rules/)'
+        exclude: "^(docs/adr/|docs/quality-rules/)"

@@ -722,7 +722,7 @@ public class LttServiceImpl implements LttService {
                     .senderGlSegment2(srcSender.getSenderGlSegment2())
                     .senderNum(srcSender.getSenderNum())
                     .senderBankCode(srcSender.getSenderBankCode())
-                    .senderIdentifyId(srcSender.getSenderIdentiFyId())
+                    .senderIdentifyId(srcSender.getSenderIdentifyId())
                     .senderIssuedDate(srcSender.getSenderIssuedDate())
                     .senderIssuedPlace(srcSender.getSenderIssuedPlace())
                     .tpcpCode(srcSender.getTpcpCode())
@@ -949,7 +949,7 @@ public class LttServiceImpl implements LttService {
                 .senderGlSegment2(info.getSenderGlSegment2())
                 .senderNum(info.getSenderNum())
                 .senderBankCode(info.getSenderBankCode())
-                .senderIdentifyId(info.getSenderIdentiFyId())
+                .senderIdentifyId(info.getSenderIdentifyId())
                 .senderIssuedDate(info.getSenderIssuedDate())
                 .senderIssuedPlace(info.getSenderIssuedPlace())
                 .tpcpCode(info.getTpcpCode())
@@ -999,7 +999,7 @@ public class LttServiceImpl implements LttService {
         if (info.getSenderGlSegment2() != null) sender.setSenderGlSegment2(info.getSenderGlSegment2());
         if (info.getSenderNum() != null) sender.setSenderNum(info.getSenderNum());
         if (info.getSenderBankCode() != null) sender.setSenderBankCode(info.getSenderBankCode());
-        if (info.getSenderIdentiFyId() != null) sender.setSenderIdentiFyId(info.getSenderIdentiFyId());
+        if (info.getSenderIdentifyId() != null) sender.setSenderIdentifyId(info.getSenderIdentifyId());
         if (info.getSenderIssuedDate() != null) sender.setSenderIssuedDate(info.getSenderIssuedDate());
         if (info.getSenderIssuedPlace() != null) sender.setSenderIssuedPlace(info.getSenderIssuedPlace());
         if (info.getTpcpCode() != null) sender.setTpcpCode(info.getTpcpCode());
