@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<title>TT_LENHTT.ATTACH – Quản lý đính kèm</title>
+<link rel="stylesheet" href="./vdbas.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">TT</div>
+  <div class="title">
+    <strong>VDBAS – Phân hệ Thanh toán</strong>
+    <small>Quản lý tài liệu đính kèm</small>
+  </div>
+  <div class="spacer"></div>
+  <div class="user">
+    <div class="avatar">PT</div>
+    <div class="who"><span>Phong TD16</span><small>Maker · KBNN Hà Nội</small></div>
+  </div>
+</header>
+
+<nav class="crumb">
+  <a href="../index.html">Trang chủ</a><span class="sep">›</span>
+  <a href="../TT_LENHTT_LIST.html">Danh sách</a><span class="sep">›</span>
+  <a href="../TT_LENHTT_VIEW.html">YCTT-2026-0001</a><span class="sep">›</span>
+  <span class="cur">Đính kèm</span>
+</nav>
+
+<main class="page">
+  <h1 class="page-title">Đính kèm — YCTT-2026-0001</h1>
+
+  <div class="hint info">
+    Định dạng cho phép: <b>pdf, jpg, png, docx, xlsx</b>. Kích thước mỗi file ≤ <b>10 MB</b>. Tổng dung lượng/bản ghi ≤ <b>50 MB</b>. Hệ thống kiểm tra MIME + magic byte và lưu hash <b>SHA-256</b> để chống trùng & toàn vẹn.
+  </div>
+
+  <section class="card">
+    <div class="card-header">
+      <h2>Tải tài liệu</h2>
+      <span class="code">TT_LENHTT.ATTACH.UPLOAD</span>
+    </div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Loại tài liệu <span class="req">*</span></label>
+          <select>
+            <option>-- Chọn --</option>
+            <option selected>Chứng từ gốc</option>
+            <option>Hợp đồng</option>
+            <option>Hoá đơn</option>
+            <option>Bảng kê</option>
+            <option>Văn bản khác</option>
+          </select>
+        </div>
+        <div class="form-group span-2">
+          <label>Mô tả</label>
+          <input type="text" placeholder="≤ 250 ký tự…" />
+        </div>
+        <div class="form-group span-3">
+          <label>File <span class="req">*</span></label>
+          <div class="dropzone">
+            <div style="font-size:14px;margin-bottom:6px;">📎 Kéo & thả file vào đây</div>
+            <div>hoặc <strong>Chọn từ máy tính…</strong></div>
+            <div class="field-help" style="margin-top:8px;">PDF / JPG / PNG / DOCX / XLSX · tối đa 10 MB/file</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="toolbar">
+      <button class="btn">Huỷ <span class="kbd">Esc</span></button>
+      <button class="btn btn-primary">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Tải lên <span class="kbd">Ctrl+U</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h2>Danh sách tệp đính kèm · 3 file · 4.85 MB</h2>
+      <span class="code">TT_LENHTT.ATTACH</span>
+    </div>
+    <div class="table-wrap">
+      <table class="tbl" aria-label="Danh sách tệp đính kèm">
+        <thead>
+          <tr>
+            <th class="num">STT</th>
+            <th>Tên file</th>
+            <th>Loại tài liệu</th>
+            <th>Mô tả</th>
+            <th class="right">Kích thước</th>
+            <th>SHA-256 (truncated)</th>
+            <th>Người tải</th>
+            <th>Thời gian tải</th>
+            <th class="center">Trạng thái</th>
+            <th class="act">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="num">1</td>
+            <td>HopDong_12-HD-KBNN.pdf</td>
+            <td>Hợp đồng</td>
+            <td class="wrap">Hợp đồng thi công gói thầu số 12</td>
+            <td class="right">2.45 MB</td>
+            <td><code style="font-size:11px;">a3f7…9b2c</code></td>
+            <td>phongtd16</td>
+            <td>12/05/2026 09:13</td>
+            <td class="center"><span class="badge badge-active">Active</span></td>
+            <td class="act">
+              <button class="icon-btn" title="Xem trước"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button class="icon-btn" title="Tải xuống (Ctrl+J)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+              <button class="icon-btn danger" title="Xoá (Shift+Delete)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+            </td>
+          </tr>
+          <tr>
+            <td class="num">2</td>
+            <td>HoaDon_2026-04-28.pdf</td>
+            <td>Hoá đơn</td>
+            <td class="wrap">Hoá đơn GTGT đợt 1</td>
+            <td class="right">1.78 MB</td>
+            <td><code style="font-size:11px;">7c92…4d51</code></td>
+            <td>phongtd16</td>
+            <td>12/05/2026 09:14</td>
+            <td class="center"><span class="badge badge-active">Active</span></td>
+            <td class="act">
+              <button class="icon-btn" title="Xem trước"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button class="icon-btn" title="Tải xuống"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+              <button class="icon-btn danger" title="Xoá"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+            </td>
+          </tr>
+          <tr>
+            <td class="num">3</td>
+            <td>BangKe_HangMuc.xlsx</td>
+            <td>Bảng kê</td>
+            <td class="wrap">Bảng kê chi tiết hạng mục thanh toán</td>
+            <td class="right">0.62 MB</td>
+            <td><code style="font-size:11px;">d4ba…81fe</code></td>
+            <td>phongtd16</td>
+            <td>12/05/2026 09:16</td>
+            <td class="center"><span class="badge badge-active">Active</span></td>
+            <td class="act">
+              <button class="icon-btn" title="Xem trước"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button class="icon-btn" title="Tải xuống"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+              <button class="icon-btn danger" title="Xoá"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="summary-strip">
+      <span>Tổng số file: <b>3</b></span>
+      <span>Tổng dung lượng: <b>4.85 MB / 50 MB</b> (9.7%)</span>
+      <div class="left"></div>
+      <span class="field-help">URL tải có TTL 5 phút (ký số). Mọi tải xuống đều ghi audit.</span>
+    </div>
+    <div class="toolbar">
+      <a href="../TT_LENHTT_VIEW.html" class="btn">Đóng <span class="kbd">Esc</span></a>
+    </div>
+  </section>
+</main>
+</body>
+</html>

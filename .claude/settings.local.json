@@ -29,7 +29,9 @@
       "Bash(/usr/local/bin/gh run *)",
       "Read(//usr/local/**)",
       "Bash(npm -v)",
-      "Bash(brew install *)"
+      "Bash(brew install *)",
+      "Bash(./node_modules/.bin/vite *)",
+      "Bash(node_modules/.bin/vite --host 0.0.0.0)"
     ]
   }
 }

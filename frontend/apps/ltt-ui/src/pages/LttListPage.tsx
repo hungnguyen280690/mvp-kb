@@ -1,52 +1,57 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import LttStatusBadge from '../components/LttStatusBadge';
-import type { LttFilter, LttHeader } from '../api/lttApi';
-
-// ---------------------------------------------------------------------------
-// Stub data — remove once API integration is complete
-// ---------------------------------------------------------------------------
-const STUB_ROWS: LttHeader[] = [
-  {
-    id: '1',
-    lttCode: 'LTT-2026-0001',
-    channel: 'INTERNAL',
-    status: 'DRAFT',
-    senderName: 'Nguyen Van A',
-    senderAccount: '001234567890',
-    receiverName: 'Tran Thi B',
-    receiverAccount: '009876543210',
-    currency: 'VND',
-    amount: 100_000_000,
-    valueDate: '2026-05-18',
-    createdAt: '2026-05-18T08:00:00Z',
-    createdBy: 'admin',
-  },
-  {
-    id: '2',
-    lttCode: 'LTT-2026-0002',
-    channel: 'SWIFT',
-    status: 'PENDING_APPROVE',
-    senderName: 'Le Van C',
-    senderAccount: '001111222222',
-    receiverName: 'Pham Thi D',
-    receiverAccount: '003333444444',
-    currency: 'USD',
-    amount: 50_000,
-    valueDate: '2026-05-19',
-    createdAt: '2026-05-18T09:30:00Z',
-    createdBy: 'teller1',
-  },
-];
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import LttStatusBadge from "../components/LttStatusBadge";
+import { listLtt } from "../api/lttApi";
+import type {
+  LttFilter,
+  LttHeader,
+  LttStatus,
+  LttChannel,
+} from "../api/lttApi";
 
 export default function LttListPage() {
   const [filters, setFilters] = useState<LttFilter>({});
+  const [rows, setRows] = useState<LttHeader[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [totalElements, setTotalElements] = useState(0);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
+  const fetchList = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await listLtt({ ...filters, page, size: 20 });
+      setRows(res.data.content);
+      setTotalElements(res.data.totalElements);
+      setTotalPages(res.data.totalPages);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Loi tai du lieu");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchList();
+  }, [page]);
 
   const handleFilterChange = (
     field: keyof LttFilter,
     value: string | undefined,
   ) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSearch = () => {
+    setPage(0);
+    fetchList();
+  };
+
+  const handleClear = () => {
+    setFilters({});
+    setPage(0);
   };
 
   return (
@@ -58,19 +63,19 @@ export default function LttListPage() {
         </h1>
         <div className="flex gap-3">
           <Link
-            to="/new"
+            to="/ltt/new"
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
             + Tao moi
           </Link>
-          <button
-            type="button"
-            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Xuat file
-          </button>
         </div>
       </div>
+
+      {error && (
+        <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       {/* Filter Area */}
       <div className="rounded-lg border border-gray-200 bg-white p-4">
@@ -83,19 +88,17 @@ export default function LttListPage() {
             </label>
             <select
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              value={filters.channel ?? ''}
+              value={filters.channel ?? ""}
               onChange={(e) =>
                 handleFilterChange(
-                  'channel',
-                  e.target.value || undefined,
+                  "channel",
+                  (e.target.value || undefined) as LttChannel | undefined,
                 )
               }
             >
               <option value="">-- Tat ca --</option>
-              <option value="INTERNAL">Noi bo</option>
-              <option value="SWIFT">SWIFT</option>
-              <option value="RTGS">RTGS</option>
-              <option value="NAPAS">NAPAS</option>
+              <option value="LNH">Lien ngan hang</option>
+              <option value="TTSP">Thanh toan song phuong</option>
             </select>
           </div>
 
@@ -106,21 +109,24 @@ export default function LttListPage() {
             </label>
             <select
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              value={filters.status ?? ''}
+              value={filters.status ?? ""}
               onChange={(e) =>
                 handleFilterChange(
-                  'status',
-                  e.target.value || undefined,
+                  "status",
+                  (e.target.value || undefined) as LttStatus | undefined,
                 )
               }
             >
               <option value="">-- Tat ca --</option>
-              <option value="DRAFT">Draft</option>
-              <option value="PENDING_CHECK">Cho kiem tra</option>
-              <option value="PENDING_APPROVE">Cho phe duyet</option>
+              <option value="DRAFT">Ban nhap</option>
+              <option value="READY_FOR_APPROVAL">Cho kiem soat</option>
+              <option value="PENDING_APPROVER">Cho phe duyet</option>
               <option value="APPROVED">Da phe duyet</option>
+              <option value="RETURNED_TO_MAKER">Tra lai Maker</option>
               <option value="REJECTED">Tu choi</option>
-              <option value="RETURNED">Tra lai</option>
+              <option value="TRANSFERRED_TO_GL">Da chuyen GL</option>
+              <option value="POSTED">Da ghi so</option>
+              <option value="DELETED">Da xoa</option>
             </select>
           </div>
 
@@ -132,12 +138,9 @@ export default function LttListPage() {
             <input
               type="date"
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              value={filters.fromDate ?? ''}
+              value={filters.fromDate ?? ""}
               onChange={(e) =>
-                handleFilterChange(
-                  'fromDate',
-                  e.target.value || undefined,
-                )
+                handleFilterChange("fromDate", e.target.value || undefined)
               }
             />
           </div>
@@ -148,31 +151,25 @@ export default function LttListPage() {
             <input
               type="date"
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              value={filters.toDate ?? ''}
+              value={filters.toDate ?? ""}
               onChange={(e) =>
-                handleFilterChange(
-                  'toDate',
-                  e.target.value || undefined,
-                )
+                handleFilterChange("toDate", e.target.value || undefined)
               }
             />
           </div>
 
-          {/* Amount Range (simplified) */}
+          {/* Keyword */}
           <div>
             <label className="block text-xs font-medium text-gray-600">
-              So tu khoa
+              Tu khoa
             </label>
             <input
               type="text"
               placeholder="Ma LTT, ten..."
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              value={filters.keyword ?? ''}
+              value={filters.keyword ?? ""}
               onChange={(e) =>
-                handleFilterChange(
-                  'keyword',
-                  e.target.value || undefined,
-                )
+                handleFilterChange("keyword", e.target.value || undefined)
               }
             />
           </div>
@@ -182,13 +179,14 @@ export default function LttListPage() {
           <button
             type="button"
             className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            onClick={() => setFilters({})}
+            onClick={handleClear}
           >
             Xoa bo loc
           </button>
           <button
             type="button"
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            onClick={handleSearch}
           >
             Tim kiem
           </button>
@@ -224,77 +222,99 @@ export default function LttListPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {STUB_ROWS.map((row) => (
-              <tr key={row.id} className="hover:bg-gray-50">
-                <td className="whitespace-nowrap px-4 py-3 text-sm">
-                  <Link
-                    to={`/${row.id}`}
-                    className="text-blue-600 hover:text-blue-800 hover:underline"
-                  >
-                    {row.lttCode}
-                  </Link>
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                  {row.channel}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-sm">
-                  <LttStatusBadge status={row.status} />
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                  {row.senderName}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                  {row.receiverName}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">
-                  {row.amount.toLocaleString()} {row.currency}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                  {row.valueDate}
+            {loading ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  Dang tai du lieu...
                 </td>
               </tr>
-            ))}
+            ) : rows.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  Khong co du lieu. Nhan "Tao moi" de tao lenh thanh toan.
+                </td>
+              </tr>
+            ) : (
+              rows.map((row) => (
+                <tr key={row.id} className="hover:bg-gray-50">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm">
+                    <Link
+                      to={`/ltt/${row.id}`}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {row.lttCode}
+                    </Link>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                    {row.channel}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm">
+                    <LttStatusBadge status={row.status} />
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                    {row.senderName}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                    {row.receiverName}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">
+                    {row.amount.toLocaleString()} {row.currency}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                    {row.valueDate}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
-
-        {/* Empty State */}
-        {STUB_ROWS.length === 0 && (
-          <div className="py-12 text-center text-gray-500">
-            Khong co du lieu. Nhan &quot;Tao moi&quot; de tao lenh thanh toan.
-          </div>
-        )}
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-600">
-          Hien thi <span className="font-medium">1</span> -{' '}
-          <span className="font-medium">{STUB_ROWS.length}</span> tren tong so{' '}
-          <span className="font-medium">{STUB_ROWS.length}</span> ban ghi
-        </p>
-        <div className="flex gap-1">
-          <button
-            type="button"
-            disabled
-            className="rounded border border-gray-300 bg-white px-3 py-1 text-sm text-gray-400"
-          >
-            Truoc
-          </button>
-          <button
-            type="button"
-            className="rounded border border-blue-600 bg-blue-600 px-3 py-1 text-sm text-white"
-          >
-            1
-          </button>
-          <button
-            type="button"
-            disabled
-            className="rounded border border-gray-300 bg-white px-3 py-1 text-sm text-gray-400"
-          >
-            Sau
-          </button>
+      {totalElements > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            Hien thi <span className="font-medium">{page * 20 + 1}</span> -{" "}
+            <span className="font-medium">
+              {Math.min((page + 1) * 20, totalElements)}
+            </span>{" "}
+            tren tong so <span className="font-medium">{totalElements}</span>{" "}
+            ban ghi
+          </p>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              disabled={page === 0}
+              onClick={() => setPage((p) => p - 1)}
+              className="rounded border border-gray-300 bg-white px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 disabled:text-gray-400 disabled:opacity-50"
+            >
+              Truoc
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setPage(i)}
+                className={`rounded border px-3 py-1 text-sm ${
+                  i === page
+                    ? "border-blue-600 bg-blue-600 text-white"
+                    : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={page >= totalPages - 1}
+              onClick={() => setPage((p) => p + 1)}
+              className="rounded border border-gray-300 bg-white px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 disabled:text-gray-400 disabled:opacity-50"
+            >
+              Sau
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

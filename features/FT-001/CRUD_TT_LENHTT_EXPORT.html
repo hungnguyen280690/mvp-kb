@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<title>TT_LENHTT.EXPORT – Cấu hình & Xuất file</title>
+<link rel="stylesheet" href="./vdbas.css" />
+</head>
+<body style="overflow:hidden;">
+
+<header class="topbar">
+  <div class="logo">TT</div>
+  <div class="title">
+    <strong>VDBAS – Phân hệ Thanh toán</strong>
+    <small>Xuất danh sách Lệnh thanh toán</small>
+  </div>
+  <div class="spacer"></div>
+  <div class="user">
+    <div class="avatar">PT</div>
+    <div class="who"><span>Phong TD16</span><small>Maker · KBNN Hà Nội</small></div>
+  </div>
+</header>
+
+<nav class="crumb">
+  <a href="../index.html">Trang chủ</a><span class="sep">›</span>
+  <a href="../TT_LENHTT_LIST.html">Danh sách</a><span class="sep">›</span>
+  <span class="cur">Xuất file</span>
+</nav>
+
+<div style="padding:30px;">
+  <p style="color:var(--muted);font-style:italic;">(Màn hình danh sách phía sau bị mờ khi modal mở)</p>
+</div>
+
+<!-- MODAL EXPORT -->
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="dlg-export">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="dlg-export">Cấu hình xuất file</h3>
+      <span class="code">TT_LENHTT.EXPORT</span>
+      <button class="close-x" title="Đóng (Esc)" aria-label="Đóng">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="hint info">
+        Bộ lọc hiện tại: <b>Kênh = Liên ngân hàng · Khoảng ngày 05–12/05/2026 · Tổng 124 bản ghi · 12.456.780.000 VND</b>. Nếu kết quả > 50.000 bản ghi, hệ thống sẽ chạy bất đồng bộ (job nền) và gửi link tải qua thông báo.
+      </div>
+
+      <div class="split-2">
+        <div>
+          <h3 class="section-title">Tham số cơ bản</h3>
+          <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+            <div class="form-group span-2">
+              <label>Định dạng <span class="req">*</span></label>
+              <div class="radio-group">
+                <label><input type="radio" name="fmt" checked/> Excel (.xlsx)</label>
+                <label><input type="radio" name="fmt"/> CSV (.csv)</label>
+                <label><input type="radio" name="fmt"/> PDF (.pdf)</label>
+              </div>
+            </div>
+            <div class="form-group span-2">
+              <label>Phạm vi <span class="req">*</span></label>
+              <div class="radio-group">
+                <label><input type="radio" name="scope"/> Trang hiện tại (20 bản ghi)</label>
+                <label><input type="radio" name="scope" checked/> Toàn bộ kết quả lọc (124 bản ghi)</label>
+                <label><input type="radio" name="scope"/> Theo lựa chọn (đã tick 6 bản ghi)</label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Sắp xếp theo</label>
+              <select>
+                <option selected>Ngày lập (DESC)</option>
+                <option>Ngày thanh toán (ASC)</option>
+                <option>Số tiền (DESC)</option>
+                <option>Số YCTT (ASC)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Ngôn ngữ tiêu đề</label>
+              <select><option selected>Tiếng Việt</option><option>Tiếng Anh</option></select>
+            </div>
+            <div class="form-group span-2">
+              <label>Tên file <span class="req">*</span></label>
+              <input type="text" value="TT_LENHTT_LIST_20260512_1015.xlsx"/>
+              <div class="field-help">Chỉ chấp nhận ký tự A–Z, 0–9, _ và -</div>
+            </div>
+          </div>
+
+          <h3 class="section-title">Tuỳ chọn nâng cao</h3>
+          <ul class="checklist">
+            <li><input type="checkbox" checked/> Kế thừa bộ lọc đang áp dụng tại LIST</li>
+            <li><input type="checkbox"/> Bao gồm dòng chi tiết khoản mục (1 sheet/YCTT)</li>
+            <li><input type="checkbox" checked/> Bao gồm dòng tổng cộng cuối file (theo loại tiền)</li>
+            <li><input type="checkbox"/> Mã hoá file bằng mật khẩu</li>
+            <li><input type="checkbox"/> Ẩn các cột chứa PII (CMND/CCCD/TK đầy đủ)</li>
+          </ul>
+
+          <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+            <div class="form-group">
+              <label>Mật khẩu <span class="req-c">(*)</span></label>
+              <input type="password" placeholder="≥ 8 ký tự, có chữ + số + ký tự đặc biệt" disabled/>
+            </div>
+            <div class="form-group">
+              <label>Watermark (PDF)</label>
+              <input type="text" placeholder="Chỉ áp dụng cho định dạng PDF" disabled/>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="section-title">Chọn trường xuất</h3>
+          <ul class="checklist" style="max-height:380px;overflow-y:auto;border:1px solid var(--border);padding:8px 10px;border-radius:4px;background:#fff;">
+            <li><input type="checkbox" checked/> STT</li>
+            <li><input type="checkbox" checked/> Số YCTT / Số bút toán</li>
+            <li><input type="checkbox" checked/> Kênh</li>
+            <li><input type="checkbox" checked/> Loại lệnh</li>
+            <li><input type="checkbox"/> Loại giao dịch (LNH)</li>
+            <li><input type="checkbox" checked/> Ngày lập</li>
+            <li><input type="checkbox" checked/> Ngày thanh toán</li>
+            <li><input type="checkbox" checked/> NH/KB chuyển</li>
+            <li><input type="checkbox" checked/> NH/KB nhận</li>
+            <li><input type="checkbox"/> Tên người chuyển</li>
+            <li><input type="checkbox"/> Tên người nhận</li>
+            <li><input type="checkbox" checked/> Số tiền chuyển</li>
+            <li><input type="checkbox" checked/> Loại tiền</li>
+            <li><input type="checkbox"/> Nội dung TT</li>
+            <li><input type="checkbox" checked/> Trạng thái</li>
+            <li><input type="checkbox" checked/> Người lập</li>
+            <li><input type="checkbox"/> Người kiểm soát</li>
+            <li><input type="checkbox"/> Người phê duyệt</li>
+            <li><input type="checkbox"/> F-VER</li>
+            <li><input type="checkbox"/> CMND/CCCD người nhận <span class="badge badge-inactive" style="font-size:10px;">PII</span></li>
+            <li><input type="checkbox"/> Số TK người nhận đầy đủ <span class="badge badge-inactive" style="font-size:10px;">PII</span></li>
+          </ul>
+          <div class="field-help" style="margin-top:6px;">Đã chọn <b>11 / 21</b> trường. Lưu preset cá nhân để tái sử dụng.</div>
+          <div style="margin-top:8px;display:flex;gap:8px;">
+            <button class="btn btn-ghost" style="height:26px;font-size:11.5px;">Lưu preset</button>
+            <button class="btn btn-ghost" style="height:26px;font-size:11.5px;">Khôi phục mặc định</button>
+          </div>
+
+          <h3 class="section-title">Ghi nhận</h3>
+          <dl class="kv">
+            <dt>Người xuất</dt><dd>Phong TD16 (phongtd16)</dd>
+            <dt>Thời gian</dt><dd>12/05/2026 10:15:32</dd>
+            <dt>Audit event</dt><dd><code>TT_LENHTT.LIST.EXPORT</code></dd>
+          </dl>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="toolbar">
+      <a href="../TT_LENHTT_LIST.html" class="btn">Huỷ <span class="kbd">Esc</span></a>
+      <button class="btn btn-ghost">Lưu preset</button>
+      <button class="btn btn-primary">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Xuất file <span class="kbd">Ctrl+Shift+E</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,7 +1,7 @@
 # MVP Kho Bac - Orchestration Makefile
 
 .DEFAULT_GOAL := help
-.PHONY: help setup verify dev test lint format clean infra stage0 stage1 stage2 stage3 stage4
+.PHONY: help setup verify dev test lint format clean infra stage0 stage1 stage2 stage3 stage4 gate-verify
 
 help: ## Hien thi danh sach lenh
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make \033[36m<target>\033[0m\n\nTargets:\n"} \
@@ -58,3 +58,6 @@ stage3: ## [Dev] Thuc thi ma nguon
 
 stage4: ## [QA] Kiem thu
 	@echo "cd workspaces/qa"
+
+gate-verify: ## Chay gate verification (usage: make gate-verify FT=FT-001 GATE=G3)
+	@bash scripts/gate-verify.sh $(FT) $(GATE)

@@ -1,7 +1,7 @@
 # Thiết kế Giải pháp — FT-001: Quản lý Lệnh Thanh Toán (LTT)
 
 > **Giai đoạn**: Stage 2 — SA Design
-> **Đầu vào**: `features/FT-001/01-business-spec.md`
+> **Đầu vào**: `01_spec_field.md`, `01_spec_button.md`, `01_spec_function.md`
 > **Đầu ra**: File này + `03-schema.sql`
 
 ---
@@ -13,6 +13,7 @@
 FT-001 triển khai CRUD Lệnh Thanh Toán (LTT) với luồng Maker-Checker-Approver 3 cấp. Thiết kế tuân thủ kiến trúc Hexagonal (Ports & Adapters), chia tách rõ ràng giữa domain logic, application use cases và infrastructure adapters.
 
 Nguyên tắc thiết kế cốt lõi:
+
 - **Domain-First**: State machine và business rules nằm hoàn toàn trong domain layer của `ltt-service`, không phụ thuộc framework.
 - **Contract-Driven**: Mọi giao tiếp giữa modules (BFF <-> ltt-service, ltt-service <-> audit-service) tuân thủ OpenAPI contract.
 - **Eventual Consistency**: Phê duyệt (Approved) trigger downstream (audit hash, GL push) qua Outbox + Saga, không đồng bộ.
@@ -37,15 +38,15 @@ Nguyên tắc thiết kế cốt lõi:
 
 ### 2.1. `ltt-service` (Port 8081) — Domain Core
 
-| Trách nhiệm | Chi tiết |
-|---|---|
-| **State Machine** | Quản lý vòng đời LTT: Draft -> Ready_For_Approval -> Pending_Approver -> Approved -> Transferred_to_GL -> Posted. Sử dụng enum-based transition table. |
-| **CRUD Business Logic** | Create, Update, Delete (soft), Copy LTT. Validate đầy đủ theo VAL-01..VAL-18. |
-| **Maker-Checker-Approver** | SoD enforcement (maker_id <> checker_id <> approver_id). Phân quyền theo role. |
-| **CCID Cross-Validation** | Validate 12 GL Segments (COA) theo lookup table. Tổng tiền chi tiết = tổng header. |
-| **Outbox Publisher** | Ghi event vào `LTT_OUTBOX` trong cùng transaction với business data. |
-| **Optimistic Lock** | Sử dụng cột `VERSION` + `@Version` JPA. Reject nếu mismatch (VAL-15). |
-| **Idempotency** | Kiểm tra `X-Request-ID` trên mọi POST/PUT. Lưu vào `IDEMPOTENCY_CACHE` table. |
+| Trách nhiệm                | Chi tiết                                                                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **State Machine**          | Quản lý vòng đời LTT: Draft -> Ready_For_Approval -> Pending_Approver -> Approved -> Transferred_to_GL -> Posted. Sử dụng enum-based transition table. |
+| **CRUD Business Logic**    | Create, Update, Delete (soft), Copy LTT. Validate đầy đủ theo VAL-01..VAL-18.                                                                          |
+| **Maker-Checker-Approver** | SoD enforcement (maker_id <> checker_id <> approver_id). Phân quyền theo role.                                                                         |
+| **CCID Cross-Validation**  | Validate 12 GL Segments (COA) theo lookup table. Tổng tiền chi tiết = tổng header.                                                                     |
+| **Outbox Publisher**       | Ghi event vào `LTT_OUTBOX` trong cùng transaction với business data.                                                                                   |
+| **Optimistic Lock**        | Sử dụng cột `VERSION` + `@Version` JPA. Reject nếu mismatch (VAL-15).                                                                                  |
+| **Idempotency**            | Kiểm tra `X-Request-ID` trên mọi POST/PUT. Lưu vào `IDEMPOTENCY_CACHE` table.                                                                          |
 
 **Cấu trúc Hexagonal nội tại**:
 
@@ -124,14 +125,15 @@ backend/ltt-service/src/main/java/com/kb/ltt/
 
 ### 2.2. `bff-service` (Port 8080) — API Aggregation
 
-| Trách nhiệm | Chi tiết |
-|---|---|
+| Trách nhiệm            | Chi tiết                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------- |
 | **API Gateway cho UI** | Tổng hợp data từ `ltt-service`, `audit-service` thành response duy nhất cho frontend. |
-| **Auth Forwarding** | Forward JWT token, inject `X-Request-ID`, handle session timeout. |
-| **Response Shaping** | Transform domain model thành UI-friendly DTO (masking PII, format currency/date). |
-| **Pagination Wrapper** | Chuẩn hóa response pagination cho `LIST` screen. |
+| **Auth Forwarding**    | Forward JWT token, inject `X-Request-ID`, handle session timeout.                     |
+| **Response Shaping**   | Transform domain model thành UI-friendly DTO (masking PII, format currency/date).     |
+| **Pagination Wrapper** | Chuẩn hóa response pagination cho `LIST` screen.                                      |
 
 **Luồng BFF**:
+
 ```text
 Client --> BFF GET /api/v1/ltt/{id}
          |--> Call ltt-service --> PaymentOrder (header + details + attachments)
@@ -141,20 +143,20 @@ Client --> BFF GET /api/v1/ltt/{id}
 
 ### 2.3. `audit-service` (Port 8083) — Hash Chain Audit
 
-| Trách nhiệm | Chi tiết |
-|---|---|
-| **Hash Chain** | Tính `currentHash = SHA-256(prevHash + payload + timestamp)`. Mỗi bản ghi audit liên kết với bản ghi trước. |
-| **Audit Storage** | Lưu trữ mọi action trên LTT: CREATE, UPDATE, DELETE, SUBMIT, CHECK, APPROVE, REJECT, RETURN. |
-| **Diff Tracking** | Ghi `oldValue -> newValue` cho mỗi field thay đổi (BIZ-007). |
-| **Query API** | Cung cấp API đọc audit history theo `lttId` cho tab History và export. |
+| Trách nhiệm       | Chi tiết                                                                                                    |
+| ----------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Hash Chain**    | Tính `currentHash = SHA-256(prevHash + payload + timestamp)`. Mỗi bản ghi audit liên kết với bản ghi trước. |
+| **Audit Storage** | Lưu trữ mọi action trên LTT: CREATE, UPDATE, DELETE, SUBMIT, CHECK, APPROVE, REJECT, RETURN.                |
+| **Diff Tracking** | Ghi `oldValue -> newValue` cho mỗi field thay đổi (BIZ-007).                                                |
+| **Query API**     | Cung cấp API đọc audit history theo `lttId` cho tab History và export.                                      |
 
 ### 2.4. `integration-gateway` (Port 8082) — IBM MQ
 
-| Trách nhiệm | Chi tiết |
-|---|---|
-| **Message Transform** | Chuyển đổi LTT Approved -> định dạng IBM MQ message (LNH / TTSP). |
+| Trách nhiệm           | Chi tiết                                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------- |
+| **Message Transform** | Chuyển đổi LTT Approved -> định dạng IBM MQ message (LNH / TTSP).                         |
 | **Reliable Delivery** | Đảm bảo at-least-once delivery qua MQ. Idempotent consumer ở phía NHNN/ngân hàng đối ứng. |
-| **Callback Handling** | Nhận ACK/NACK từ MQ, update trạng thái LTT (Transferred_to_GL / Posted). |
+| **Callback Handling** | Nhận ACK/NACK từ MQ, update trạng thái LTT (Transferred_to_GL / Posted).                  |
 
 ---
 
@@ -174,41 +176,41 @@ If-Match: <version>            # Bat buoc tren PUT (optimistic lock)
 
 #### CRUD Operations
 
-| Method | Path | Mo ta | Req Body | Success | Event |
-|---|---|---|---|---|---|
-| `POST` | `/api/v1/ltt` | Tao moi LTT (Draft) | `CreatePaymentOrderRequest` | 201 Created | `LTT.NEW.SAVE` |
-| `GET` | `/api/v1/ltt` | Danh sach LTT (phan trang, loc) | Query params | 200 OK + Page | `LTT.LIST.VIEW` |
-| `GET` | `/api/v1/ltt/{id}` | Xem chi tiet LTT | -- | 200 OK + ETag | `LTT.VIEW.OPEN` |
-| `PUT` | `/api/v1/ltt/{id}` | Cap nhat LTT (Draft/Returned) | `UpdatePaymentOrderRequest` | 200 OK + ETag | `LTT.EDIT.SAVE` |
-| `DELETE` | `/api/v1/ltt/{id}` | Soft-delete LTT | `{ "reason": "..." }` | 204 No Content | `LTT.DELETE.CONFIRM` |
-| `POST` | `/api/v1/ltt/{id}/copy` | Sao chep LTT | -- | 201 Created | `LTT.NEW.COPY` |
+| Method   | Path                    | Mo ta                           | Req Body                    | Success        | Event                |
+| -------- | ----------------------- | ------------------------------- | --------------------------- | -------------- | -------------------- |
+| `POST`   | `/api/v1/ltt`           | Tao moi LTT (Draft)             | `CreatePaymentOrderRequest` | 201 Created    | `LTT.NEW.SAVE`       |
+| `GET`    | `/api/v1/ltt`           | Danh sach LTT (phan trang, loc) | Query params                | 200 OK + Page  | `LTT.LIST.VIEW`      |
+| `GET`    | `/api/v1/ltt/{id}`      | Xem chi tiet LTT                | --                          | 200 OK + ETag  | `LTT.VIEW.OPEN`      |
+| `PUT`    | `/api/v1/ltt/{id}`      | Cap nhat LTT (Draft/Returned)   | `UpdatePaymentOrderRequest` | 200 OK + ETag  | `LTT.EDIT.SAVE`      |
+| `DELETE` | `/api/v1/ltt/{id}`      | Soft-delete LTT                 | `{ "reason": "..." }`       | 204 No Content | `LTT.DELETE.CONFIRM` |
+| `POST`   | `/api/v1/ltt/{id}/copy` | Sao chep LTT                    | --                          | 201 Created    | `LTT.NEW.COPY`       |
 
 #### Workflow Operations (State Transitions)
 
-| Method | Path | Mo ta | Req Body | Success | Event |
-|---|---|---|---|---|---|
-| `POST` | `/api/v1/ltt/{id}/submit` | Gui kiem soat (Draft -> Ready_For_Approval) | -- | 200 OK | `LTT.NEW.SUBMIT` |
-| `POST` | `/api/v1/ltt/{id}/check` | Checker kiem soat (Ready -> Pending_Approver) | `ApprovalRequest` | 200 OK | `LTT.APPROVE.CHECKER` |
-| `POST` | `/api/v1/ltt/{id}/approve` | Approver phe duyet (Pending -> Approved) | `ApprovalRequest` | 200 OK | `LTT.APPROVE.APPROVER` |
-| `POST` | `/api/v1/ltt/{id}/reject` | Tu choi (-> Rejected) | `RejectionRequest` | 200 OK | `LTT.APPROVE.REJECT` |
-| `POST` | `/api/v1/ltt/{id}/return` | Tra lai Maker (-> Returned_To_Maker) | `ReturnRequest` | 200 OK | `LTT.APPROVE.RETURN` |
+| Method | Path                       | Mo ta                                         | Req Body           | Success | Event                  |
+| ------ | -------------------------- | --------------------------------------------- | ------------------ | ------- | ---------------------- |
+| `POST` | `/api/v1/ltt/{id}/submit`  | Gui kiem soat (Draft -> Ready_For_Approval)   | --                 | 200 OK  | `LTT.NEW.SUBMIT`       |
+| `POST` | `/api/v1/ltt/{id}/check`   | Checker kiem soat (Ready -> Pending_Approver) | `ApprovalRequest`  | 200 OK  | `LTT.APPROVE.CHECKER`  |
+| `POST` | `/api/v1/ltt/{id}/approve` | Approver phe duyet (Pending -> Approved)      | `ApprovalRequest`  | 200 OK  | `LTT.APPROVE.APPROVER` |
+| `POST` | `/api/v1/ltt/{id}/reject`  | Tu choi (-> Rejected)                         | `RejectionRequest` | 200 OK  | `LTT.APPROVE.REJECT`   |
+| `POST` | `/api/v1/ltt/{id}/return`  | Tra lai Maker (-> Returned_To_Maker)          | `ReturnRequest`    | 200 OK  | `LTT.APPROVE.RETURN`   |
 
 #### Attachment Operations
 
-| Method | Path | Mo ta | Success |
-|---|---|---|---|
-| `POST` | `/api/v1/ltt/{id}/attachments` | Upload file dinh kem (multipart) | 201 Created |
-| `GET` | `/api/v1/ltt/{id}/attachments` | Danh sach dinh kem | 200 OK |
-| `GET` | `/api/v1/ltt/{id}/attachments/{attachId}/download` | Tai file | 200 + Stream |
-| `DELETE` | `/api/v1/ltt/{id}/attachments/{attachId}` | Xoa dinh kem | 204 No Content |
+| Method   | Path                                               | Mo ta                            | Success        |
+| -------- | -------------------------------------------------- | -------------------------------- | -------------- |
+| `POST`   | `/api/v1/ltt/{id}/attachments`                     | Upload file dinh kem (multipart) | 201 Created    |
+| `GET`    | `/api/v1/ltt/{id}/attachments`                     | Danh sach dinh kem               | 200 OK         |
+| `GET`    | `/api/v1/ltt/{id}/attachments/{attachId}/download` | Tai file                         | 200 + Stream   |
+| `DELETE` | `/api/v1/ltt/{id}/attachments/{attachId}`          | Xoa dinh kem                     | 204 No Content |
 
 #### Query & Export
 
-| Method | Path | Mo ta | Success |
-|---|---|---|---|
-| `GET` | `/api/v1/ltt/{id}/history` | Lich su audit (tu audit-service) | 200 OK |
-| `GET` | `/api/v1/ltt/{id}/approval-status` | Trang thai phe duyet (workflow) | 200 OK |
-| `POST` | `/api/v1/ltt/export` | Xuat Excel/PDF/CSV | 200 + File / 202 Accepted (async) |
+| Method | Path                               | Mo ta                            | Success                           |
+| ------ | ---------------------------------- | -------------------------------- | --------------------------------- |
+| `GET`  | `/api/v1/ltt/{id}/history`         | Lich su audit (tu audit-service) | 200 OK                            |
+| `GET`  | `/api/v1/ltt/{id}/approval-status` | Trang thai phe duyet (workflow)  | 200 OK                            |
+| `POST` | `/api/v1/ltt/export`               | Xuat Excel/PDF/CSV               | 200 + File / 202 Accepted (async) |
 
 ### 3.3. Key DTOs
 
@@ -315,26 +317,30 @@ If-Match: <version>            # Bat buoc tren PUT (optimistic lock)
   "errorCode": "MSG-ERR-REQUIRED",
   "traceId": "abc-123-def",
   "fieldErrors": [
-    { "field": "refNo", "message": "Vui long nhap So YCTT", "code": "MSG-ERR-REQUIRED" }
+    {
+      "field": "refNo",
+      "message": "Vui long nhap So YCTT",
+      "code": "MSG-ERR-REQUIRED"
+    }
   ]
 }
 ```
 
 ### 3.5. HTTP Status Codes
 
-| Code | Su dung khi |
-|---|---|
-| `200 OK` | GET, PUT thanh cong, workflow action thanh cong |
-| `201 Created` | POST tao moi thanh cong |
-| `204 No Content` | DELETE thanh cong |
-| `400 Bad Request` | Validation loi (VAL-*), business rule vi pham |
-| `401 Unauthorized` | JWT het han / khong hop le |
-| `403 Forbidden` | Khong co quyen (SoD violation, wrong role) |
-| `404 Not Found` | LTT khong ton tai |
-| `409 Conflict` | Optimistic lock mismatch (VAL-15) |
-| `422 Unprocessable Entity` | State transition khong hop le (VAL-13) |
-| `429 Too Many Requests` | Duplicate request (idempotency) |
-| `500 Internal Server Error` | Loi he thong |
+| Code                        | Su dung khi                                     |
+| --------------------------- | ----------------------------------------------- |
+| `200 OK`                    | GET, PUT thanh cong, workflow action thanh cong |
+| `201 Created`               | POST tao moi thanh cong                         |
+| `204 No Content`            | DELETE thanh cong                               |
+| `400 Bad Request`           | Validation loi (VAL-\*), business rule vi pham  |
+| `401 Unauthorized`          | JWT het han / khong hop le                      |
+| `403 Forbidden`             | Khong co quyen (SoD violation, wrong role)      |
+| `404 Not Found`             | LTT khong ton tai                               |
+| `409 Conflict`              | Optimistic lock mismatch (VAL-15)               |
+| `422 Unprocessable Entity`  | State transition khong hop le (VAL-13)          |
+| `429 Too Many Requests`     | Duplicate request (idempotency)                 |
+| `500 Internal Server Error` | Loi he thong                                    |
 
 ---
 
@@ -344,35 +350,35 @@ Chi tiet DDL day du trong file `03-schema.sql`. Duoi day la tong quan cac bang c
 
 ### 4.1. Bang Nghiep vu (Business Tables)
 
-| Bang | Mo ta | Khoa chinh |
-|---|---|---|
-| `LTT_HEADER` | Header cua Lenh Thanh Toan | `ID` (BIGINT, sequence) |
-| `LTT_DETAIL` | Chi tiet khoan muc (GL Segments) | `ID`, FK -> `LTT_HEADER.ID` |
-| `LTT_ATTACHMENT` | File dinh kem | `ID`, FK -> `LTT_HEADER.ID` |
-| `LTT_SENDER_INFO` | Thong tin nguoi chuyen (1:1) | `ID`, FK -> `LTT_HEADER.ID` |
-| `LTT_RECEIVER_INFO` | Thong tin nguoi nhan (1:1) | `ID`, FK -> `LTT_HEADER.ID` |
+| Bang                | Mo ta                            | Khoa chinh                  |
+| ------------------- | -------------------------------- | --------------------------- |
+| `LTT_HEADER`        | Header cua Lenh Thanh Toan       | `ID` (BIGINT, sequence)     |
+| `LTT_DETAIL`        | Chi tiet khoan muc (GL Segments) | `ID`, FK -> `LTT_HEADER.ID` |
+| `LTT_ATTACHMENT`    | File dinh kem                    | `ID`, FK -> `LTT_HEADER.ID` |
+| `LTT_SENDER_INFO`   | Thong tin nguoi chuyen (1:1)     | `ID`, FK -> `LTT_HEADER.ID` |
+| `LTT_RECEIVER_INFO` | Thong tin nguoi nhan (1:1)       | `ID`, FK -> `LTT_HEADER.ID` |
 
 ### 4.2. Bang Kiem toan & Ha tang (Audit & Infrastructure Tables)
 
-| Bang | Mo ta | Khoa chinh |
-|---|---|---|
-| `LTT_AUDIT` | Audit log + Hash Chain | `ID` (sequence) |
-| `LTT_OUTBOX` | Outbox pattern cho event publishing | `ID` |
-| `IDEMPOTENCY_CACHE` | Chong lap request | `REQUEST_ID` (unique) |
-| `LTT_LOCK` | Distributed lock (concurrent edit) | `LTT_ID` |
+| Bang                | Mo ta                               | Khoa chinh            |
+| ------------------- | ----------------------------------- | --------------------- |
+| `LTT_AUDIT`         | Audit log + Hash Chain              | `ID` (sequence)       |
+| `LTT_OUTBOX`        | Outbox pattern cho event publishing | `ID`                  |
+| `IDEMPOTENCY_CACHE` | Chong lap request                   | `REQUEST_ID` (unique) |
+| `LTT_LOCK`          | Distributed lock (concurrent edit)  | `LTT_ID`              |
 
 ### 4.3. Bang Danh muc (Reference Tables)
 
-| Bang | Mo ta |
-|---|---|
-| `REF_BANK` | Danh muc NH/KB |
-| `REF_CURRENCY` | Danh muc tien te |
-| `REF_COA` | Ma COA (12 segments) -- dung cho CCID validation |
-| `REF_TRANSACTION_TYPE` | Danh muc loai lenh theo kenh |
-| `REF_EXPENSE_TYPE` | Danh muc loai phi |
-| `REF_ERROR_CODE` | Danh muc ma loi nghiep vu (CHECK, APPROVE) |
-| `REF_GL_SEGMENT` | Danh muc tung segment GL (quy, TK tu nhien, DVQHNS...) |
-| `REF_APPROVAL_LIMIT` | Han muc phe duyet theo user/role |
+| Bang                   | Mo ta                                                  |
+| ---------------------- | ------------------------------------------------------ |
+| `REF_BANK`             | Danh muc NH/KB                                         |
+| `REF_CURRENCY`         | Danh muc tien te                                       |
+| `REF_COA`              | Ma COA (12 segments) -- dung cho CCID validation       |
+| `REF_TRANSACTION_TYPE` | Danh muc loai lenh theo kenh                           |
+| `REF_EXPENSE_TYPE`     | Danh muc loai phi                                      |
+| `REF_ERROR_CODE`       | Danh muc ma loi nghiep vu (CHECK, APPROVE)             |
+| `REF_GL_SEGMENT`       | Danh muc tung segment GL (quy, TK tu nhien, DVQHNS...) |
+| `REF_APPROVAL_LIMIT`   | Han muc phe duyet theo user/role                       |
 
 ### 4.4. Key Columns trong LTT_HEADER
 
@@ -443,6 +449,7 @@ ALTER TABLE LTT_HEADER ADD CONSTRAINT uk_ref_no_unique
 ### 5.1. Lựa chọn kỹ thuật
 
 Su dung **enum-based transition table** thay vi Spring StateMachine full framework, vi:
+
 - MVP can don gian, de debug, de test.
 - So trang thai va transition huu han, khong can hierarchical/parallel states.
 - Full Spring StateMachine them complexity khong can thiet cho MVP.
@@ -495,6 +502,7 @@ private static final Map<LttState, Set<LttEvent>> ALLOWED_TRANSITIONS = Map.of(
 ### 5.3. Guard Conditions
 
 Truoc moi transition, `StateTransitionGuard` kiem tra:
+
 1. **State validity**: `targetEvent` co thuoc `ALLOWED_TRANSITIONS.get(currentState)` khong?
 2. **Role check**: User co role phu hop khong? (Maker = CREATE/SAVE/SUBMIT/DELETE, Checker = CHECK_APPROVE, Approver = APPROVE).
 3. **SoD check** (BIZ-001): `currentUserId != record.createdBy` cho Checker/Approver. `currentUserId != record.checkedBy` cho Approver.
@@ -570,6 +578,7 @@ Khi LTT duoc phe duyet (Approved), he thong can trigger nhieu downstream actions
 ### 6.3. Idempotent Consumer
 
 Moi downstream service kiem tra idempotency khi nhan event:
+
 ```text
 Key: {eventId} + {consumerId}
 Neu da xu ly -> skip (return 200 OK)
@@ -582,25 +591,25 @@ Neu chua -> xu ly + ghi marker
 
 ### 7.1. Authentication & Authorization
 
-| Co che | Chi tiet |
-|---|---|
+| Co che                 | Chi tiet                                                                                                                                  |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | **JWT Authentication** | Bearer token trong `Authorization` header. Token chua: `sub` (userId), `roles` (MAKER/CHECKER/APPROVER/VIEWER), `org` (ma don vi), `exp`. |
-| **Role-Based Access** | Moi endpoint kiem tra role qua Spring Security `@PreAuthorize`. |
-| **SoD Enforcement** | O 2 tang: (1) Application Service check truoc khi goi domain, (2) DB Constraint `chk_sod_checker` / `chk_sod_approver`. |
+| **Role-Based Access**  | Moi endpoint kiem tra role qua Spring Security `@PreAuthorize`.                                                                           |
+| **SoD Enforcement**    | O 2 tang: (1) Application Service check truoc khi goi domain, (2) DB Constraint `chk_sod_checker` / `chk_sod_approver`.                   |
 
 ### 7.2. Endpoint Security Matrix
 
-| Endpoint | Role duoc phep | Ghi chu |
-|---|---|---|
-| `POST /api/v1/ltt` | MAKER | -- |
-| `PUT /api/v1/ltt/{id}` | MAKER (owner only) | VAL-14 |
-| `DELETE /api/v1/ltt/{id}` | MAKER (owner only) | VAL-14, VAL-13 |
-| `POST /api/v1/ltt/{id}/submit` | MAKER (owner only) | -- |
-| `POST /api/v1/ltt/{id}/check` | CHECKER | SoD: checker != maker |
-| `POST /api/v1/ltt/{id}/approve` | APPROVER | SoD: approver != maker, != checker |
-| `POST /api/v1/ltt/{id}/reject` | CHECKER / APPROVER | Tuy trang thai hien tai |
-| `POST /api/v1/ltt/{id}/return` | CHECKER / APPROVER | Tuy trang thai hien tai |
-| `GET /api/v1/ltt/*` | MAKER / CHECKER / APPROVER / VIEWER | PII masking theo quyen |
+| Endpoint                        | Role duoc phep                      | Ghi chu                            |
+| ------------------------------- | ----------------------------------- | ---------------------------------- |
+| `POST /api/v1/ltt`              | MAKER                               | --                                 |
+| `PUT /api/v1/ltt/{id}`          | MAKER (owner only)                  | VAL-14                             |
+| `DELETE /api/v1/ltt/{id}`       | MAKER (owner only)                  | VAL-14, VAL-13                     |
+| `POST /api/v1/ltt/{id}/submit`  | MAKER (owner only)                  | --                                 |
+| `POST /api/v1/ltt/{id}/check`   | CHECKER                             | SoD: checker != maker              |
+| `POST /api/v1/ltt/{id}/approve` | APPROVER                            | SoD: approver != maker, != checker |
+| `POST /api/v1/ltt/{id}/reject`  | CHECKER / APPROVER                  | Tuy trang thai hien tai            |
+| `POST /api/v1/ltt/{id}/return`  | CHECKER / APPROVER                  | Tuy trang thai hien tai            |
+| `GET /api/v1/ltt/*`             | MAKER / CHECKER / APPROVER / VIEWER | PII masking theo quyen             |
 
 ### 7.3. Idempotency
 
@@ -614,12 +623,12 @@ TTL: 24 gio (cleanup scheduled job)
 
 ### 7.4. Data Protection
 
-| Quy tac | Chi tiet |
-|---|---|
-| **PII Masking** | CMND/CCCD: chi hien thi 4 ky tu cuoi voi user khong co quyen `VIEW_PII`. So tai khoan tuong tu. BFF thuc hien masking truoc khi tra cho UI. |
-| **Soft Delete** | `IS_DELETED = 'Y'`, khong xoa vat ly. Admin co the restore (DELETED -> DRAFT). |
-| **File Security** | Attachment: validate MIME type + magic bytes, SHA-256 hash, scan virus. |
-| **Audit Log Immutable** | Bang `LTT_AUDIT` khong co UPDATE/DELETE grant, chi INSERT + SELECT. |
+| Quy tac                 | Chi tiet                                                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **PII Masking**         | CMND/CCCD: chi hien thi 4 ky tu cuoi voi user khong co quyen `VIEW_PII`. So tai khoan tuong tu. BFF thuc hien masking truoc khi tra cho UI. |
+| **Soft Delete**         | `IS_DELETED = 'Y'`, khong xoa vat ly. Admin co the restore (DELETED -> DRAFT).                                                              |
+| **File Security**       | Attachment: validate MIME type + magic bytes, SHA-256 hash, scan virus.                                                                     |
+| **Audit Log Immutable** | Bang `LTT_AUDIT` khong co UPDATE/DELETE grant, chi INSERT + SELECT.                                                                         |
 
 ---
 
@@ -714,14 +723,14 @@ LIST screen (LttListPage):
 
 ### 8.3. Key Frontend Patterns
 
-| Pattern | Ap dung |
-|---|---|
-| **Module Federation** | `shell` la host, `ltt-ui` la remote. Lazy-load LTT module khi user navigate vao menu. |
-| **TanStack Query** | Server state management (caching, background refresh, optimistic updates). |
-| **React Hook Form + Zod** | Form validation dong bo voi backend VAL-* rules. |
-| **State-based UI** | `useLttStateMachine` hook quyet dinh hien thi/an nut, tab, field dua tren STATUS + role. |
-| **Optimistic Lock** | Moi PUT request kem `If-Match` header = `version`. Xu ly 409 -> prompt reload. |
-| **Keyboard Shortcuts** | Global hotkey registry trong shell, scoped activation theo page focus. |
+| Pattern                   | Ap dung                                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------- |
+| **Module Federation**     | `shell` la host, `ltt-ui` la remote. Lazy-load LTT module khi user navigate vao menu.    |
+| **TanStack Query**        | Server state management (caching, background refresh, optimistic updates).               |
+| **React Hook Form + Zod** | Form validation dong bo voi backend VAL-\* rules.                                        |
+| **State-based UI**        | `useLttStateMachine` hook quyet dinh hien thi/an nut, tab, field dua tren STATUS + role. |
+| **Optimistic Lock**       | Moi PUT request kem `If-Match` header = `version`. Xu ly 409 -> prompt reload.           |
+| **Keyboard Shortcuts**    | Global hotkey registry trong shell, scoped activation theo page focus.                   |
 
 ### 8.4. Routing
 
@@ -741,6 +750,7 @@ LIST screen (LttListPage):
 ### 9.1. Notification
 
 Khi state chuyen doi, he thong phat notification:
+
 - **Channel**: In-app (WebSocket / SSE) + Email.
 - **Trigger points**: Submit -> notify Checker; Check -> notify Approver; Approve/Reject/Return -> notify Maker.
 - **Implementation**: `NotificationPort` (outgoing port), implement boi `NotificationAdapter` goi notification-service hoac truc tiep email.
@@ -748,6 +758,7 @@ Khi state chuyen doi, he thong phat notification:
 ### 9.2. Concurrent Edit Handling
 
 Su dung optimistic locking ket hop distributed advisory lock:
+
 1. **Optimistic**: Cot `VERSION` (`@Version` JPA). Client gui `If-Match: <version>`. Server reject neu mismatch -> 409 Conflict.
 2. **Advisory Lock** (optional cho MVP): Khi user mo form EDIT, acquire soft-lock (`LTT_LOCK` table). Release khi save/cancel. Phat hien conflict -> thong bao user khac dang sua (MSG-ERR-CONCURRENT).
 
@@ -810,20 +821,20 @@ Maker         BFF(8080)    ltt-service(8081)    audit-service(8083)    integrati
 
 Bang tham chieu giua Business Rules (BA spec) va Technical Implementation.
 
-| Business Rule | Technical Component | File/Location |
-|---|---|---|
-| BIZ-001 (SoD) | `StateTransitionGuard` + DB constraints | `domain/service/StateTransitionGuard.java` + `03-schema.sql` |
-| BIZ-002 (Owner only) | `StateTransitionGuard.checkOwnership()` | `domain/service/StateTransitionGuard.java` |
-| BIZ-003 (Soft delete) | `DeletePaymentOrderUseCase` + `IS_DELETED` flag | `application/port/in/DeletePaymentOrderUseCase.java` |
-| BIZ-004 (Sum detail = header) | `CcidValidator.validateTotal()` | `domain/service/CcidValidator.java` |
-| BIZ-005 (Attachment limit) | `PaymentOrderApplicationService.validateAttachment()` | `application/service/PaymentOrderApplicationService.java` |
-| BIZ-006 (Reason length) | Request DTO validation (`@Size(min=10, max=500)`) | `infrastructure/web/dto/RejectionRequest.java` |
-| BIZ-007 (Audit log) | `AuditEventAdapter` -> `audit-service` | `infrastructure/audit/AuditEventAdapter.java` |
-| BIZ-008 (History tracking) | JPA auditing (`@CreatedDate`, `@LastModifiedDate`) | `infrastructure/persistence/entity/PaymentOrderJpaEntity.java` |
-| BIZ-009 (Notification) | `NotificationPort` + Outbox event | `application/port/out/NotificationPort.java` |
-| BIZ-010 (Amount limit) | `StateTransitionGuard.checkApprovalLimit()` | `domain/service/StateTransitionGuard.java` |
-| VAL-01..VAL-18 | Frontend Zod + Backend Bean Validation + Domain guards | `validators/lttValidator.ts` + `domain/service/` |
-| VAL-15 (Optimistic lock) | `@Version` JPA + `If-Match` header | `infrastructure/persistence/entity/PaymentOrderJpaEntity.java` |
+| Business Rule                 | Technical Component                                    | File/Location                                                  |
+| ----------------------------- | ------------------------------------------------------ | -------------------------------------------------------------- |
+| BIZ-001 (SoD)                 | `StateTransitionGuard` + DB constraints                | `domain/service/StateTransitionGuard.java` + `03-schema.sql`   |
+| BIZ-002 (Owner only)          | `StateTransitionGuard.checkOwnership()`                | `domain/service/StateTransitionGuard.java`                     |
+| BIZ-003 (Soft delete)         | `DeletePaymentOrderUseCase` + `IS_DELETED` flag        | `application/port/in/DeletePaymentOrderUseCase.java`           |
+| BIZ-004 (Sum detail = header) | `CcidValidator.validateTotal()`                        | `domain/service/CcidValidator.java`                            |
+| BIZ-005 (Attachment limit)    | `PaymentOrderApplicationService.validateAttachment()`  | `application/service/PaymentOrderApplicationService.java`      |
+| BIZ-006 (Reason length)       | Request DTO validation (`@Size(min=10, max=500)`)      | `infrastructure/web/dto/RejectionRequest.java`                 |
+| BIZ-007 (Audit log)           | `AuditEventAdapter` -> `audit-service`                 | `infrastructure/audit/AuditEventAdapter.java`                  |
+| BIZ-008 (History tracking)    | JPA auditing (`@CreatedDate`, `@LastModifiedDate`)     | `infrastructure/persistence/entity/PaymentOrderJpaEntity.java` |
+| BIZ-009 (Notification)        | `NotificationPort` + Outbox event                      | `application/port/out/NotificationPort.java`                   |
+| BIZ-010 (Amount limit)        | `StateTransitionGuard.checkApprovalLimit()`            | `domain/service/StateTransitionGuard.java`                     |
+| VAL-01..VAL-18                | Frontend Zod + Backend Bean Validation + Domain guards | `validators/lttValidator.ts` + `domain/service/`               |
+| VAL-15 (Optimistic lock)      | `@Version` JPA + `If-Match` header                     | `infrastructure/persistence/entity/PaymentOrderJpaEntity.java` |
 
 ---
 

@@ -6,10 +6,6 @@ import com.kb.ltt.domain.model.LttHeader;
 import com.kb.ltt.domain.model.LttReceiver;
 import com.kb.ltt.domain.model.LttSender;
 import com.kb.ltt.domain.port.outbound.LttRepository;
-import com.kb.ltt.infrastructure.persistence.JpaLttRepository.LttDetailJpaRepository;
-import com.kb.ltt.infrastructure.persistence.JpaLttRepository.LttHeaderJpaRepository;
-import com.kb.ltt.infrastructure.persistence.JpaLttRepository.LttReceiverJpaRepository;
-import com.kb.ltt.infrastructure.persistence.JpaLttRepository.LttSenderJpaRepository;
 
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;

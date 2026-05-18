@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<title>TT_LENHTT.LOOKUP – Tra cứu danh mục</title>
+<link rel="stylesheet" href="./vdbas.css" />
+</head>
+<body style="overflow:hidden;">
+
+<header class="topbar">
+  <div class="logo">TT</div>
+  <div class="title">
+    <strong>VDBAS – Phân hệ Thanh toán</strong>
+    <small>Tạo mới Lệnh thanh toán</small>
+  </div>
+  <div class="spacer"></div>
+  <div class="user">
+    <div class="avatar">PT</div>
+    <div class="who"><span>Phong TD16</span><small>Maker · KBNN Hà Nội</small></div>
+  </div>
+</header>
+
+<nav class="crumb">
+  <a href="../index.html">Trang chủ</a><span class="sep">›</span>
+  <a href="../TT_LENHTT_NEW.html">Tạo mới</a><span class="sep">›</span>
+  <span class="cur">Tra cứu danh mục NH/KB</span>
+</nav>
+
+<div style="padding:30px;">
+  <p style="color:var(--muted);font-style:italic;">(Màn hình form phía sau bị mờ khi modal mở)</p>
+</div>
+
+<!-- MODAL LOOKUP -->
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="dlg-lookup">
+  <div class="modal medium">
+    <div class="modal-head">
+      <h3 id="dlg-lookup">Tra cứu danh mục — NH/KB</h3>
+      <span class="code">TT_LENHTT.LOOKUP.BANK</span>
+      <button class="close-x" title="Đóng (Esc)" aria-label="Đóng">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="hint info">
+        Nhập từ khoá rồi <b>Enter</b> để tìm. Dùng phím <b>↑/↓</b> để di chuyển, <b>Enter</b> để chọn, <b>Esc</b> để đóng.
+      </div>
+
+      <div class="filter-row" style="margin-bottom:10px;">
+        <div class="form-group">
+          <label>Mã NH/KB</label>
+          <input type="text" placeholder="VD: 01202001…" value="970"/>
+        </div>
+        <div class="form-group">
+          <label>Tên</label>
+          <input type="text" placeholder="Tìm theo tên (không phân biệt hoa thường)…" value="Ngoại"/>
+        </div>
+        <div class="form-group">
+          <label>Nhóm</label>
+          <select>
+            <option>-- Tất cả --</option>
+            <option>NH thành viên Citad</option>
+            <option>NH song phương (TTSP)</option>
+            <option>Kho bạc</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Trạng thái</label>
+          <select>
+            <option selected>Đang hoạt động</option>
+            <option>Tất cả</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="toolbar-top" style="margin-bottom:0;">
+        <button class="btn btn-ghost">Đặt lại</button>
+        <button class="btn btn-primary">Tìm kiếm <span class="kbd">Enter</span></button>
+        <div class="left"></div>
+        <span class="field-help">Tìm thấy <b>3</b> kết quả</span>
+      </div>
+
+      <div class="table-wrap">
+        <table class="tbl" aria-label="Kết quả tra cứu NH/KB">
+          <thead>
+            <tr>
+              <th class="num"><input type="checkbox" class="cell-check" aria-label="Chọn"/></th>
+              <th>Mã</th>
+              <th>Tên đầy đủ</th>
+              <th>Tên viết tắt</th>
+              <th>Nhóm</th>
+              <th>Mã NH trực tiếp</th>
+              <th class="center">Trạng thái</th>
+              <th class="act">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background:#eef5fd;">
+              <td class="num"><input type="radio" name="pick" class="cell-check" checked/></td>
+              <td><code>97041018</code></td>
+              <td class="wrap">Ngân hàng TMCP Ngoại thương Việt Nam — Chi nhánh Hà Nội</td>
+              <td>Vietcombank Hà Nội</td>
+              <td>NH thành viên Citad</td>
+              <td>970418</td>
+              <td class="center"><span class="badge badge-active">Active</span></td>
+              <td class="act">
+                <button class="btn btn-primary" style="height:24px;padding:0 8px;font-size:11px;">Chọn <span class="kbd">↵</span></button>
+              </td>
+            </tr>
+            <tr>
+              <td class="num"><input type="radio" name="pick" class="cell-check"/></td>
+              <td><code>97041019</code></td>
+              <td class="wrap">Ngân hàng TMCP Ngoại thương Việt Nam — Chi nhánh Ba Đình</td>
+              <td>Vietcombank Ba Đình</td>
+              <td>NH thành viên Citad</td>
+              <td>970419</td>
+              <td class="center"><span class="badge badge-active">Active</span></td>
+              <td class="act">
+                <button class="btn" style="height:24px;padding:0 8px;font-size:11px;">Chọn</button>
+              </td>
+            </tr>
+            <tr>
+              <td class="num"><input type="radio" name="pick" class="cell-check"/></td>
+              <td><code>97041020</code></td>
+              <td class="wrap">Ngân hàng TMCP Ngoại thương Việt Nam — Chi nhánh Tây Hồ</td>
+              <td>Vietcombank Tây Hồ</td>
+              <td>NH thành viên Citad</td>
+              <td>970420</td>
+              <td class="center"><span class="badge badge-active">Active</span></td>
+              <td class="act">
+                <button class="btn" style="height:24px;padding:0 8px;font-size:11px;">Chọn</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pager">
+        <div class="left">
+          <span>Hiển thị</span>
+          <select><option>10</option><option>20</option><option>50</option></select>
+          <span>/ tổng <b>3</b> bản ghi</span>
+        </div>
+        <div class="pages">
+          <button class="active">1</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn">Huỷ <span class="kbd">Esc</span></button>
+      <button class="btn btn-primary">Áp dụng dòng đang chọn <span class="kbd">Enter</span></button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

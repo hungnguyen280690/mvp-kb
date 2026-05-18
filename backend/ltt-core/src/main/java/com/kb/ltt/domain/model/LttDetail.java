@@ -79,9 +79,9 @@ public class LttDetail {
     @Column(name = "GL_SEGMENT12", length = 3)
     private String glSegment12;
 
-    @Column(name = "DESCRIPTION", nullable = false, length = 500)
+    @Column(name = "LINE_DESCRIPTION", length = 500)
     private String description;
 
-    @Column(name = "AMOUNT", nullable = false, precision = 20, scale = 2)
+    @Column(name = "LINE_AMOUNT", nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
 }

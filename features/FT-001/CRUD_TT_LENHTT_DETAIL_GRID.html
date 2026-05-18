@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<title>TT_LENHTT.DETAIL.GRID – Lưới chi tiết khoản mục</title>
+<link rel="stylesheet" href="./vdbas.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">TT</div>
+  <div class="title">
+    <strong>VDBAS – Phân hệ Thanh toán</strong>
+    <small>Lưới chi tiết khoản mục (COA)</small>
+  </div>
+  <div class="spacer"></div>
+  <div class="user">
+    <div class="avatar">PT</div>
+    <div class="who"><span>Phong TD16</span><small>Maker · KBNN Hà Nội</small></div>
+  </div>
+</header>
+
+<nav class="crumb">
+  <a href="../6.%20Mockup/index.html">Trang chủ</a><span class="sep">›</span>
+  <a href="CRUD_TT_LENHTT_LIST.html">Danh sách</a><span class="sep">›</span>
+  <a href="CRUD_TT_LENHTT_NEW.html">Tạo mới</a><span class="sep">›</span>
+  <span class="cur">Chi tiết khoản mục</span>
+</nav>
+
+<main class="page">
+  <h1 class="page-title">Chi tiết khoản mục — YCTT-2026-0124</h1>
+
+  <div class="hint info">
+    Mỗi dòng tương ứng với một combination COA (12 segment). Tổng số tiền các dòng phải khớp <b>Số tiền chuyển</b> tại tab Thông tin chung. Tuân theo CCID (Cross-Validation Rule).
+  </div>
+
+  <section class="card">
+    <div class="card-header">
+      <h2>Chi tiết khoản mục</h2>
+      <span class="code">TT_LENHTT.DETAIL.GRID</span>
+    </div>
+    <div class="toolbar-top">
+      <button class="btn btn-success">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+        Thêm dòng
+      </button>
+      <button class="btn btn-ghost">Sao chép dòng <span class="kbd">Ctrl+Shift+C</span></button>
+      <button class="btn btn-danger">Xoá dòng được chọn <span class="kbd">Delete</span></button>
+      <div class="left"></div>
+      <span class="field-help">Định dạng số: dấu chấm ngăn cách nghìn, phẩy ngăn cách thập phân.</span>
+    </div>
+    <div class="table-wrap">
+      <table class="tbl" aria-label="Lưới chi tiết khoản mục">
+        <thead>
+          <tr>
+            <th class="num"><input type="checkbox" class="cell-check" aria-label="Chọn tất cả"/></th>
+            <th class="num">STT</th>
+            <th>Mã quỹ<br><small style="color:var(--muted);font-weight:400;">Varchar(2)</small></th>
+            <th>TK tự nhiên<br><small style="color:var(--muted);font-weight:400;">Varchar(4)</small></th>
+            <th>DVQHNS<br><small style="color:var(--muted);font-weight:400;">Varchar(7)</small></th>
+            <th>Cấp NS</th>
+            <th>Chương</th>
+            <th>Ngành KT</th>
+            <th>NDKT</th>
+            <th>ĐB</th>
+            <th>CTMT</th>
+            <th>MN</th>
+            <th>Kho bạc</th>
+            <th>DP</th>
+            <th style="min-width:200px;">Diễn giải <span class="req">*</span></th>
+            <th class="right">Số tiền (VND) <span class="req">*</span></th>
+            <th class="act">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="num"><input type="checkbox" class="cell-check"/></td>
+            <td class="num">1</td>
+            <td><input class="cell-input" value="01" style="width:50px;"/></td>
+            <td><input class="cell-input" value="1112" style="width:60px;"/></td>
+            <td><input class="cell-input" value="1059482" style="width:80px;"/></td>
+            <td><input class="cell-input" value="1" style="width:50px;"/></td>
+            <td><input class="cell-input" value="017" style="width:60px;"/></td>
+            <td><input class="cell-input" value="070" style="width:60px;"/></td>
+            <td><input class="cell-input" value="7012" style="width:60px;"/></td>
+            <td><input class="cell-input" value="00000" style="width:70px;"/></td>
+            <td><input class="cell-input" value="00000" style="width:70px;"/></td>
+            <td><input class="cell-input" value="13" style="width:50px;"/></td>
+            <td><input class="cell-input" value="0119" style="width:60px;"/></td>
+            <td><input class="cell-input" value="00" style="width:50px;"/></td>
+            <td><input class="cell-input" value="Thanh toán đợt 1 — hạng mục san nền"/></td>
+            <td class="right"><input class="cell-input" value="1.450.000.000" style="text-align:right;"/></td>
+            <td class="act">
+              <button class="icon-btn" title="Tra cứu CCID (F4)" aria-label="Tra cứu CCID">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              </button>
+              <button class="icon-btn danger" title="Xoá dòng (Shift+Delete)" aria-label="Xoá dòng">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+              </button>
+            </td>
+          </tr>
+          <tr>
+            <td class="num"><input type="checkbox" class="cell-check"/></td>
+            <td class="num">2</td>
+            <td><input class="cell-input" value="01" style="width:50px;"/></td>
+            <td><input class="cell-input" value="1112" style="width:60px;"/></td>
+            <td><input class="cell-input" value="1059482" style="width:80px;"/></td>
+            <td><input class="cell-input" value="1" style="width:50px;"/></td>
+            <td><input class="cell-input" value="017" style="width:60px;"/></td>
+            <td><input class="cell-input" value="070" style="width:60px;"/></td>
+            <td><input class="cell-input" value="7012" style="width:60px;"/></td>
+            <td><input class="cell-input" value="00000" style="width:70px;"/></td>
+            <td><input class="cell-input" value="00000" style="width:70px;"/></td>
+            <td><input class="cell-input" value="13" style="width:50px;"/></td>
+            <td><input class="cell-input" value="0119" style="width:60px;"/></td>
+            <td><input class="cell-input" value="00" style="width:50px;"/></td>
+            <td><input class="cell-input" value="Thanh toán đợt 1 — hạng mục móng cọc"/></td>
+            <td class="right"><input class="cell-input" value="1.000.000.000" style="text-align:right;"/></td>
+            <td class="act">
+              <button class="icon-btn" title="Tra cứu CCID (F4)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+              <button class="icon-btn danger" title="Xoá dòng"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+            </td>
+          </tr>
+          <tr style="background: #fff8e1;">
+            <td class="num"></td>
+            <td class="num">3</td>
+            <td colspan="13" class="wrap" style="font-style:italic; color: var(--muted);">Dòng mới (đang nhập)… nhấn <b>Tab</b> để sang ô tiếp theo, <b>Enter</b> để xác nhận.</td>
+            <td class="right"><input class="cell-input" placeholder="0" style="text-align:right;"/></td>
+            <td class="act"></td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr style="background:#eef3f9;font-weight:700;">
+            <td></td>
+            <td colspan="14" style="text-align:right;color:var(--primary-dark);">TỔNG CỘNG</td>
+            <td class="right" style="color:var(--primary-dark);">2.450.000.000</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="summary-strip">
+      <span>Tổng số dòng: <b>2</b></span>
+      <span>Tổng số tiền dòng: <b>2.450.000.000 VND</b></span>
+      <span>Số tiền chuyển: <b>2.450.000.000 VND</b></span>
+      <span style="color: var(--success);font-weight:600;">✓ Khớp tổng tiền</span>
+    </div>
+    <div class="toolbar">
+      <a href="CRUD_TT_LENHTT_NEW.html" class="btn">Huỷ <span class="kbd">Esc</span></a>
+      <button class="btn btn-primary">Áp dụng <span class="kbd">Ctrl+S</span></button>
+    </div>
+  </section>
+</main>
+</body>
+</html>
