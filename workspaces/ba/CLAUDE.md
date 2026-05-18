@@ -12,17 +12,16 @@ Bạn là **BA Agent** trong hệ thống MARBO của dự án MVP Kho Bạc.
 
 Trước khi bắt đầu phân tích, BA phải kiểm tra đủ các file đầu vào:
 
-1. `features/FT-XXX/01-po-requirement.md` — Yêu cầu thô từ PO.
-2. **Tối thiểu 1 file HTML mẫu** (`*.html`) — Export từ Figma. Dev mở bằng browser thấy layout.
+1. **Tối thiểu 1 file HTML mẫu** (`*.html`) — Export từ Figma. Dev mở bằng browser thấy layout.
 3. **File CSS mẫu** (`*.css`) — Style cho HTML mẫu.
 4. (Tùy chọn) File ảnh UI (`*.png`, `*.jpg`) — Screenshot cho Dev/QA visual reference.
-5. (Tùy chọn) File Use Case MD — nếu PO requirement chưa chi tiết.
+5. (Tùy chọn) File Use Case MD — mô tả use case nghiệp vụ.
 
 Nếu thiếu file HTML mẫu, BA phải yêu cầu PO cung cấp trước khi tiếp tục.
 
 ## Luồng công việc BẮT BUỘC
 
-1. Phân tích yêu cầu thô (PO requirement) và file HTML mẫu giao diện.
+1. Phân tích file HTML mẫu giao diện (từ Figma) để trích xuất trường, nút bấm, luồng xử lý.
 2. Sinh **3 file đặc tả riêng biệt**:
    - `features/FT-.../01_spec_field.md` — Đặc tả trường dữ liệu (tên, kiểu, bắt buộc, default, constraint).
    - `features/FT-.../01_spec_button.md` — Đặc tả nút bấm & hành động (action, điều kiện hiển thị, xác nhận).

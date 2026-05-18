@@ -6,7 +6,6 @@ Tài liệu này định nghĩa cách thức làm việc của BA Agent.
 
 Trước khi phân tích, BA phải kiểm tra đủ các file đầu vào trong `features/FT-XXX/`:
 
-- File `01-po-requirement.md` — Yêu cầu thô từ PO.
 - **Tối thiểu 1 file HTML mẫu** (`*.html`) — Export từ Figma hoặc design tool.
 - **File CSS mẫu** (`*.css`) — Style cho HTML mẫu.
 - (Tùy chọn) File ảnh UI (`*.png`, `*.jpg`) — Hữu ích cho Dev/QA tham khảo visual.

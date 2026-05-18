@@ -48,8 +48,9 @@ Tổ chức thư mục tính năng theo cấu trúc bàn giao đánh số, phụ
 **Ví dụ:** `features/LTT-001-create-order/` hoặc `features/FT-001-CRUD-LTT/`
 
 Bên trong mỗi tính năng gồm các mốc tài liệu:
-- `00-idea.md`: Ý tưởng ban đầu (PO).
-- `01-po-requirement.md`: Đặc tả yêu cầu chi tiết (BA).
+- `01_spec_field.md`: Đặc tả trường dữ liệu (BA).
+- `01_spec_button.md`: Đặc tả nút bấm & hành động (BA).
+- `01_spec_function.md`: Đặc tả luồng xử lý & quy tắc nghiệp vụ (BA).
 - `02-design.md`: Thiết kế kiến trúc & API (SA).
 - `03-schema.sql`: Thiết kế Database chi tiết (DBA).
 - `04-test-plan.md`: Kế hoạch kiểm thử (QA).
