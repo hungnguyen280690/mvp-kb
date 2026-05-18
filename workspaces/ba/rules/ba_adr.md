@@ -2,49 +2,38 @@
 
 Tài liệu này định nghĩa cách thức làm việc của BA Agent.
 
-## 0. Đầu vào bắt buộc (ADR-019)
+## 0. Đầu vào từ PO/Con người
 
-Trước khi phân tích, BA phải kiểm tra đủ các file đầu vào trong `features/FT-XXX/`:
-
-- **Tối thiểu 1 file HTML mẫu** (`*.html`) — Export từ Figma hoặc design tool.
-- **File CSS mẫu** (`*.css`) — Style cho HTML mẫu.
-- (Tùy chọn) File ảnh UI (`*.png`, `*.jpg`) — Hữu ích cho Dev/QA tham khảo visual.
-- (Tùy chọn) File Use Case MD — Mô tả use case chi tiết.
-
-Nếu thiếu file HTML mẫu, BA phải dừng và yêu cầu PO cung cấp.
+BA đọc toàn bộ file trong `features/FT-XXX/` do PO cung cấp. Có thể bao gồm:
+- File đặc tả (`.md`), HTML mẫu (`*.html`), CSS (`*.css`), ảnh UI, Excel template...
+- BA **không yêu cầu bắt buộc** loại file nào cụ thể — làm việc với những gì PO đã cung cấp.
 
 ## 1. Nguồn sự thật duy nhất (ADR-002)
 
 - Mọi thay đổi về nghiệp vụ phải được cập nhật vào file `.md` trong thư mục `features/`. Tài liệu Markdown là nguồn sự thật duy nhất cho Dev và QA.
 
-## 2. Cấu trúc Đặc tả (ADR-001) — Tách 3 file
+## 2. Đầu ra của BA — BDD Use Cases (ADR-001)
 
-- Đặc tả nghiệp vụ được chia thành **3 file riêng biệt**:
-  - `01_spec_field.md` — Đặc tả trường dữ liệu (tên field, kiểu dữ liệu, bắt buộc, default, constraint).
-  - `01_spec_button.md` — Đặc tả nút bấm & hành động (action name, điều kiện hiển thị, xác nhận, icon).
-  - `01_spec_function.md` — Đặc tả luồng xử lý & quy tắc nghiệp vụ (BIZ-xxx, VAL-xxx, state machine, validation rules).
-- BA phải phân tích file HTML mẫu để trích xuất chính xác trường, nút bấm và luồng xử lý.
+BA không bị ép sinh fixed file names. Đầu ra duy nhất bắt buộc là **BDD Use Cases**:
+- BA tra soát đặc tả của PO và sinh các **BDD scenarios** (Given-When-Then) cho từng luồng nghiệp vụ.
+- BDD scenarios là cầu nối giữa đặc tả nghiệp vụ và Dev/QA.
+- BA **không bắt buộc** sinh `spec_field.md`, `spec_button.md`, `spec_function.md` nếu PO đã cung cấp đủ thông tin.
 
 ## 3. Truy vết (ADR-018)
 
 - Mọi yêu cầu nghiệp vụ phải có ID duy nhất (ví dụ: `BIZ-001`).
-- Đảm bảo mọi trường dữ liệu trên UI (HTML mẫu) đều có mô tả tương ứng trong `01_spec_field.md` và DB Schema (phối hợp với SA).
+- Đảm bảo mọi trường dữ liệu trên UI (HTML mẫu) đều có mô tả tương ứng trong đặc tả và DB Schema (phối hợp với SA).
 
-## 4. Kiểm tra chéo trước Sign-off (ADR-005)
+## 4. Gate G1 — Tiêu chí Pass BA (ADR-005)
 
-- Trước khi con người ký duyệt Gate G1, **SA Agent** phải đọc và xác nhận cả 3 file spec (`01_spec_field.md`, `01_spec_button.md`, `01_spec_function.md`) đủ rõ ràng để thiết kế (BA Cross-Review).
-- SA ghi kết quả review vào file `gates/FT-XXX-G1-ba-readiness.md`. Chỉ khi file này có status `APPROVED`, con người mới được ký `G1-ba-signoff.md`.
-- Nếu SA từ chối (`REJECTED`), BA phải sửa đặc tả theo feedback của SA.
+BA được coi là **PASS Gate G1** khi:
+1. Đã sinh **BDD use cases** cho các luồng nghiệp vụ chính của tính năng.
+2. Đã cập nhật glossary (`docs/domain/glossary.md`) nếu có thuật ngữ mới.
+3. Con người duyệt sign-off `gates/FT-XXX-G1-ba-signoff.md`.
 
-## 5. Fast-Track Audit-Only (ADR-020)
+**Không yêu cầu** SA cross-review hay ba-readiness check. Con người tự đánh giá BDD use cases là đủ.
 
-Khi tính năng đã có đủ 4 file (`01_spec_field.md`, `01_spec_button.md`, `01_spec_function.md`, `01b-bdd-scenarios.md`), BA được phép bỏ qua bước sinh spec và chỉ cần:
+## 5. Cập nhật Glossary
 
-1. **Tra soát** 3 file spec so với HTML mẫu — xác nhận mọi trường, nút bấm, quy tắc đã cover.
-2. **Kiểm tra glossary** — xác nhận thuật ngữ mới đã cập nhật.
-3. Nếu OK → báo SA thực hiện Readiness Check như bình thường.
-4. Nếu phát hiện thiếu sót → phải sửa/bổ sung spec trước khi chuyển SA.
-
-Điều kiện áp dụng fast-track:
-- Đã có đủ 3 file spec + BDD scenarios trong `features/FT-XXX/`.
-- File HTML mẫu tồn tại để đối chiếu.
+- BA phải trích xuất thuật ngữ nghiệp vụ mới và ghi vào `docs/domain/glossary.md`.
+- Đây là bước bắt buộc để SA và Dev dùng đúng tên biến và khái niệm.

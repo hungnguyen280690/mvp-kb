@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<title>TT_LENHTT.NEW – Tạo mới Lệnh thanh toán</title>
+<link rel="stylesheet" href="vdbas.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">TT</div>
+  <div class="title">
+    <strong>VDBAS – Phân hệ Thanh toán</strong>
+    <small>Tạo mới Lệnh thanh toán</small>
+  </div>
+  <div class="spacer"></div>
+  <div class="user">
+    <div class="avatar">PT</div>
+    <div class="who"><span>Phong TD16</span><small>Maker · KBNN Hà Nội</small></div>
+  </div>
+</header>
+
+<nav class="crumb">
+  <a href="../6.%20Mockup/index.html">Trang chủ</a><span class="sep">›</span>
+  <a href="#">Thanh toán</a><span class="sep">›</span>
+  <a href="CRUD_TT_LENHTT_LIST.html">Danh sách</a><span class="sep">›</span>
+  <span class="cur">Tạo mới</span>
+</nav>
+
+<main class="page">
+  <h1 class="page-title">Tạo mới Lệnh thanh toán</h1>
+
+  <div class="hint info">
+    Phím tắt: <b>Ctrl+S</b> Lưu · <b>Ctrl+Shift+S</b> Lưu nháp · <b>Ctrl+Enter</b> hoặc <b>F9</b> Gửi kiểm soát · <b>Esc</b> Huỷ · <b>F4</b> Tra cứu.
+  </div>
+
+  <section class="card">
+    <div class="card-header">
+      <h2>Thông tin Lệnh thanh toán</h2>
+      <span class="code">TT_LENHTT.NEW</span>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <div class="tab active" role="tab" aria-selected="true">Thông tin chung</div>
+      <div class="tab" role="tab">Thông tin khoản mục</div>
+      <div class="tab" role="tab">Thông tin người chuyển</div>
+      <div class="tab" role="tab">Thông tin người nhận</div>
+    </div>
+
+    <div class="card-body">
+
+      <!-- TAB 1: Thông tin chung -->
+      <div class="form-grid" id="tab-general">
+        <div class="form-group">
+          <label for="f-ch">Kênh <span class="req">*</span></label>
+          <select id="f-ch">
+            <option value="">-- Chọn --</option>
+            <option selected>Liên ngân hàng</option>
+            <option>Thanh toán song phương</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="f-tl">Loại lệnh <span class="req">*</span></label>
+          <select id="f-tl">
+            <option selected>Lệnh thông thường</option>
+            <option>Lệnh trái phiếu chính phủ</option>
+            <option>Lệnh có thông tin thu NSNN</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="f-rn">Số YCTT / Số bút toán <span class="req">*</span></label>
+          <input id="f-rn" type="text" value="YCTT-2026-0124" />
+        </div>
+
+        <div class="form-group">
+          <label for="f-sd">NH/KB chuyển <span class="req">*</span></label>
+          <input id="f-sd" type="text" value="01202001 – KBNN Hà Nội" readonly />
+        </div>
+        <div class="form-group">
+          <label for="f-rc">NH/KB nhận <span class="req">*</span></label>
+          <div class="with-lookup">
+            <input id="f-rc" type="text" value="97041018 – Ngân hàng TMCP Ngoại thương VN" readonly />
+            <button class="lookup-btn" title="Tra cứu (F4)">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="f-pd">Ngày thanh toán <span class="req">*</span></label>
+          <input id="f-pd" type="date" value="2026-05-12" readonly />
+        </div>
+
+        <div class="form-group">
+          <label for="f-am">Số tiền chuyển <span class="req">*</span></label>
+          <input id="f-am" type="text" value="2.450.000.000" readonly />
+          <div class="field-help">Tự tính từ tổng các dòng chi tiết khoản mục</div>
+        </div>
+        <div class="form-group">
+          <label for="f-cc">Loại tiền <span class="req">*</span></label>
+          <select id="f-cc">
+            <option selected>VND</option><option>USD</option><option>EUR</option><option>JPY</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="f-lt">Loại giao dịch <span class="req-c">(*)</span></label>
+          <select id="f-lt">
+            <option selected>Lệnh chuyển Có GT cao</option>
+            <option disabled>Lệnh chuyển Có GT thấp</option>
+            <option>Lệnh chuyển Nợ GT cao</option>
+            <option disabled>Lệnh chuyển Nợ GT thấp</option>
+          </select>
+          <div class="field-help">Số tiền ≥ 500 triệu — bắt buộc "GT cao"</div>
+        </div>
+
+        <div class="form-group">
+          <label for="f-er">Tỷ giá <span class="req-c">(*)</span></label>
+          <input id="f-er" type="text" placeholder="Chỉ nhập khi loại tiền là ngoại tệ" disabled />
+        </div>
+        <div class="form-group">
+          <label for="f-on">Số chứng từ gốc <span class="req-c">(*)</span></label>
+          <input id="f-on" type="text" placeholder="Bắt buộc khi Kênh = TTSP" disabled />
+        </div>
+        <div class="form-group">
+          <label for="f-td">Ngày chứng từ <span class="req-c">(*)</span></label>
+          <input id="f-td" type="date" disabled />
+        </div>
+
+        <div class="form-group span-3">
+          <label for="f-desc">Nội dung thanh toán <span class="req">*</span></label>
+          <textarea id="f-desc" rows="3">Chuyển tiền thanh toán hợp đồng số 12/HĐ-KBNN ngày 05/05/2026 cho NCC Công ty CP Xây dựng số 1.</textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="f-cb">Người lập</label>
+          <input id="f-cb" type="text" value="Phong TD16 (phongtd16)" readonly />
+        </div>
+        <div class="form-group">
+          <label for="f-cd">Ngày lập</label>
+          <input id="f-cd" type="text" value="12/05/2026 09:12:34" readonly />
+        </div>
+        <div class="form-group">
+          <label>Trạng thái</label>
+          <div><span class="badge badge-draft" aria-label="Trạng thái: Nháp">Draft</span></div>
+        </div>
+      </div>
+
+      <!-- TAB 2 PREVIEW (Khoản mục) – collapsed dưới dạng bảng -->
+      <h3 class="section-title">Tab Thông tin khoản mục (preview)</h3>
+      <div class="table-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th class="num">STT</th>
+              <th>Mã quỹ</th><th>TK tự nhiên</th><th>DVQHNS</th><th>Chương</th>
+              <th>Ngành KT</th><th>NDKT</th><th>ĐB</th><th>CTMT</th><th>MN</th><th>Kho bạc</th><th>DP</th>
+              <th>Diễn giải</th>
+              <th class="right">Số tiền (VND)</th>
+              <th class="act">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="num">1</td>
+              <td>01</td><td>1112</td><td>1059482</td><td>017</td>
+              <td>070</td><td>7012</td><td>00000</td><td>00000</td><td>13</td><td>0119</td><td>00</td>
+              <td class="wrap">Thanh toán đợt 1 — hạng mục san nền</td>
+              <td class="right">1.450.000.000</td>
+              <td class="act"><button class="icon-btn" title="Sửa dòng"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button><button class="icon-btn danger" title="Xoá dòng"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></td>
+            </tr>
+            <tr>
+              <td class="num">2</td>
+              <td>01</td><td>1112</td><td>1059482</td><td>017</td>
+              <td>070</td><td>7012</td><td>00000</td><td>00000</td><td>13</td><td>0119</td><td>00</td>
+              <td class="wrap">Thanh toán đợt 1 — hạng mục móng cọc</td>
+              <td class="right">1.000.000.000</td>
+              <td class="act"><button class="icon-btn" title="Sửa dòng"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button><button class="icon-btn danger" title="Xoá dòng"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="summary-strip">
+        <span>Tổng số dòng: <b>2</b></span>
+        <span>Tổng số tiền dòng: <b>2.450.000.000 VND</b></span>
+        <span style="color: var(--success);">✓ Khớp với Số tiền chuyển</span>
+        <div class="left"></div>
+        <a class="btn btn-ghost" href="CRUD_TT_LENHTT_DETAIL_GRID.html">+ Thêm dòng</a>
+      </div>
+
+      <!-- TAB 3: Thông tin người chuyển -->
+      <h3 class="section-title">Tab Thông tin người chuyển (preview)</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Tên <span class="req">*</span></label>
+          <input type="text" value="Kho bạc Nhà nước Hà Nội" />
+        </div>
+        <div class="form-group span-2">
+          <label>Địa chỉ <span class="req">*</span></label>
+          <input type="text" value="32 Cát Linh, P. Cát Linh, Q. Đống Đa, TP Hà Nội" />
+        </div>
+        <div class="form-group">
+          <label>Tài khoản <span class="req">*</span></label>
+          <input type="text" value="1112-1059482" readonly />
+        </div>
+        <div class="form-group">
+          <label>Mã KH</label>
+          <input type="text" value="" placeholder="Để trống nếu không áp dụng…" />
+        </div>
+        <div class="form-group">
+          <label>Mở tại NH/KB <span class="req">*</span></label>
+          <input type="text" value="01202001 – KBNN Hà Nội" readonly />
+        </div>
+      </div>
+
+      <!-- TAB 4: Thông tin người nhận -->
+      <h3 class="section-title">Tab Thông tin người nhận (preview)</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Tên <span class="req">*</span></label>
+          <input type="text" value="Công ty CP Xây dựng số 1 Hà Nội" />
+        </div>
+        <div class="form-group span-2">
+          <label>Địa chỉ</label>
+          <input type="text" value="59 Quang Trung, Q. Hai Bà Trưng, TP Hà Nội" />
+        </div>
+        <div class="form-group">
+          <label>Tài khoản <span class="req">*</span></label>
+          <input type="text" value="1020 1000 123456" />
+        </div>
+        <div class="form-group">
+          <label>Tên tài khoản <span class="req">*</span></label>
+          <input type="text" value="CTY CP XAY DUNG SO 1 HA NOI" />
+        </div>
+        <div class="form-group">
+          <label>Mở tại NH/KB <span class="req">*</span></label>
+          <div class="with-lookup">
+            <input type="text" value="970418 – Vietcombank CN Hà Nội" />
+            <button class="lookup-btn" title="Tra cứu (F4)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>CMND/CCCD/HC/Mã DN</label>
+          <input type="text" value="0100123456" />
+        </div>
+        <div class="form-group">
+          <label>Ngày cấp <span class="req-c">(*)</span></label>
+          <input type="date" value="2018-06-15" />
+        </div>
+        <div class="form-group">
+          <label>Nơi cấp <span class="req-c">(*)</span></label>
+          <input type="text" value="Sở KH&ĐT TP Hà Nội" />
+        </div>
+      </div>
+
+    </div>
+
+    <div class="toolbar">
+      <div class="left">
+        <span class="badge badge-warning">2 cảnh báo</span>
+        <span class="field-help" style="margin-left:8px;">Hệ thống ghi audit khi Lưu/Gửi kiểm soát.</span>
+      </div>
+      <a href="CRUD_TT_LENHTT_LIST.html" class="btn">Huỷ <span class="kbd">Esc</span></a>
+      <button class="btn btn-ghost">Lưu nháp <span class="kbd">Ctrl+Shift+S</span></button>
+      <button class="btn btn-primary">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Lưu <span class="kbd">Ctrl+S</span>
+      </button>
+      <button class="btn btn-success">
+        Gửi kiểm soát <span class="kbd">Ctrl+Enter</span>
+      </button>
+    </div>
+  </section>
+</main>
+</body>
+</html>
