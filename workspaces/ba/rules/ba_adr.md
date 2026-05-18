@@ -6,10 +6,11 @@ Tài liệu này định nghĩa cách thức làm việc của BA Agent.
 
 Trước khi phân tích, BA phải kiểm tra đủ các file đầu vào trong `features/FT-XXX/`:
 
-- **Tối thiểu 1 file HTML mẫu** (`*.html`) — Màn hình mẫu giao diện.
-- **File CSS mẫu** (`*.css`) — Quy tắc style liên quan.
-- **File Use Case MD** (`*.md`) — Mô tả use case (nếu PO yêu cầu thô chưa đủ chi tiết).
 - File `01-po-requirement.md` — Yêu cầu thô từ PO.
+- **Tối thiểu 1 file HTML mẫu** (`*.html`) — Export từ Figma hoặc design tool.
+- **File CSS mẫu** (`*.css`) — Style cho HTML mẫu.
+- (Tùy chọn) File ảnh UI (`*.png`, `*.jpg`) — Hữu ích cho Dev/QA tham khảo visual.
+- (Tùy chọn) File Use Case MD — Mô tả use case chi tiết.
 
 Nếu thiếu file HTML mẫu, BA phải dừng và yêu cầu PO cung cấp.
 
