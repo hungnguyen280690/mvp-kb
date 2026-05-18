@@ -1,31 +1,101 @@
-# MVP Kho Bạc - Hệ thống Lệnh Thanh Toán (LTT)
+# MVP Kho Bac - He thong Lenh Thanh Toan (LTT)
 
-Dự án MVP cho hệ thống KBNN với luồng làm việc 3 Agent siêu tối giản, ưu tiên tính đúng đắn và chống bias.
+Du an MVP cho he thong KBNN quan ly Lenh Thanh Toan (LTT) voi luong lam viec **Multi-Agent Role-Based Orchestration (MARBO)** — 4 giai doan, 6 Agent chuyen biệt.
 
-## 🚀 Luồng làm việc (4-Phase Workflow)
+## Luong lam viec (4-Stage MARBO Workflow)
 
-1. **Đầu vào gốc**: Product Owner (PO) cung cấp:
-    - `docs/PROJECT_CHARTER.md`: Định hướng công nghệ toàn cục cho dự án.
-    - `features/{{feature-id}}/01-po-requirement.md`: Yêu cầu chi tiết cho từng tính năng.
-2. **Giai đoạn song song (Phase 0 & 1)**:
-    - **Phase 0 (SA/Tech Lead)**: Đọc **Project Charter** để khởi tạo **Base Project** (Skeleton) tại `backend/` và `frontend/`.
-    - **Phase 1 (BA)**: Đọc **Feature Requirement** để rã thành các đặc tả chi tiết `.md` trong thư mục `features/`.
-3. **Giai đoạn 2 (SA - Detailed Design)**: SA Agent đọc đặc tả chi tiết + Base Project để gen Database Schema vật lý và OpenAPI tại `contracts/`. Phải có Plan được duyệt trước khi gen. Ký duyệt `G2`.
-4. **Giai đoạn 3 (Dev - Implementation)**: Dev Agent đọc OpenAPI + Đặc tả để gen Code tính năng vào Base Project. Áp dụng **TDD**: Viết Test trước trong Plan -> Duyệt Test -> Gen Code. Ký duyệt `G3`.
+| Stage | Agent | Cong | Dau vao | Dau ra |
+|-------|-------|------|---------|--------|
+| 1 — BA | BA Agent | G1 | HTML mau (Figma) + CSS + Use Case | 3 spec files + BDD |
+| 2 — Design | SA / Security / UI | G2 | 3 spec files | API Contract + DB Schema + Threat Model |
+| 3 — Dev | Fullstack Dev | G3 | OpenAPI + Schema | Backend + Frontend code |
+| 4 — Test | QA Agent | G4 | Spec + Code | E2E tests + Test data |
 
-## 🛠️ Quy tắc Tử huyệt
+**Fast-Track (Audit-Only)**: Neu tinh nang da co du 3 spec + BDD, BA chi can tra sosat doi chieu HTML mau roi chuyen thang SA.
 
-- **Plan-First**: Luôn sinh Plan trong thư mục `gates/` trước khi hành động.
-- **No CI/CD Bias**: Chạy test local pass 100% trước khi ký Gate.
-- **Traceability**: Mọi code và test đều phải map với ID nghiệp vụ.
+## Cau truc Feature
 
-## 📂 Cấu trúc Thư mục
+```text
+features/FT-001/
+├── 01_spec_field.md         (BA — Dac ta truong du lieu)
+├── 01_spec_button.md        (BA — Dac ta nut bam & hanh dong)
+├── 01_spec_function.md      (BA — Dac ta luong xu ly & quy tac)
+├── 01b-bdd-scenarios.md     (BA — BDD Scenarios)
+├── *.html                   (Dau vao bat buoc — HTML mau tu Figma)
+├── *.css                    (Dau vao bat buoc — CSS mau)
+├── 02-design.md             (SA — Thiet ke giai phap)
+├── 03-schema.sql            (SA — Oracle 19c DDL)
+├── 06-threat-model.md       (Security — Tuy chon)
+└── 08-test-data.md          (QA — Du lieu test)
+```
 
-- `features/`: Nơi chứa đặc tả nghiệp vụ (.md).
-- `backend/`: Mã nguồn Java (Root).
-- `frontend/`: Mã nguồn React (Root).
-- `contracts/`: File OpenAPI (Root).
-- `docs/`: Tài liệu quy trình và luật lệ cốt lõi.
-- `gates/`: Nơi lưu trữ các Kế hoạch (Plan) và file Ký duyệt (Sign-off).
-- `workspaces/`: Không gian ảo cho Agent (ba, sa, dev).
-- `scripts/`: Các tiện ích hỗ trợ.
+## Dau vao bat buoc cho moi Feature
+
+1. **Toi thieu 1 file HTML mau** — Export tu Figma.
+2. **File CSS mau** — Style cho HTML mau.
+3. **File Use Case MD** — Mo ta use case nghiep vu.
+4. (Tuy chon) Anh UI (`*.png`, `*.jpg`) — Visual reference cho Dev/QA.
+
+## Quy tac tu huyet
+
+- **Stage-Gate Process**: Khong nhay coc cong. Khong co G1 thi cam SA lam viec.
+- **Plan-First**: Luong sinh Plan trong `gates/` truoc khi hanh dong.
+- **Traceability**: Moi code va test phai map voi ID nghiep vu (`BIZ-xxx`, `VAL-xxx`).
+- **Frozen Artifacts**: File qua cong sign-off bi dong bang. Cam tu y sua.
+- **Context Sync**: Moi Agent phai cap nhat glossary khi phat hien thuat ngu moi.
+
+## Cong nghe
+
+| Layer | Tech |
+|-------|------|
+| Backend | Java 17 + Spring Boot 3 + Oracle 19c |
+| Frontend | React 18 + Vite + Tailwind CSS + shadcn/ui (micro-frontend) |
+| API Contract | OpenAPI 3.0.3 |
+| Architecture | Hexagonal (Ports & Adapters) |
+| CI/CD | GitHub Actions |
+
+## Cau truc Thu muc
+
+```
+├── backend/               # Java monolith (modules: ltt-core, bff, audit-service, ...)
+├── frontend/              # React micro-frontends (apps/shell, apps/ltt-ui)
+├── contracts/             # OpenAPI contract
+├── docs/                  # Tai lieu quy trinh, luat le, kien truc
+│   ├── ARCHITECTURE.md    # Kien truc he thong & danh muc services
+│   ├── CONTEXT.md         # Tu dien nen tang
+│   ├── RULES.md           # Luat chat luong & an toan
+│   ├── WORKFLOW.md        # Quy trinh 4 giai doan
+│   └── conventions/       # Quy tac dat ten
+├── features/              # Dac ta nghiep vu theo tinh nang (FT-001, FT-002, ...)
+├── gates/                 # Plan, Sign-off, Readiness check
+├── scripts/               # Tien ich verify (API contract, status alignment)
+└── workspaces/            # Khong gian lam viec cho tung Agent
+    ├── ba/                # BA Agent (Stage 1)
+    ├── sa/                # SA Agent (Stage 2)
+    ├── dev/               # Fullstack Dev Agent (Stage 3)
+    └── qa/                # QA Agent (Stage 4)
+```
+
+## Quick Start
+
+```bash
+# Backend
+cd backend && mvn clean install
+
+# Frontend
+cd frontend && pnpm install && pnpm build
+
+# Verify API contract alignment
+./scripts/verify-api-contract.sh
+
+# Verify status enum alignment (Java ↔ TypeScript ↔ OpenAPI)
+./scripts/verify-status-alignment.sh
+```
+
+## Tai lieu chinh
+
+- `CLAUDE.md` — Hien phap MARBO (master instruction cho AI agents)
+- `docs/WORKFLOW.md` — Quy trinh 4 giai doan chi tiet
+- `docs/ARCHITECTURE.md` — Kien truc he thong & service catalog
+- `docs/RULES.md` — Luat chat luong & an toan
+- `docs/CONTEXT.md` — Tu dien nen tang
