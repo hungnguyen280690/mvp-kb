@@ -35,3 +35,16 @@ Nếu thiếu file HTML mẫu, BA phải dừng và yêu cầu PO cung cấp.
 - Trước khi con người ký duyệt Gate G1, **SA Agent** phải đọc và xác nhận cả 3 file spec (`01_spec_field.md`, `01_spec_button.md`, `01_spec_function.md`) đủ rõ ràng để thiết kế (BA Cross-Review).
 - SA ghi kết quả review vào file `gates/FT-XXX-G1-ba-readiness.md`. Chỉ khi file này có status `APPROVED`, con người mới được ký `G1-ba-signoff.md`.
 - Nếu SA từ chối (`REJECTED`), BA phải sửa đặc tả theo feedback của SA.
+
+## 5. Fast-Track Audit-Only (ADR-020)
+
+Khi tính năng đã có đủ 4 file (`01_spec_field.md`, `01_spec_button.md`, `01_spec_function.md`, `01b-bdd-scenarios.md`), BA được phép bỏ qua bước sinh spec và chỉ cần:
+
+1. **Tra soát** 3 file spec so với HTML mẫu — xác nhận mọi trường, nút bấm, quy tắc đã cover.
+2. **Kiểm tra glossary** — xác nhận thuật ngữ mới đã cập nhật.
+3. Nếu OK → báo SA thực hiện Readiness Check như bình thường.
+4. Nếu phát hiện thiếu sót → phải sửa/bổ sung spec trước khi chuyển SA.
+
+Điều kiện áp dụng fast-track:
+- Đã có đủ 3 file spec + BDD scenarios trong `features/FT-XXX/`.
+- File HTML mẫu tồn tại để đối chiếu.

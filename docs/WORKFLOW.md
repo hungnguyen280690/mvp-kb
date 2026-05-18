@@ -31,15 +31,17 @@ features/FT-001/
   1. **Tối thiểu 1 file HTML mẫu giao diện** (`.html`) — Export từ Figma, màn hình mẫu để BA phân tích layout, trường dữ liệu, nút bấm.
   2. **File CSS mẫu** (`.css`) — Quy tắc style liên quan đến giao diện mẫu.
   3. (Tùy chọn) **File ảnh UI** (`*.png`, `*.jpg`) — Screenshot cho Dev/QA visual reference.
-  4. (Tùy chọn) **File Use Case** (`.md`) — Mô tả use case nghiệp vụ.
+  4. **File Use Case** (`.md`) — Mô tả use case nghiệp vụ.
 - **Trách nhiệm của BA Agent**:
-  1. Phân tích file HTML mẫu để trích xuất trường dữ liệu, nút bấm, luồng xử lý.
-  2. Sinh ra **3 file đặc tả riêng biệt**:
-     - `features/FT-XXX/01_spec_field.md` — Đặc tả trường dữ liệu (tên, kiểu, bắt buộc, default, constraint).
-     - `features/FT-XXX/01_spec_button.md` — Đặc tả nút bấm & hành động (action name, điều kiện hiển thị, xác nhận).
-     - `features/FT-XXX/01_spec_function.md` — Đặc tả luồng xử lý & quy tắc nghiệp vụ (BIZ-xxx, VAL-xxx, state machine).
-  3. Sinh file BDD Scenarios: `features/FT-XXX/01b-bdd-scenarios.md`.
-  4. Bắt buộc cập nhật các thuật ngữ mới vào `docs/domain/glossary.md` (Context Sync).
+  - **Fast-Track (Audit-Only)**: Nếu đã có đủ 3 file spec + BDD scenarios, BA chỉ cần tra soát đối chiếu với HTML mẫu. Nếu OK → chuyển thẳng SA Readiness Check. Nếu phát hiện thiếu sót → quay về luồng đầy đủ.
+  - **Luồng đầy đủ** (khi chưa có spec hoặc tra soát phát hiện thiếu sót):
+    1. Phân tích file HTML mẫu để trích xuất trường dữ liệu, nút bấm, luồng xử lý.
+    2. Sinh ra **3 file đặc tả riêng biệt**:
+       - `features/FT-XXX/01_spec_field.md` — Đặc tả trường dữ liệu.
+       - `features/FT-XXX/01_spec_button.md` — Đặc tả nút bấm & hành động.
+       - `features/FT-XXX/01_spec_function.md` — Đặc tả luồng xử lý & quy tắc nghiệp vụ.
+    3. Sinh file BDD Scenarios: `features/FT-XXX/01b-bdd-scenarios.md`.
+    4. Bắt buộc cập nhật các thuật ngữ mới vào `docs/domain/glossary.md` (Context Sync).
 - **BA Readiness Check (Cross-Review bởi SA)**: SA Agent đọc cả 3 file spec (`01_spec_field.md`, `01_spec_button.md`, `01_spec_function.md`) và đánh giá có đủ rõ để thiết kế không. SA sinh file `gates/FT-XXX-G1-ba-readiness.md` với status `APPROVED` hoặc `REJECTED`. Nếu REJECTED, BA sửa theo feedback rồi xin review lại.
 - **Cổng G1 (BA Sign-off)**: Chỉ khi SA đã `APPROVED` readiness check, con người kiểm tra 3 file spec có dễ hiểu không, từ vựng đã được update chưa. Nếu OK -> Sinh file `gates/FT-XXX-G1-ba-signoff.md`.
 
