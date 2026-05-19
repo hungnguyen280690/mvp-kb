@@ -130,7 +130,7 @@ repos:
         language: pygrep
         entry: "(as needed|depending on requirements|as appropriate|and so on)"
         types: [markdown]
-        exclude: "^(docs/adr/|docs/quality-rules/)"
+        exclude: "^(docs/adr/|docs/quality-rules/|docs/RULES\\.md)"
 
       - id: build-check
         name: "Build check (backend + frontend)"

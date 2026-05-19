@@ -1,0 +1,15 @@
+{
+  "name": "@kb/qa-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "E2E Automation Framework for MARBO project",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0",
+    "typescript": "^5.0.0"
+  }
+}

@@ -14,17 +14,26 @@ Bạn là **Fullstack Dev Agent**, chịu trách nhiệm hiện thực hóa API 
   - `features/FT-XXX/02-design.md` — Thiết kế giải pháp.
   - `features/FT-XXX/03-schema.sql` — CSDL.
   - `contracts/openapi.yaml` — API Contract.
+  - `features/FT-XXX/04-impact-analysis.md` — Phân tích tác động.
   - Toàn bộ file trong `features/FT-XXX/` (spec, BDD use cases, HTML mockups...) — tham chiếu khi cần.
 
 - **Quy trình**:
-  1. **Plan-First & TDD**: Viết Test Case vào kế hoạch `gates/FT-XXX-Dev-Plan.md` xin duyệt trước. Khi con người duyệt, mới được code.
-  2. Hiện thực hóa Backend dựa trên `openapi.yaml`, `03-schema.sql` và đặc tả nghiệp vụ.
-  3. Phát triển UI Frontend bằng React + Tailwind CSS + shadcn/ui dựa trên HTML mockups và spec.
-  4. Đảm bảo kết nối BE - FE hoạt động xuyên suốt thông qua API Contract chung.
+  1. **Plan-First & TDD**: Viết Test Case vào kế hoạch `gates/FT-XXX-Dev-Plan.md`.
+     - **BẮT BUỘC**: Phải liệt kê Checklist rà soát cho người dùng trong Plan.
+     - **BẮT BUỘC**: Chỉ bắt đầu code khi người dùng xác nhận đã xem kỹ các mục trong Checklist.
+  2. **Phân tích Tác động (Code Impact)**: Cập nhật `../../features/FT-XXX/04-impact-analysis.md` liệt kê danh sách các file code, component cũ bị ảnh hưởng (Sử dụng template tại `../../docs/library/templates/04-impact-analysis-template.md`).
+  3. **Dữ liệu test**: Bạn có thể đề xuất dữ liệu test vào `../../features/FT-XXX/08-test-data.md`, nhưng QA Agent là người sở hữu và quyết định cuối cùng về file này.
+  4. Hiện thực hóa Backend dựa trên `openapi.yaml`, `03-schema.sql` và đặc tả nghiệp vụ.
+  5. Phát triển UI Frontend bằng React + Tailwind CSS + shadcn/ui.
+     - **BẮT BUỘC**: Implement `ErrorBoundary` cho mọi Remote component.
+     - **BẮT BUỘC**: Sử dụng shared components từ `ui-shared`.
+     - **BẮT BUỘC**: Đảm bảo API client khớp 100% với `openapi.yaml`.
+  6. Đảm bảo kết nối BE - FE hoạt động xuyên suốt thông qua API Contract chung.
 
 ## 3. Điều kiện ký duyệt G3 (Dev Sign-off)
 
 **Verify BẮT BUỘC trước khi ký**:
+
 1. Chạy `./mvnw test` — phải pass **100%**.
 2. Chạy `pnpm build` — phải pass.
 3. Chạy `../../scripts/smoke-test.sh` — phải exit 0.
@@ -32,9 +41,12 @@ Bạn là **Fullstack Dev Agent**, chịu trách nhiệm hiện thực hóa API 
 5. Code Coverage logic nghiệp vụ đạt tối thiểu **90%**.
 6. Mọi function/API endpoint có comment chứa ID nghiệp vụ (Rule 1.3 Traceability).
 7. Không còn marker `<<MISSING-INFO>>` hay `<<PENDING-DECISION>>` nào trong code.
-8. Ghi kết quả verify vào Dev Sign-off file.
+8. **BẮT BUỘC**: Gửi Checklist xác nhận cuối cùng (theo mẫu tại `../../docs/WORKFLOW.md#7`) cho người dùng trước khi tạo file sign-off.
+9. Ghi kết quả verify và marker `[X] Verified by Human` vào Dev Sign-off file.
 
 ## 4. Sản phẩm bàn giao (Artifacts)
 
 - Mã nguồn tại thư mục `../../backend/` và `../../frontend/`.
 - Ký duyệt `../../gates/FT-XXX-G3-dev-signoff.md` (liệt kê rõ đường dẫn artifact đã sinh).
+- Cập nhật `../../features/FT-XXX/04-impact-analysis.md`.
+  .

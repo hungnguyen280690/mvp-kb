@@ -26,22 +26,53 @@ fi
 echo ""
 
 # ---------------------------------------------------------------------------
-# 2. Frontend build
+# 2. Frontend: Lint + TypeCheck + Test + Build
 # ---------------------------------------------------------------------------
-echo "[2/3] Frontend: pnpm build ..."
-if (cd "$ROOT_DIR/frontend" && pnpm build 2>&1); then
-  echo "[PASS] Frontend build"
+echo "[2/3] Frontend: Verifying quality ..."
+
+# 2.1 Lint
+echo "       - pnpm lint ..."
+if (cd "$ROOT_DIR/frontend" && pnpm lint 2>&1); then
+  echo "       [PASS] Lint"
 else
-  echo "[FAIL] Frontend build failed"
+  echo "       [FAIL] Lint failed"
+  FAIL=1
+fi
+
+# 2.2 Type check
+echo "       - pnpm typecheck ..."
+if (cd "$ROOT_DIR/frontend" && pnpm typecheck 2>&1); then
+  echo "       [PASS] Type check"
+else
+  echo "       [FAIL] Type check failed"
+  FAIL=1
+fi
+
+# 2.3 Unit tests
+echo "       - pnpm test ..."
+if (cd "$ROOT_DIR/frontend" && pnpm test --run 2>&1); then
+  echo "       [PASS] Unit tests"
+else
+  echo "       [FAIL] Unit tests failed"
+  FAIL=1
+fi
+
+# 2.4 Build
+echo "       - pnpm build ..."
+if (cd "$ROOT_DIR/frontend" && pnpm build 2>&1); then
+  echo "       [PASS] Build"
+else
+  echo "       [FAIL] Build failed"
   FAIL=1
 fi
 echo ""
+
 
 # ---------------------------------------------------------------------------
 # 3. Pre-commit hooks (dry-run check)
 # ---------------------------------------------------------------------------
 echo "[3/3] Pre-commit hooks check ..."
-if (cd "$ROOT_DIR" && git diff --cached --quiet 2>/dev/null; then
+if cd "$ROOT_DIR" && git diff --cached --quiet 2>/dev/null; then
   echo "[SKIP] No staged files to check"
 else
   echo "[INFO] Run 'pre-commit run --all-files' separately if needed"

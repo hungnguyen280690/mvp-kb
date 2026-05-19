@@ -24,26 +24,35 @@ Tài liệu này chứa các quy tắc bắt buộc áp dụng cho mọi Agent v
 - **Rule 3.3: Audit Trail.** Các thao tác tác động dữ liệu phải ghi log vào bảng Audit với cơ chế Hash Chain (PrevHash + Payload -> CurrentHash).
 - **Rule 3.4: Fail Fast & Negative Tests.** Các hàm logic phải bắt đầu bằng khối kiểm tra điều kiện (Guard Clauses). Phải có ít nhất một Negative Test Case cho mỗi quy tắc nghiệp vụ để chứng minh mã nguồn ném lỗi (Exception) đúng chỗ.
 - **Rule 3.5: Ready to Change (Low Coupling).** Mã nguồn phải module hóa, hàm nhỏ (dưới 20 dòng), không lặp lại (DRY). Phải sử dụng Interface cho tầng Service. Tuyệt đối không hardcode logic nghiệp vụ vào code.
+- **Rule 3.6: Frontend Integrity.** Code Frontend BẮT BUỘC phải vượt qua `pnpm lint` và `pnpm typecheck` trước khi Sign-off. 100% unit tests của component (nếu có) phải pass.
 
 ## 4. Quy tắc Kiểm thử (Test Rules)
 
-- **Rule 4.1: Coverage Target.** Độ bao phủ Unit Test (Code Coverage) phải đạt mức tối thiểu **90%** logic nghiệp vụ. Không cố ép 100% để tránh rác (junk tests).
+- **Rule 4.1: Coverage Target.** Độ bao phủ Unit Test (Code Coverage) cho Backend phải đạt mức tối thiểu **90%** logic nghiệp vụ.
 - **Rule 4.2: Frozen Test.** Kịch bản Test sau khi được duyệt tại Gate sẽ bị "đóng băng". Tuyệt đối không được sửa Test để lấp liếm lỗi code. Muốn sửa Test phải quay lại bước lập Plan.
 - **Rule 4.3: Isolation.** Unit Test không được kết nối database thật. Sử dụng Mocking/H2 Database.
 
 ## 5. Quy tắc Kiểm thử Cơ bản (Smoke Test Rules)
 
-- **Rule 5.1: Smoke Test.** Mọi tính năng phải có `scripts/smoke-test.sh` pass (build + unit test) trước khi xin Dev Sign-off (Gate G3).
-- **Rule 5.2: API Smoke Test.** Khi service đang chạy, mọi endpoint phải phản hồi HTTP 2xx. Kiểm tra bằng `scripts/smoke-api.sh`. Bắt buộc cho QA Sign-off (Gate G4).
-- **Rule 5.3: Test Data.** Mọi tính năng phải có file `features/FT-XXX/08-test-data.md` chứa dữ liệu mẫu để chạy test (INSERT SQL hoặc JSON payload).
-- **Rule 5.4: Plan-First for ALL Agents.** Mọi Agent (BA, SA, Dev, QA) BẮT BUỘC tạo Plan file trong `gates/` (`BA-Plan`, `SA-Plan`, `Dev-Plan`, `QA-Plan`) và chờ con người duyệt trước khi hành động.
+- **Rule 5.1: Smoke Test.** Mọi tính năng phải có `scripts/smoke-test.sh` pass (build + unit test BE/FE + lint/typecheck FE) trước khi xin Dev Sign-off (Gate G3).
+- **Rule 5.2: API Smoke Test.** Khi service đang chạy, mọi endpoint phải phản hồi HTTP 2xx. Kiểm tra bằng `scripts/smoke-api.sh`.
+- **Rule 5.3: UI Smoke Test.** Mọi tính năng UI phải vượt qua `scripts/smoke-ui.sh` để đảm bảo không bị lỗi màn hình trắng (White Screen).
+- **Rule 5.4: Test Data Ownership.** QA Agent là chủ sở hữu chính của file `features/FT-XXX/08-test-data.md`.
+- **Rule 5.5: Plan-First for ALL Agents.** Mọi Agent (BA, SA, Dev, QA) BẮT BUỘC tạo Plan file trong `gates/` (`BA-Plan`, `SA-Plan`, `Dev-Plan`, `QA-Plan`) và chờ con người duyệt trước khi hành động.
 
-## 6. Quy tắc Bảo mật (Security Rules)
+## 8. Quy tắc Trách nhiệm & Kiểm soát của Con người (Human Accountability)
 
-- **Rule 6.1: No Secrets.** Tuyệt đối không commit API Key, Password vào mã nguồn. Sử dụng `.env` hoặc Secret Manager.
-- **Rule 6.2: Data Masking.** Các thông tin nhạy cảm (Số tài khoản, Số CMT) phải được che (masking) khi hiển thị trên UI hoặc ghi log.
+Để đảm bảo việc ký duyệt và duyệt Plan không mang tính hình thức:
+
+- **Rule 8.1: Explicit Confirmation Checklist.** Trước khi kết thúc một Phase hoặc bắt đầu thực thi một Plan, Agent BẮT BUỘC phải đặt câu hỏi cho người dùng kèm theo danh sách các mục (Checklist) cần kiểm tra.
+- **Rule 8.2: Human Affirmation in Artifacts.** Trong file Plan (`*-Plan.md`) hoặc Gate Sign-off (`G*-signoff.md`), Agent phải ghi lại mục `[X] Human Verified: <Tên người dùng> đã xác nhận đã rà soát kỹ các nội dung...`. Chỉ khi có dòng này, file mới được coi là có hiệu lực.
+- **Rule 8.3: Re-verification on Plan Execution.** Khi người dùng ra lệnh "Execute Plan", Agent phải hỏi lại một lần nữa: "Bạn đã xem kỹ mục A, B, C trong Plan chưa?" và yêu cầu người dùng xác nhận rõ ràng trước khi Agent bắt đầu thay đổi mã nguồn.
+- **Rule 8.4: Audit of Reviewer Intent.** Mọi ý kiến phản hồi hoặc yêu cầu sửa đổi của con người trong quá trình Review phải được Agent ghi chú lại vào nhật ký thay đổi của file Plan/Gate để theo dõi lý do tại sao thiết kế/code thay đổi.
 
 ---
+
 ## Lịch sử Sửa đổi (Audit Log)
+
+- **2026-05-19** | **System** | Thêm Section 7 (MFE Safety) và Section 8 (Human Accountability).
 - **2026-05-18** | **System** | Thêm Section 5: Smoke Test Rules (5.1-5.4). Đổi Security Rules thành Section 6.
 - **2026-05-17** | **System** | Cập nhật Rule 1.4 (Context Evolution), Rule 2.1 (Schema.sql), Rule 3.1 (Tailwind CSS).

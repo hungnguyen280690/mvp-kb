@@ -310,6 +310,14 @@ gate_g4() {
       fail "smoke-test.sh failed"
     fi
   fi
+
+  # 5. QA Automation Tests (Playwright)
+  echo "--- QA Automation Tests (Playwright) ---"
+  if (cd "${ROOT_DIR}/frontend" && pnpm run test:e2e 2>&1); then
+    pass "QA Automation tests pass"
+  else
+    fail "QA Automation tests failed — check Playwright report for details"
+  fi
 }
 
 # ---------------------------------------------------------------------------
