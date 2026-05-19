@@ -103,12 +103,93 @@ _Mục tiêu: Xác định tác động đến quy trình nghiệp vụ và ngư
 
 _Mục tiêu: Xác định tác động đến kiến trúc, API và CSDL._
 
-**Chờ SA Agent (Stage 2) bổ sung sau khi BA hoàn thành G1.**
+### 2.1. Dịch vụ (Services) bị ảnh hưởng
 
-- **Dịch vụ (Services) bị ảnh hưởng:** _(SA sẽ điền)_
-- **API bị ảnh hưởng:** _(SA sẽ điền)_
-- **Cấu trúc dữ liệu (Database):** _(SA sẽ điền)_
-- **Bảo mật (Security):** _(SA sẽ điền)_
+| #   | Service                    | Loại tác động      | Chi tiết                                                                                                                                                       |
+| --- | -------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **`bff-service`**          | **Mở rộng**        | Thêm REST controller `/api/pay-out-manual/**` (20 endpoints). Validate JWT, aggregate DTO cho `ltt-ui`, proxy sang `ltt-service`. Mới hoàn toàn cho FT-001.    |
+| 2   | **`ltt-service`**          | **Mở rộng**        | Core domain logic: State Machine PayOrder, SoD guards, CCID validation (Caffeine cache), audit hash-chain writer, idempotency store. Mới hoàn toàn cho FT-001. |
+| 3   | **`audit-service`**        | **Tái sử dụng**    | MVP: logic audit merge vào `ltt-service` (embedded mode). Event outbox + hash-chain ghi trực tiếp `LTT_AUDIT_LOG`. Phase 2 tách riêng.                         |
+| 4   | **`master-data-service`**  | **Tái sử dụng**    | FT-001 gọi `/lookup/{type}` để lấy LOV.01..07 (Channel, Bank, Branch, Currency, Expense, Payment Type, COA Segments). Không thay đổi code.                     |
+| 5   | **`notification-service`** | **Tái sử dụng**    | FT-001 gọi POST `/notifications/inapp` khi chuyển trạng thái. Email → stub (log only MVP). Không thay đổi code.                                                |
+| 6   | **`integration-gateway`**  | **Không tác động** | Out of scope MVP. Phase 2 dùng khi đẩy APPROVED → Oracle EBS GL.                                                                                               |
+| 7   | **`ltt-ui` (React MFE)**   | **Mới**            | Micro-frontend mới: form 4 tab, list + filter, workflow stepper, attachment manager, export dialog, lookup popups.                                             |
+
+### 2.2. API bị ảnh hưởng
+
+| #   | Endpoint                                          | Method | Service   | Loại    | Auth Role                        |
+| --- | ------------------------------------------------- | ------ | --------- | ------- | -------------------------------- |
+| 1   | `/api/pay-out-manual`                             | POST   | bff → ltt | **Mới** | MAKER                            |
+| 2   | `/api/pay-out-manual/{id}`                        | GET    | bff → ltt | **Mới** | MAKER, CHECKER, APPROVER, VIEWER |
+| 3   | `/api/pay-out-manual/{id}`                        | PUT    | bff → ltt | **Mới** | MAKER (gốc)                      |
+| 4   | `/api/pay-out-manual/{id}`                        | DELETE | bff → ltt | **Mới** | MAKER (gốc)                      |
+| 5   | `/api/pay-out-manual/{id}/submit`                 | POST   | bff → ltt | **Mới** | MAKER                            |
+| 6   | `/api/pay-out-manual/{id}/check-approve`          | POST   | bff → ltt | **Mới** | CHECKER                          |
+| 7   | `/api/pay-out-manual/{id}/approve`                | POST   | bff → ltt | **Mới** | APPROVER                         |
+| 8   | `/api/pay-out-manual/{id}/return`                 | POST   | bff → ltt | **Mới** | CHECKER, APPROVER                |
+| 9   | `/api/pay-out-manual/{id}/reject`                 | POST   | bff → ltt | **Mới** | CHECKER, APPROVER                |
+| 10  | `/api/pay-out-manual/{id}/copy`                   | POST   | bff → ltt | **Mới** | MAKER                            |
+| 11  | `/api/pay-out-manual`                             | GET    | bff → ltt | **Mới** | MAKER, CHECKER, APPROVER, VIEWER |
+| 12  | `/api/pay-out-manual/export`                      | POST   | bff → ltt | **Mới** | MAKER, CHECKER, APPROVER, VIEWER |
+| 13  | `/api/pay-out-manual/{id}/attachments`            | POST   | bff → ltt | **Mới** | MAKER (DRAFT/RETURNED)           |
+| 14  | `/api/pay-out-manual/{id}/attachments`            | GET    | bff → ltt | **Mới** | Mọi role                         |
+| 15  | `/api/pay-out-manual/{id}/attachments/{attachId}` | GET    | bff → ltt | **Mới** | Mọi role                         |
+| 16  | `/api/pay-out-manual/{id}/attachments/{attachId}` | DELETE | bff → ltt | **Mới** | MAKER                            |
+| 17  | `/api/pay-out-manual/{id}/audit-log`              | GET    | bff → ltt | **Mới** | Mọi role                         |
+| 18  | `/api/pay-out-manual/{id}/approval-status`        | GET    | bff → ltt | **Mới** | Mọi role                         |
+| 19  | `/api/pay-out-manual/{id}/validate-ccid`          | POST   | bff → ltt | **Mới** | MAKER                            |
+| 20  | `/api/pay-out-manual/lookup/{type}`               | GET    | bff → ltt | **Mới** | Mọi role                         |
+
+**Tổng: 20 API endpoints mới**. Không endpoint cũ bị thay đổi.
+
+### 2.3. Cấu trúc dữ liệu (Database — Oracle 19c)
+
+| #   | Bảng                       | Loại    | Mô tả                                                                                                |
+| --- | -------------------------- | ------- | ---------------------------------------------------------------------------------------------------- |
+| 1   | `LTT_PAY_ORDER`            | **Mới** | Header lệnh thanh toán. PK UUID, 8 indexes, 11 CHECK constraints (SoD, enum, amount, delete reason). |
+| 2   | `LTT_PAY_ORDER_LINE`       | **Mới** | Chi tiết COA (12 segments). FK → LTT_PAY_ORDER.CASCADE.                                              |
+| 3   | `LTT_PAY_ORDER_ATTACHMENT` | **Mới** | File đính kèm. Soft-delete flag. FK → LTT_PAY_ORDER.CASCADE.                                         |
+| 4   | `LTT_PAY_ORDER_APPROVAL`   | **Mới** | Workflow history (append-only). FK → LTT_PAY_ORDER.CASCADE.                                          |
+| 5   | `LTT_AUDIT_LOG`            | **Mới** | Hash-chain audit. Immutable (trigger chặn UPDATE/DELETE). Sequence `SEQ_LTT_AUDIT_LOG`.              |
+| 6   | `LTT_IDEMPOTENCY_STORE`    | **Mới** | Idempotency key cache. TTL 24h.                                                                      |
+| 7   | `LTT_REF_NO_SEQUENCE`      | **Mới** | Sequence per (KBNN, YYYYMM) sinh REF_NO atomic.                                                      |
+
+**Không bảng cũ bị thay đổi.** Tất cả bảng mới dùng prefix `LTT_`.
+
+### 2.4. Bảo mật (Security Impact)
+
+| #   | Khía cạnh bảo mật          | Tác động                                                                           | Mitigation                                                        |
+| --- | -------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| 1   | **Authentication (JWT)**   | 20 endpoints mới cần Bearer token. `bff-service` verify signature + expiry.        | RS256 JWT, short-lived access token, refresh token rotation.      |
+| 2   | **Authorization (RBAC)**   | 13 permission codes mới: `PAY.OUT.MANUAL.*`. SoD rule: Maker ≠ Checker ≠ Approver. | Permission check ở bff + ltt layer. DB CHECK constraint failsafe. |
+| 3   | **Data Integrity**         | Race condition trên PayOrder khi concurrent edit.                                  | Optimistic lock (version + If-Match). HTTP 409 khi mismatch.      |
+| 4   | **Audit Trail**            | Mọi mutating action cần audit không thể sửa xoá.                                   | Hash-chain SHA-256, DB trigger immutable, append-only.            |
+| 5   | **PII Protection**         | CMND/CCCD, số tài khoản ngân hàng, địa chỉ người dùng.                             | Masking cho user không có VIEW_PII. Audit truy cập PII.           |
+| 6   | **File Upload Security**   | Attachment upload có thể bị lợi dụng upload malicious file.                        | Validate MIME + magic byte, size ≤10MB, SHA-256 hash.             |
+| 7   | **Idempotency**            | POST requests bị duplicate do network retry.                                       | X-Idempotency-Key + LTT_IDEMPOTENCY_STORE (ADR-0005).             |
+| 8   | **Cross-Tenant Isolation** | User ở KBNN_A có thể thấy data KBNN_B nếu query không filter.                      | KBNN_ID filter bắt buộc trong mọi query. JWT claim kbnnId.        |
+| 9   | **SQL Injection**          | REST endpoints nhận user input.                                                    | Parameterized queries (JPA), input validation, WAF.               |
+
+### 2.5. Tác động Hạ tầng (Infrastructure)
+
+| #   | Thành phần                 | Tác động                                                                               |
+| --- | -------------------------- | -------------------------------------------------------------------------------------- |
+| 1   | **Object Storage (MinIO)** | Cần cấu hình bucket `/ltt/` cho attachment storage. Policy lifecycle nếu cần cleanup.  |
+| 2   | **Oracle 19c**             | 7 bảng mới + 1 sequence + trigger. Ước tính ~10 indexes. Dung lượng ban đầu thấp.      |
+| 3   | **Service Mesh / mTLS**    | Nếu đã có: thêm config route cho 2 service mới (bff, ltt). Nếu chưa: dùng HTTP nội bộ. |
+| 4   | **Caffeine Cache**         | Cấu hình L1 cache cho COA validation (TTL 30 phút, max entries theo ADR-0006).         |
+| 5   | **S3-compatible Storage**  | Cần provision bucket cho attachment. IAM policy cho ltt-service read/write.            |
+
+### 2.6. Rủi ro Kỹ thuật (Technical Risks)
+
+| Mã          | Rủi ro                                                        | Mức độ         | Mitigation                                                                                 |
+| ----------- | ------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------ |
+| **R-SA-01** | REF_NO sequence bị hot-spot khi nhiều KBNN tạo lệnh đồng thời | **Trung bình** | Row-level lock per (KBNN, YYYYMM) — phân tán contention. Monitor lock wait time.           |
+| **R-SA-02** | Audit hash chain ảnh hưởng throughput khi write cao           | **Thấp**       | INSERT trong cùng transaction, in-memory cache last_hash_per_entity. Batch verify job.     |
+| **R-SA-03** | CCID Caffeine cache out-of-sync với DB master                 | **Trung bình** | TTL 30 phút ngắn; re-validate lúc Submit (server-side final guard). Phase 2 thêm Redis L2. |
+| **R-SA-04** | Export sync >50k records gây timeout                          | **Trung bình** | Cap 50k + warning UI. Phase 2 chuyển sang async export (outbox → worker).                  |
+| **R-SA-05** | Idempotency store đầy do không cleanup                        | **Thấp**       | TTL 24h. Cleanup batch job 1h/lần (infrastructure shared, out-of-scope FT-001).            |
+| **R-SA-06** | Bảng LTT_AUDIT_LOG tăng trưởng nhanh, ảnh hưởng storage       | **Thấp**       | Partitioning theo tháng (Phase 2). MVP không cần.                                          |
 
 ---
 
@@ -140,3 +221,4 @@ _Mục tiêu: Xác định phạm vi kiểm thử hồi quy dựa trên các tá
 ## Lịch sử Sửa đổi
 
 - **2026-05-19** | **BA Agent** | FT-001 | Khởi tạo file, hoàn thành Section 1 — Business Impact (quy trình, vai trò, báo cáo, rủi ro, phụ thuộc).
+- **2026-05-19** | **SA Agent** | FT-001 | Hoàn thành Section 2 — System Impact (services, API, DB, security, infrastructure, technical risks).

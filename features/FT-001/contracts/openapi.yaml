@@ -1,0 +1,2695 @@
+openapi: 3.1.0
+info:
+  title: PAY.OUT.MANUAL — Lệnh Thanh Toán Đi Thủ Công
+  description: >
+    API contract for FT-001: CRUD + Maker-Checker-Approver workflow
+    for manual payment orders. Covers 20 endpoints including order management,
+    workflow transitions, attachments, export, audit, CCID validation and lookup.
+  version: 1.0.0
+  contact:
+    name: SA Agent — FT-001
+  license:
+    name: Internal
+
+servers:
+  - url: https://api.khobac.local/v1
+    description: Production (BFF proxy)
+  - url: https://api-dev.khobac.local/v1
+    description: Development
+  - url: http://localhost:8080/v1
+    description: Local development
+
+tags:
+  - name: Orders
+    description: CRUD operations for payment orders
+  - name: Workflow
+    description: Maker-Checker-approver state transitions
+  - name: Attachments
+    description: File upload, download, list and delete
+  - name: Export
+    description: Excel / PDF / CSV export
+  - name: Lookup
+    description: Master-data lookup popups and CCID validation
+
+# ---------------------------------------------------------------------------
+# PATHS
+# ---------------------------------------------------------------------------
+paths:
+  # ── 1. POST /api/pay-out-manual  (Create) ────────────────────────────────
+  /api/pay-out-manual:
+    post:
+      operationId: createPayOutManual
+      summary: Create new payment order (DRAFT). REF_NO auto-generated.
+      tags: [Orders]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.CREATE]
+      parameters:
+        - $ref: "#/components/parameters/XIdempotencyKey"
+        - $ref: "#/components/parameters/XRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePayOrderRequest"
+            example:
+              CHANNEL: LNH
+              ORDER_TYPE: LTT_TRUCTIEP
+              LNH_TRANSACTION_TYPE: LTT01
+              SENDER: "07001"
+              RECEIVER: "08002"
+              PAYMENT_DATE: "2026-06-15"
+              AMOUNT: 50000000.00
+              CURRENCY_CODE: VND
+              DESCRIPTION: "Thanh toan hop dong dich vu tu van"
+              LINES:
+                - GL_SEGMENT1: "01"
+                  GL_SEGMENT2: "1561"
+                  GL_SEGMENT3: "7010110"
+                  GL_SEGMENT4: "1"
+                  GL_SEGMENT5: "130"
+                  GL_SEGMENT6: "251"
+                  GL_SEGMENT7: "5201"
+                  GL_SEGMENT8: "00000"
+                  GL_SEGMENT9: "00000"
+                  GL_SEGMENT10: "00"
+                  GL_SEGMENT11: "0700"
+                  GL_SEGMENT12: "000"
+                  LINE_DESCRIPTION: "Chi tu van du an X"
+                  LINE_AMOUNT: 50000000.00
+              SENDER_NAME: "Cong ty ABC"
+              SENDER_ADDRESS: "123 Le Loi, Quan 1, TP.HCM"
+              SENDER_GL_SEGMENT2: "1561"
+              SENDER_BANK_CODE: "07001"
+              SENDER_IDENTIFY_ID: "001234567890"
+              SENDER_ISSUED_DATE: "2020-01-15"
+              SENDER_ISSUED_PLACE: "CA TP.HCM"
+              RECEIVER_NAME: "Cong ty XYZ"
+              RECEIVER_ADDRESS: "456 Nguyen Trai, Quan 5, TP.HCM"
+              RECEIVER_GL_SEGMENT2: "3311"
+              RECEIVER_BANK_CODE: "08002"
+              RECEIVER_ACCOUNT_NAME: "Cong ty XYZ"
+      responses:
+        "201":
+          description: Order created in DRAFT status
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayOrderDetailResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    # ── 11. GET /api/pay-out-manual  (List) ─────────────────────────────────
+    get:
+      operationId: listPayOutManual
+      summary: List payment orders with filter, sort and pagination.
+      tags: [Orders]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.READ]
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+        - $ref: "#/components/parameters/SortParam"
+        - name: STATUS
+          in: query
+          description: Filter by status (comma-separated for multiple)
+          schema:
+            type: string
+          example: "DRAFT,READY_FOR_APPROVAL"
+        - name: CHANNEL
+          in: query
+          description: Filter by channel
+          schema:
+            $ref: "#/components/schemas/ChannelEnum"
+        - name: PAYMENT_DATE_FROM
+          in: query
+          description: Payment date range start (inclusive)
+          schema:
+            type: string
+            format: date
+          example: "2026-01-01"
+        - name: PAYMENT_DATE_TO
+          in: query
+          description: Payment date range end (inclusive)
+          schema:
+            type: string
+            format: date
+          example: "2026-12-31"
+        - name: AMOUNT_FROM
+          in: query
+          description: Minimum amount (inclusive)
+          schema:
+            type: number
+            format: double
+          example: 1000000
+        - name: AMOUNT_TO
+          in: query
+          description: Maximum amount (inclusive)
+          schema:
+            type: number
+            format: double
+          example: 500000000
+        - name: REF_NO
+          in: query
+          description: Partial match on REF_NO
+          schema:
+            type: string
+          example: "07001-202606"
+        - name: CREATED_BY
+          in: query
+          description: Filter by creator user ID
+          schema:
+            type: string
+            format: uuid
+        - name: KBNN_ID
+          in: query
+          description: Filter by KBNN ID
+          schema:
+            type: string
+          example: "07001"
+        - $ref: "#/components/parameters/XRequestId"
+      responses:
+        "200":
+          description: Paginated list of payment orders
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayOrderListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ── 12. POST /api/pay-out-manual/export  (Export) ────────────────────────
+  /api/pay-out-manual/export:
+    post:
+      operationId: exportPayOutManual
+      summary: Export payment orders to Excel, PDF or CSV (sync, max 50 000 rows).
+      tags: [Export]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.EXPORT]
+      parameters:
+        - $ref: "#/components/parameters/XIdempotencyKey"
+        - $ref: "#/components/parameters/XRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExportRequest"
+            example:
+              FORMAT: XLSX
+              FILTERS:
+                STATUS: ["DRAFT", "READY_FOR_APPROVAL"]
+                CHANNEL: "LNH"
+                PAYMENT_DATE_FROM: "2026-01-01"
+                PAYMENT_DATE_TO: "2026-12-31"
+              COLUMNS:
+                - REF_NO
+                - CHANNEL
+                - AMOUNT
+                - STATUS
+                - PAYMENT_DATE
+                - CREATED_BY
+                - CREATED_AT
+      responses:
+        "200":
+          description: Binary file download
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+            Content-Disposition:
+              schema:
+                type: string
+              description: 'attachment; filename="pay-out-manual-export.xlsx"'
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          description: Dataset exceeds 50 000 rows limit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ── 20. GET /api/pay-out-manual/lookup/{type}  (Lookup) ──────────────────
+  /api/pay-out-manual/lookup/{type}:
+    get:
+      operationId: lookupMasterData
+      summary: Master-data lookup popup (BANK, USER, DVQHNS, CURRENCY, COA).
+      tags: [Lookup]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.READ]
+      parameters:
+        - name: type
+          in: path
+          required: true
+          description: Lookup type
+          schema:
+            type: string
+            enum:
+              [
+                BANK,
+                USER,
+                DVQHNS,
+                CURRENCY,
+                COA,
+                ORDER_TYPE,
+                LNH_TRANSACTION_TYPE,
+                EXP_TYPE,
+                DOC_TYPE,
+              ]
+          example: BANK
+        - name: q
+          in: query
+          description: Search keyword (partial match)
+          schema:
+            type: string
+          example: "0700"
+        - name: parentCode
+          in: query
+          description: Parent code for hierarchical lookups (e.g. CHANNEL for ORDER_TYPE)
+          schema:
+            type: string
+          example: "LNH"
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+        - $ref: "#/components/parameters/XRequestId"
+      responses:
+        "200":
+          description: Lookup result list
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LookupResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ── Single-order endpoints ───────────────────────────────────────────────
+  /api/pay-out-manual/{id}:
+    # ── 2. GET detail ──────────────────────────────────────────────────────
+    get:
+      operationId: getPayOutManual
+      summary: View payment order detail. Returns ETag = F-VER.
+      tags: [Orders]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.READ]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/XRequestId"
+      responses:
+        "200":
+          description: Payment order detail
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayOrderDetailResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    # ── 3. PUT update ─────────────────────────────────────────────────────
+    put:
+      operationId: updatePayOutManual
+      summary: Update payment order (DRAFT or RETURNED_TO_MAKER). If-Match required.
+      tags: [Orders]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.UPDATE]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/IfMatch"
+        - $ref: "#/components/parameters/XIdempotencyKey"
+        - $ref: "#/components/parameters/XRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePayOrderRequest"
+      responses:
+        "200":
+          description: Order updated successfully
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayOrderDetailResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    # ── 4. DELETE soft-delete ──────────────────────────────────────────────
+    delete:
+      operationId: deletePayOutManual
+      summary: Soft-delete payment order. Body requires deleteReason and confirmed=true.
+      tags: [Orders]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.DELETE]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/IfMatch"
+        - $ref: "#/components/parameters/XIdempotencyKey"
+        - $ref: "#/components/parameters/XRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeletePayOrderRequest"
+            example:
+              DELETE_REASON: "Khach hang yeu cau huy lenh do nhap sai thong tin"
+              CONFIRMED: true
+      responses:
+        "200":
+          description: Order soft-deleted (STATUS = DELETED)
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayOrderDetailResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ── 5. POST submit ──────────────────────────────────────────────────────
+  /api/pay-out-manual/{id}/submit:
+    post:
+      operationId: submitPayOutManual
+      summary: Submit payment order for approval (DRAFT/RETURNED_TO_MAKER -> READY_FOR_APPROVAL).
+      tags: [Workflow]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.SUBMIT]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/IfMatch"
+        - $ref: "#/components/parameters/XIdempotencyKey"
+        - $ref: "#/components/parameters/XRequestId"
+      responses:
+        "200":
+          description: Order submitted. STATUS is now READY_FOR_APPROVAL.
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayOrderDetailResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ── 6. POST check-approve ───────────────────────────────────────────────
+  /api/pay-out-manual/{id}/check-approve:
+    post:
+      operationId: checkApprovePayOutManual
+      summary: Checker approves (READY_FOR_APPROVAL -> PENDING_APPROVER).
+      tags: [Workflow]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.CHECK]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/IfMatch"
+        - $ref: "#/components/parameters/XIdempotencyKey"
+        - $ref: "#/components/parameters/XRequestId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowActionRequest"
+      responses:
+        "200":
+          description: Checker approved. STATUS is now PENDING_APPROVER.
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayOrderDetailResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ── 7. POST approve ─────────────────────────────────────────────────────
+  /api/pay-out-manual/{id}/approve:
+    post:
+      operationId: approvePayOutManual
+      summary: Approver final approval (PENDING_APPROVER -> APPROVED).
+      tags: [Workflow]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.APPROVE]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/IfMatch"
+        - $ref: "#/components/parameters/XIdempotencyKey"
+        - $ref: "#/components/parameters/XRequestId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowActionRequest"
+      responses:
+        "200":
+          description: Order approved. STATUS is now APPROVED (final state).
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayOrderDetailResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ── 8. POST return ──────────────────────────────────────────────────────
+  /api/pay-out-manual/{id}/return:
+    post:
+      operationId: returnPayOutManual
+      summary: Return order to maker (READY_FOR_APPROVAL/PENDING_APPROVER -> RETURNED_TO_MAKER). Reason >= 10 chars.
+      tags: [Workflow]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.RETURN]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/IfMatch"
+        - $ref: "#/components/parameters/XIdempotencyKey"
+        - $ref: "#/components/parameters/XRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReturnRejectRequest"
+            example:
+              REASON: "Thieu thong tin nguoi nhan, vui long bo sung dia chi day du"
+      responses:
+        "200":
+          description: Order returned. STATUS is now RETURNED_TO_MAKER.
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayOrderDetailResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ── 9. POST reject ──────────────────────────────────────────────────────
+  /api/pay-out-manual/{id}/reject:
+    post:
+      operationId: rejectPayOutManual
+      summary: Reject order (READY_FOR_APPROVAL/PENDING_APPROVER -> REJECTED). Reason >= 10 chars.
+      tags: [Workflow]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.REJECT]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/IfMatch"
+        - $ref: "#/components/parameters/XIdempotencyKey"
+        - $ref: "#/components/parameters/XRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReturnRejectRequest"
+            example:
+              REASON: "Chung tu khong hop le, khong the phe duyet yeu cau nay"
+      responses:
+        "200":
+          description: Order rejected. STATUS is now REJECTED (final state).
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayOrderDetailResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ── 10. POST copy ───────────────────────────────────────────────────────
+  /api/pay-out-manual/{id}/copy:
+    post:
+      operationId: copyPayOutManual
+      summary: Clone an existing order into a new DRAFT.
+      tags: [Orders]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.CREATE]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/XIdempotencyKey"
+        - $ref: "#/components/parameters/XRequestId"
+      responses:
+        "201":
+          description: New DRAFT order created as a copy.
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayOrderDetailResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ── 13. POST attachments (upload) ───────────────────────────────────────
+  /api/pay-out-manual/{id}/attachments:
+    post:
+      operationId: uploadAttachment
+      summary: Upload a file attachment (multipart). Allowed only on DRAFT/RETURNED_TO_MAKER.
+      tags: [Attachments]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.UPDATE]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/XIdempotencyKey"
+        - $ref: "#/components/parameters/XRequestId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/UploadAttachmentRequest"
+      responses:
+        "201":
+          description: Attachment uploaded successfully
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttachmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          description: File exceeds 10 MB limit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    # ── 14. GET attachments (list) ─────────────────────────────────────────
+    get:
+      operationId: listAttachments
+      summary: List all attachments for a payment order.
+      tags: [Attachments]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.READ]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/XRequestId"
+      responses:
+        "200":
+          description: List of attachments
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttachmentListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ── 15. GET attachment by ID (download) & 16. DELETE attachment ──────────
+  /api/pay-out-manual/{id}/attachments/{attachId}:
+    get:
+      operationId: downloadAttachment
+      summary: Download an attachment file by ID.
+      tags: [Attachments]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.READ]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/AttachIdPath"
+        - $ref: "#/components/parameters/XRequestId"
+      responses:
+        "200":
+          description: Binary file download
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+            Content-Disposition:
+              schema:
+                type: string
+              description: 'attachment; filename="<FILE_NAME>"'
+            Content-Type:
+              schema:
+                type: string
+              description: MIME type of the file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    delete:
+      operationId: deleteAttachment
+      summary: Soft-delete an attachment. Allowed only on DRAFT/RETURNED_TO_MAKER.
+      tags: [Attachments]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.DELETE]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/AttachIdPath"
+        - $ref: "#/components/parameters/XIdempotencyKey"
+        - $ref: "#/components/parameters/XRequestId"
+      responses:
+        "200":
+          description: Attachment soft-deleted
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  MESSAGE:
+                    type: string
+                    example: "Attachment deleted successfully"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ── 17. GET audit-log ───────────────────────────────────────────────────
+  /api/pay-out-manual/{id}/audit-log:
+    get:
+      operationId: getAuditLog
+      summary: View audit history for a payment order.
+      tags: [Orders]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.READ]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+        - $ref: "#/components/parameters/XRequestId"
+      responses:
+        "200":
+          description: Paginated audit log entries
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ── 18. GET approval-status ─────────────────────────────────────────────
+  /api/pay-out-manual/{id}/approval-status:
+    get:
+      operationId: getApprovalStatus
+      summary: Workflow stepper — Maker -> Checker -> Approver timeline.
+      tags: [Workflow]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.READ]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/XRequestId"
+      responses:
+        "200":
+          description: Approval workflow steps
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalStatusResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ── 19. POST validate-ccid ──────────────────────────────────────────────
+  /api/pay-out-manual/{id}/validate-ccid:
+    post:
+      operationId: validateCCID
+      summary: Validate COA segment combination (debounce 300ms from FE).
+      tags: [Lookup]
+      security:
+        - BearerAuth: [PAY.OUT.MANUAL.CREATE]
+      parameters:
+        - $ref: "#/components/parameters/OrderIdPath"
+        - $ref: "#/components/parameters/XRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidateCCIDRequest"
+            example:
+              LINES:
+                - GL_SEGMENT1: "01"
+                  GL_SEGMENT2: "1561"
+                  GL_SEGMENT3: "7010110"
+                  GL_SEGMENT4: "1"
+                  GL_SEGMENT5: "130"
+                  GL_SEGMENT6: "251"
+                  GL_SEGMENT7: "5201"
+                  GL_SEGMENT8: "00000"
+                  GL_SEGMENT9: "00000"
+                  GL_SEGMENT10: "00"
+                  GL_SEGMENT11: "0700"
+                  GL_SEGMENT12: "000"
+      responses:
+        "200":
+          description: CCID validation result
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidateCCIDResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+# ===========================================================================
+# COMPONENTS
+# ===========================================================================
+components:
+  # ── Security Schemes ─────────────────────────────────────────────────────
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT Bearer token issued by VDBAS SSO.
+        Claims: sub (userId), roles[], kbnnId.
+
+  # ── Reusable Headers ─────────────────────────────────────────────────────
+  headers:
+    ETag:
+      description: Optimistic lock version (F-VER). Client must echo via If-Match for mutations.
+      schema:
+        type: string
+      example: '"3"'
+    XRequestId:
+      description: Echo of the X-Request-Id correlation header.
+      schema:
+        type: string
+        format: uuid
+
+  # ── Reusable Parameters ──────────────────────────────────────────────────
+  parameters:
+    OrderIdPath:
+      name: id
+      in: path
+      required: true
+      description: Payment order UUID (F-ID)
+      schema:
+        type: string
+        format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+    AttachIdPath:
+      name: attachId
+      in: path
+      required: true
+      description: Attachment UUID
+      schema:
+        type: string
+        format: uuid
+      example: "660e8400-e29b-41d4-a716-446655440099"
+
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: ETag value from previous GET (optimistic lock). Must match current F-VER.
+      schema:
+        type: string
+      example: '"3"'
+
+    XIdempotencyKey:
+      name: X-Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated UUID v4 for idempotent requests. Prevents duplicate processing.
+      schema:
+        type: string
+        format: uuid
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+
+    XRequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      description: Correlation ID for tracing across services. Auto-generated if not provided.
+      schema:
+        type: string
+        format: uuid
+
+    PageParam:
+      name: page
+      in: query
+      description: Page number (0-based)
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+    SizeParam:
+      name: size
+      in: query
+      description: Page size
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    SortParam:
+      name: sort
+      in: query
+      description: >
+        Sort specification. Format: FIELD,DIRECTION.
+        Multiple sorts: repeat parameter. Allowed fields: REF_NO, STATUS, AMOUNT, PAYMENT_DATE, CREATED_AT.
+      schema:
+        type: array
+        items:
+          type: string
+      style: form
+      explode: true
+      example: ["CREATED_AT,DESC", "AMOUNT,DESC"]
+
+  # ── Reusable Responses ───────────────────────────────────────────────────
+  responses:
+    BadRequest:
+      description: Validation error or malformed request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            TRACE_ID: "req_abc123"
+            TIMESTAMP: "2026-05-19T09:00:00+07:00"
+            CODE: "MSG-ERR-VALIDATION"
+            MESSAGE: "Dữ liệu không hợp lệ"
+            DETAILS:
+              - FIELD: "AMOUNT"
+                MESSAGE: "Phải lớn hơn 0"
+
+    Unauthorized:
+      description: Missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            TRACE_ID: "req_abc123"
+            TIMESTAMP: "2026-05-19T09:00:00+07:00"
+            CODE: "MSG-ERR-AUTH"
+            MESSAGE: "Token hết hạn hoặc không hợp lệ"
+
+    Forbidden:
+      description: Insufficient role/permission (SoD violation or wrong role)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            TRACE_ID: "req_abc123"
+            TIMESTAMP: "2026-05-19T09:00:00+07:00"
+            CODE: "MSG-ERR-PERMISSION"
+            MESSAGE: "Bạn không có quyền thực hiện thao tác này"
+            DETAILS:
+              - FIELD: "ROLE"
+                MESSAGE: "Required role CHECKER but user has MAKER"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            TRACE_ID: "req_abc123"
+            TIMESTAMP: "2026-05-19T09:00:00+07:00"
+            CODE: "MSG-ERR-NOTFOUND"
+            MESSAGE: "Không tìm thấy lệnh thanh toán"
+
+    Conflict:
+      description: Optimistic lock mismatch or invalid status transition
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            TRACE_ID: "req_abc123"
+            TIMESTAMP: "2026-05-19T09:00:00+07:00"
+            CODE: "MSG-ERR-LOCK"
+            MESSAGE: "Bản ghi đã bị thay đổi từ phiên khác. Vui lòng tải lại."
+            DETAILS:
+              - FIELD: "F-VER"
+                YOUR_VERSION: 3
+                CURRENT_VERSION: 5
+
+    UnprocessableEntity:
+      description: Idempotency key already used with different data
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            TRACE_ID: "req_abc123"
+            TIMESTAMP: "2026-05-19T09:00:00+07:00"
+            CODE: "MSG-ERR-IDEMPOTENCY"
+            MESSAGE: "Idempotency-Key đã được sử dụng cho dữ liệu khác"
+
+    InternalServerError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            TRACE_ID: "req_abc123"
+            TIMESTAMP: "2026-05-19T09:00:00+07:00"
+            CODE: "MSG-ERR-SYSTEM"
+            MESSAGE: "Lỗi hệ thống. Vui lòng thử lại sau."
+
+  # ── Schemas ──────────────────────────────────────────────────────────────
+  schemas:
+    # ── Enums ─────────────────────────────────────────────────────────────
+    StatusEnum:
+      type: string
+      enum:
+        - DRAFT
+        - READY_FOR_APPROVAL
+        - PENDING_APPROVER
+        - APPROVED
+        - RETURNED_TO_MAKER
+        - REJECTED
+        - DELETED
+      description: >
+        Payment order lifecycle states.
+        DRAFT/RETURNED_TO_MAKER are editable by original Maker.
+        DELETED is a soft-delete state (hidden from default list).
+        APPROVED and REJECTED are final states in MVP.
+
+    ChannelEnum:
+      type: string
+      enum:
+        - LNH
+        - TTSP
+        - LIEN_KHO_BAC
+      description: >
+        Payment channel.
+        LNH = Liên ngân hàng (inter-bank).
+        TTSP = Thanh toán song phương (bilateral).
+        LIEN_KHO_BAC = Liên Kho Bạc (treasury link).
+
+    LnhTransactionTypeEnum:
+      type: string
+      enum:
+        - LTT01
+        - LTT02
+        - LTT03
+        - LTT04
+      description: LNH transaction sub-type. Required when CHANNEL = LNH.
+
+    ExpTypeEnum:
+      type: string
+      enum:
+        - EXP01
+        - EXP02
+        - EXP03
+        - EXP04
+        - EXP05
+      description: Expense type code. Conditional based on ORDER_TYPE.
+
+    DocTypeEnum:
+      type: string
+      enum:
+        - CHUNG_TU_GOC
+        - HOP_DONG
+        - HOA_DON
+        - BANG_KE
+        - VAN_BAN_KHAC
+      description: Attachment document type classification.
+
+    ApprovalActionEnum:
+      type: string
+      enum:
+        - CREATE
+        - UPDATE
+        - SUBMIT
+        - CHECK_APPROVE
+        - APPROVE
+        - RETURN_BY_CHECKER
+        - REJECT_BY_CHECKER
+        - RETURN_BY_APPROVER
+        - REJECT_BY_APPROVER
+        - DELETE
+      description: Workflow action type in approval history.
+
+    PerformedRoleEnum:
+      type: string
+      enum:
+        - MAKER
+        - CHECKER
+        - APPROVER
+      description: Role that performed the workflow action.
+
+    ExportFormatEnum:
+      type: string
+      enum:
+        - XLSX
+        - PDF
+        - CSV
+      description: Export file format.
+
+    # ── Common reusable sub-schemas ───────────────────────────────────────
+    PaginationMeta:
+      type: object
+      properties:
+        TOTAL_ELEMENTS:
+          type: integer
+          format: int64
+          description: Total number of elements across all pages
+          example: 142
+        TOTAL_PAGES:
+          type: integer
+          description: Total number of pages
+          example: 8
+        NUMBER:
+          type: integer
+          description: Current page number (0-based)
+          example: 0
+        SIZE:
+          type: integer
+          description: Page size
+          example: 20
+
+    ErrorDetail:
+      type: object
+      description: Single field-level validation or business error detail
+      properties:
+        FIELD:
+          type: string
+          description: Field name or error category
+        MESSAGE:
+          type: string
+          description: Human-readable error detail
+      additionalProperties: true
+      example:
+        FIELD: "AMOUNT"
+        MESSAGE: "Phải lớn hơn 0"
+
+    ErrorResponse:
+      type: object
+      required: [TRACE_ID, TIMESTAMP, CODE, MESSAGE]
+      properties:
+        TRACE_ID:
+          type: string
+          description: Correlation ID for log tracing
+          example: "req_abc123"
+        TIMESTAMP:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp of the error
+          example: "2026-05-19T09:00:00+07:00"
+        CODE:
+          type: string
+          description: >
+            Application error code from spec section A9.
+            Examples: MSG-ERR-VALIDATION, MSG-ERR-AUTH, MSG-ERR-PERMISSION,
+            MSG-ERR-NOTFOUND, MSG-ERR-LOCK, MSG-ERR-STATUS, MSG-ERR-IDEMPOTENCY,
+            MSG-ERR-SYSTEM, MSG-ERR-SOD, MSG-ERR-CCID.
+          example: "MSG-ERR-LOCK"
+        MESSAGE:
+          type: string
+          description: Human-readable error message (Vietnamese)
+          example: "Bản ghi đã bị thay đổi từ phiên khác. Vui lòng tải lại."
+        DETAILS:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetail"
+          description: Optional list of field-level errors
+
+    # ── COA Line (PayOrderLine) ──────────────────────────────────────────
+    PayOrderLineRequest:
+      type: object
+      required:
+        - GL_SEGMENT2
+        - GL_SEGMENT3
+        - LINE_DESCRIPTION
+        - LINE_AMOUNT
+      properties:
+        GL_SEGMENT1:
+          type: string
+          maxLength: 2
+          default: "01"
+          description: "Segment 1 — Ma quy (LOV.07.1)"
+          example: "01"
+        GL_SEGMENT2:
+          type: string
+          minLength: 1
+          maxLength: 4
+          description: "Segment 2 — TK tu nhien (LOV.07.2). Required."
+          example: "1561"
+        GL_SEGMENT3:
+          type: string
+          minLength: 1
+          maxLength: 7
+          description: "Segment 3 — DVQHNS (LOV.07.3). Required."
+          example: "7010110"
+        GL_SEGMENT4:
+          type: string
+          maxLength: 1
+          description: "Segment 4 — Cap NS (LOV.07.4). Conditional."
+          example: "1"
+        GL_SEGMENT5:
+          type: string
+          maxLength: 3
+          default: "000"
+          description: "Segment 5 — Chuong (LOV.07.5)"
+          example: "130"
+        GL_SEGMENT6:
+          type: string
+          maxLength: 3
+          default: "000"
+          description: "Segment 6 — Nganh KT (LOV.07.6)"
+          example: "251"
+        GL_SEGMENT7:
+          type: string
+          maxLength: 4
+          default: "0000"
+          description: "Segment 7 — NDKT (LOV.07.7)"
+          example: "5201"
+        GL_SEGMENT8:
+          type: string
+          maxLength: 5
+          default: "00000"
+          description: "Segment 8 — DB (LOV.07.8)"
+          example: "00000"
+        GL_SEGMENT9:
+          type: string
+          maxLength: 5
+          default: "00000"
+          description: "Segment 9 — CTMT (LOV.07.9)"
+          example: "00000"
+        GL_SEGMENT10:
+          type: string
+          maxLength: 2
+          default: "00"
+          description: "Segment 10 — MN (LOV.07.10)"
+          example: "00"
+        GL_SEGMENT11:
+          type: string
+          maxLength: 4
+          default: "0000"
+          description: "Segment 11 — Kho bac (LOV.07.11)"
+          example: "0700"
+        GL_SEGMENT12:
+          type: string
+          maxLength: 3
+          default: "000"
+          description: "Segment 12 — DP (LOV.07.12)"
+          example: "000"
+        LINE_DESCRIPTION:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: "Line description / explanation"
+          example: "Chi tu van du an X"
+        LINE_AMOUNT:
+          type: number
+          format: double
+          exclusiveMinimum: 0
+          description: "Line amount. Sum of all lines must equal header AMOUNT."
+          example: 50000000.00
+
+    PayOrderLineResponse:
+      type: object
+      required:
+        - ID
+        - ORDER_ID
+        - LINE_NO
+        - GL_SEGMENT2
+        - GL_SEGMENT3
+        - LINE_DESCRIPTION
+        - LINE_AMOUNT
+      properties:
+        ID:
+          type: string
+          format: uuid
+          description: Line UUID
+        ORDER_ID:
+          type: string
+          format: uuid
+          description: Parent order UUID
+        LINE_NO:
+          type: integer
+          description: Sequential line number within the order
+          example: 1
+        GL_SEGMENT1:
+          type: string
+          maxLength: 2
+          example: "01"
+        GL_SEGMENT2:
+          type: string
+          maxLength: 4
+          example: "1561"
+        GL_SEGMENT3:
+          type: string
+          maxLength: 7
+          example: "7010110"
+        GL_SEGMENT4:
+          type: string
+          maxLength: 1
+          example: "1"
+        GL_SEGMENT5:
+          type: string
+          maxLength: 3
+          example: "130"
+        GL_SEGMENT6:
+          type: string
+          maxLength: 3
+          example: "251"
+        GL_SEGMENT7:
+          type: string
+          maxLength: 4
+          example: "5201"
+        GL_SEGMENT8:
+          type: string
+          maxLength: 5
+          example: "00000"
+        GL_SEGMENT9:
+          type: string
+          maxLength: 5
+          example: "00000"
+        GL_SEGMENT10:
+          type: string
+          maxLength: 2
+          example: "00"
+        GL_SEGMENT11:
+          type: string
+          maxLength: 4
+          example: "0700"
+        GL_SEGMENT12:
+          type: string
+          maxLength: 3
+          example: "000"
+        CCID_KEY:
+          type: string
+          maxLength: 50
+          description: Computed composite CCID cache key
+        LINE_DESCRIPTION:
+          type: string
+          maxLength: 500
+          example: "Chi tu van du an X"
+        LINE_AMOUNT:
+          type: number
+          format: double
+          example: 50000000.00
+        CREATED_AT:
+          type: string
+          format: date-time
+        UPDATED_AT:
+          type: string
+          format: date-time
+
+    # ── Sender Info ──────────────────────────────────────────────────────
+    SenderInfo:
+      type: object
+      required:
+        - SENDER_NAME
+        - SENDER_ADDRESS
+        - SENDER_GL_SEGMENT2
+        - SENDER_BANK_CODE
+      properties:
+        SENDER_NAME:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Payer/sender full name
+          example: "Cong ty ABC"
+        SENDER_ADDRESS:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Payer/sender address
+          example: "123 Le Loi, Quan 1, TP.HCM"
+        SENDER_GL_SEGMENT2:
+          type: string
+          minLength: 1
+          maxLength: 4
+          description: "TK tu nhien cua nguoi chuyen (LOV.07.2)"
+          example: "1561"
+        SENDER_NUM:
+          type: string
+          maxLength: 20
+          description: Customer code (Ma KH)
+        SENDER_BANK_CODE:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: Bank/treasury code where sender holds account
+          example: "07001"
+        SENDER_IDENTIFY_ID:
+          type: string
+          maxLength: 50
+          description: "ID number (CMND/CCCD/HC/Ma DN). If set, ISSUED_DATE and ISSUED_PLACE are required."
+          example: "001234567890"
+        SENDER_ISSUED_DATE:
+          type: string
+          format: date
+          description: "Required when SENDER_IDENTIFY_ID is set."
+          example: "2020-01-15"
+        SENDER_ISSUED_PLACE:
+          type: string
+          maxLength: 200
+          description: "Required when SENDER_IDENTIFY_ID is set."
+          example: "CA TP.HCM"
+        TPCP_CODE:
+          type: string
+          maxLength: 20
+          description: "Ma TPCP (government bond code). Required when ORDER_TYPE = lenh trai phieu chinh phu."
+
+    # ── Receiver Info ────────────────────────────────────────────────────
+    ReceiverInfo:
+      type: object
+      required:
+        - RECEIVER_NAME
+        - RECEIVER_GL_SEGMENT2
+        - RECEIVER_BANK_CODE
+        - RECEIVER_ACCOUNT_NAME
+      properties:
+        RECEIVER_NAME:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Payee/receiver full name
+          example: "Cong ty XYZ"
+        RECEIVER_ADDRESS:
+          type: string
+          maxLength: 500
+          description: Payee/receiver address
+          example: "456 Nguyen Trai, Quan 5, TP.HCM"
+        RECEIVER_GL_SEGMENT2:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: Account number of payee
+          example: "3311"
+        RECEIVER_BANK_CODE:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: Bank/treasury code where receiver holds account
+          example: "08002"
+        RECEIVER_ACCOUNT_NAME:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Account holder name
+          example: "Cong ty XYZ"
+        RECEIVER_IDENTIFY_ID:
+          type: string
+          maxLength: 50
+          description: "ID number. If set, ISSUED_DATE and ISSUED_PLACE are required."
+        RECEIVER_ISSUED_DATE:
+          type: string
+          format: date
+          description: "Required when RECEIVER_IDENTIFY_ID is set."
+        RECEIVER_ISSUED_PLACE:
+          type: string
+          maxLength: 200
+          description: "Required when RECEIVER_IDENTIFY_ID is set."
+
+    # ── Create Request (Tab B1.1 General + Lines + Sender + Receiver) ────
+    CreatePayOrderRequest:
+      type: object
+      required:
+        - CHANNEL
+        - SENDER
+        - RECEIVER
+        - PAYMENT_DATE
+        - AMOUNT
+        - DESCRIPTION
+        - LINES
+        - SENDER_NAME
+        - SENDER_ADDRESS
+        - SENDER_GL_SEGMENT2
+        - SENDER_BANK_CODE
+        - RECEIVER_NAME
+        - RECEIVER_GL_SEGMENT2
+        - RECEIVER_BANK_CODE
+        - RECEIVER_ACCOUNT_NAME
+      properties:
+        CHANNEL:
+          $ref: "#/components/schemas/ChannelEnum"
+        ORDER_TYPE:
+          type: string
+          maxLength: 30
+          description: "Order type (LOV.01.Channel_Type). Required when CHANNEL != LIEN_KHO_BAC."
+          example: "LTT_TRUCTIEP"
+        LNH_TRANSACTION_TYPE:
+          $ref: "#/components/schemas/LnhTransactionTypeEnum"
+        SENDER:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: "Ma NH/KB chuyen (sender institution code)"
+          example: "07001"
+        RECEIVER:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: "Ma NH/KB nhan (receiver institution code)"
+          example: "08002"
+        PAYMENT_DATE:
+          type: string
+          format: date
+          description: "Payment date. Must be within an OPEN accounting period."
+          example: "2026-06-15"
+        AMOUNT:
+          type: number
+          format: double
+          exclusiveMinimum: 0
+          description: "Total amount. Must equal sum of all LINE_AMOUNT values."
+          example: 50000000.00
+        CURRENCY_CODE:
+          type: string
+          maxLength: 3
+          default: "VND"
+          description: ISO 4217 currency code
+          example: "VND"
+        EXCHANGE_RATE:
+          type: number
+          format: double
+          description: "Required when CURRENCY_CODE != VND. Must be > 0."
+          example: 24500.00
+        ORIGIN_NUM:
+          type: string
+          maxLength: 50
+          description: "Chung tu goc number. Required when CHANNEL = TTSP."
+        TRANSACTION_DATE:
+          type: string
+          format: date
+          description: "Chung tu date. Required when CHANNEL = TTSP."
+        EXP_TYPE:
+          $ref: "#/components/schemas/ExpTypeEnum"
+        FN_CODE1:
+          type: string
+          maxLength: 3
+          description: "Foreign currency debit code. Conditional."
+        FN_CODE2:
+          type: string
+          maxLength: 3
+          description: "Foreign currency payment code. Conditional."
+        FN_AMOUNT:
+          type: number
+          format: double
+          description: "Foreign currency amount. Conditional."
+        DESCRIPTION:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Payment description (header level)
+          example: "Thanh toan hop dong dich vu tu van"
+        LINES:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/PayOrderLineRequest"
+          description: "COA detail lines (1..N). Sum of LINE_AMOUNT must equal AMOUNT."
+        # Sender info (Tab B1.3) inlined
+        SENDER_NAME:
+          type: string
+          maxLength: 200
+        SENDER_ADDRESS:
+          type: string
+          maxLength: 500
+        SENDER_GL_SEGMENT2:
+          type: string
+          maxLength: 4
+        SENDER_NUM:
+          type: string
+          maxLength: 20
+        SENDER_BANK_CODE:
+          type: string
+          maxLength: 20
+        SENDER_IDENTIFY_ID:
+          type: string
+          maxLength: 50
+        SENDER_ISSUED_DATE:
+          type: string
+          format: date
+        SENDER_ISSUED_PLACE:
+          type: string
+          maxLength: 200
+        TPCP_CODE:
+          type: string
+          maxLength: 20
+        # Receiver info (Tab B1.4) inlined
+        RECEIVER_NAME:
+          type: string
+          maxLength: 200
+        RECEIVER_ADDRESS:
+          type: string
+          maxLength: 500
+        RECEIVER_GL_SEGMENT2:
+          type: string
+          maxLength: 20
+        RECEIVER_BANK_CODE:
+          type: string
+          maxLength: 20
+        RECEIVER_ACCOUNT_NAME:
+          type: string
+          maxLength: 200
+        RECEIVER_IDENTIFY_ID:
+          type: string
+          maxLength: 50
+        RECEIVER_ISSUED_DATE:
+          type: string
+          format: date
+        RECEIVER_ISSUED_PLACE:
+          type: string
+          maxLength: 200
+
+    # ── Update Request ──────────────────────────────────────────────────
+    UpdatePayOrderRequest:
+      type: object
+      description: >
+        Partial or full update. All fields from CreatePayOrderRequest are accepted.
+        Only valid when STATUS is DRAFT or RETURNED_TO_MAKER.
+        Only the original Maker (CREATED_BY) can update.
+      properties:
+        CHANNEL:
+          $ref: "#/components/schemas/ChannelEnum"
+        ORDER_TYPE:
+          type: string
+          maxLength: 30
+        LNH_TRANSACTION_TYPE:
+          $ref: "#/components/schemas/LnhTransactionTypeEnum"
+        SENDER:
+          type: string
+          maxLength: 20
+        RECEIVER:
+          type: string
+          maxLength: 20
+        PAYMENT_DATE:
+          type: string
+          format: date
+        AMOUNT:
+          type: number
+          format: double
+          exclusiveMinimum: 0
+        CURRENCY_CODE:
+          type: string
+          maxLength: 3
+        EXCHANGE_RATE:
+          type: number
+          format: double
+        ORIGIN_NUM:
+          type: string
+          maxLength: 50
+        TRANSACTION_DATE:
+          type: string
+          format: date
+        EXP_TYPE:
+          $ref: "#/components/schemas/ExpTypeEnum"
+        FN_CODE1:
+          type: string
+          maxLength: 3
+        FN_CODE2:
+          type: string
+          maxLength: 3
+        FN_AMOUNT:
+          type: number
+          format: double
+        DESCRIPTION:
+          type: string
+          maxLength: 500
+        LINES:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/PayOrderLineRequest"
+          description: "Full replacement of COA lines. Sum must equal AMOUNT."
+        SENDER_NAME:
+          type: string
+          maxLength: 200
+        SENDER_ADDRESS:
+          type: string
+          maxLength: 500
+        SENDER_GL_SEGMENT2:
+          type: string
+          maxLength: 4
+        SENDER_NUM:
+          type: string
+          maxLength: 20
+        SENDER_BANK_CODE:
+          type: string
+          maxLength: 20
+        SENDER_IDENTIFY_ID:
+          type: string
+          maxLength: 50
+        SENDER_ISSUED_DATE:
+          type: string
+          format: date
+        SENDER_ISSUED_PLACE:
+          type: string
+          maxLength: 200
+        TPCP_CODE:
+          type: string
+          maxLength: 20
+        RECEIVER_NAME:
+          type: string
+          maxLength: 200
+        RECEIVER_ADDRESS:
+          type: string
+          maxLength: 500
+        RECEIVER_GL_SEGMENT2:
+          type: string
+          maxLength: 20
+        RECEIVER_BANK_CODE:
+          type: string
+          maxLength: 20
+        RECEIVER_ACCOUNT_NAME:
+          type: string
+          maxLength: 200
+        RECEIVER_IDENTIFY_ID:
+          type: string
+          maxLength: 50
+        RECEIVER_ISSUED_DATE:
+          type: string
+          format: date
+        RECEIVER_ISSUED_PLACE:
+          type: string
+          maxLength: 200
+
+    # ── Delete Request ──────────────────────────────────────────────────
+    DeletePayOrderRequest:
+      type: object
+      required:
+        - DELETE_REASON
+        - CONFIRMED
+      properties:
+        DELETE_REASON:
+          type: string
+          minLength: 10
+          maxLength: 500
+          description: "Reason for deletion. Must be 10-500 characters."
+          example: "Khach hang yeu cau huy lenh do nhap sai thong tin"
+        CONFIRMED:
+          type: boolean
+          description: "Must be true to confirm deletion."
+          example: true
+
+    # ── Workflow Action Request (check-approve, approve) ─────────────────
+    WorkflowActionRequest:
+      type: object
+      properties:
+        COMMENT:
+          type: string
+          maxLength: 500
+          description: Optional comment for the action
+          example: "Da kiem tra, dong y phe duyet"
+
+    # ── Return / Reject Request ─────────────────────────────────────────
+    ReturnRejectRequest:
+      type: object
+      required:
+        - REASON
+      properties:
+        REASON:
+          type: string
+          minLength: 10
+          maxLength: 500
+          description: "Reason for return/reject. Must be at least 10 characters."
+          example: "Thieu thong tin nguoi nhan, vui long bo sung dia chi day du"
+
+    # ── Pay Order Detail Response ───────────────────────────────────────
+    PayOrderDetailResponse:
+      type: object
+      required:
+        - ID
+        - VERSION
+        - STATUS
+        - REF_NO
+        - CHANNEL
+        - SENDER
+        - RECEIVER
+        - PAYMENT_DATE
+        - AMOUNT
+        - CURRENCY_CODE
+        - DESCRIPTION
+        - KBNN_ID
+        - CREATED_BY
+        - CREATED_AT
+        - LINES
+        - SENDER_NAME
+        - SENDER_ADDRESS
+        - SENDER_GL_SEGMENT2
+        - SENDER_BANK_CODE
+        - RECEIVER_NAME
+        - RECEIVER_GL_SEGMENT2
+        - RECEIVER_BANK_CODE
+        - RECEIVER_ACCOUNT_NAME
+      properties:
+        ID:
+          type: string
+          format: uuid
+          description: "F-ID: UUID primary key"
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        VERSION:
+          type: integer
+          format: int32
+          minimum: 1
+          description: "F-VER: Optimistic lock version"
+          example: 1
+        STATUS:
+          $ref: "#/components/schemas/StatusEnum"
+        REF_NO:
+          type: string
+          maxLength: 20
+          description: "Auto-generated reference number pattern <KBNN>-YYYYMM-<seq6>"
+          example: "07001-202605-000001"
+        CHANNEL:
+          $ref: "#/components/schemas/ChannelEnum"
+        ORDER_TYPE:
+          type: string
+          maxLength: 30
+          description: "Order type. NULL when CHANNEL = LIEN_KHO_BAC."
+          example: "LTT_TRUCTIEP"
+        LNH_TRANSACTION_TYPE:
+          $ref: "#/components/schemas/LnhTransactionTypeEnum"
+        SENDER:
+          type: string
+          maxLength: 20
+          description: "Ma NH/KB chuyen"
+          example: "07001"
+        RECEIVER:
+          type: string
+          maxLength: 20
+          description: "Ma NH/KB nhan"
+          example: "08002"
+        PAYMENT_DATE:
+          type: string
+          format: date
+          example: "2026-06-15"
+        AMOUNT:
+          type: number
+          format: double
+          example: 50000000.00
+        CURRENCY_CODE:
+          type: string
+          maxLength: 3
+          example: "VND"
+        EXCHANGE_RATE:
+          type: number
+          format: double
+          example: null
+        ORIGIN_NUM:
+          type: string
+          maxLength: 50
+          example: null
+        TRANSACTION_DATE:
+          type: string
+          format: date
+          example: null
+        EXP_TYPE:
+          $ref: "#/components/schemas/ExpTypeEnum"
+        FN_CODE1:
+          type: string
+          maxLength: 3
+        FN_CODE2:
+          type: string
+          maxLength: 3
+        FN_AMOUNT:
+          type: number
+          format: double
+        DESCRIPTION:
+          type: string
+          maxLength: 500
+          example: "Thanh toan hop dong dich vu tu van"
+        # Sender info (Tab B1.3)
+        SENDER_NAME:
+          type: string
+          maxLength: 200
+          example: "Cong ty ABC"
+        SENDER_ADDRESS:
+          type: string
+          maxLength: 500
+          example: "123 Le Loi, Quan 1, TP.HCM"
+        SENDER_GL_SEGMENT2:
+          type: string
+          maxLength: 4
+          example: "1561"
+        SENDER_NUM:
+          type: string
+          maxLength: 20
+        SENDER_BANK_CODE:
+          type: string
+          maxLength: 20
+          example: "07001"
+        SENDER_IDENTIFY_ID:
+          type: string
+          maxLength: 50
+        SENDER_ISSUED_DATE:
+          type: string
+          format: date
+        SENDER_ISSUED_PLACE:
+          type: string
+          maxLength: 200
+        TPCP_CODE:
+          type: string
+          maxLength: 20
+        # Receiver info (Tab B1.4)
+        RECEIVER_NAME:
+          type: string
+          maxLength: 200
+          example: "Cong ty XYZ"
+        RECEIVER_ADDRESS:
+          type: string
+          maxLength: 500
+          example: "456 Nguyen Trai, Quan 5, TP.HCM"
+        RECEIVER_GL_SEGMENT2:
+          type: string
+          maxLength: 20
+          example: "3311"
+        RECEIVER_BANK_CODE:
+          type: string
+          maxLength: 20
+          example: "08002"
+        RECEIVER_ACCOUNT_NAME:
+          type: string
+          maxLength: 200
+          example: "Cong ty XYZ"
+        RECEIVER_IDENTIFY_ID:
+          type: string
+          maxLength: 50
+        RECEIVER_ISSUED_DATE:
+          type: string
+          format: date
+        RECEIVER_ISSUED_PLACE:
+          type: string
+          maxLength: 200
+        # COA Lines
+        LINES:
+          type: array
+          items:
+            $ref: "#/components/schemas/PayOrderLineResponse"
+          description: "COA detail lines"
+        # Workflow attribution
+        KBNN_ID:
+          type: string
+          maxLength: 10
+          description: "KBNN ID owning this record"
+          example: "07001"
+        CREATED_BY:
+          type: string
+          format: uuid
+          description: "Original Maker user ID"
+          example: "user-1001-uuid"
+        CREATED_AT:
+          type: string
+          format: date-time
+          example: "2026-05-19T09:00:00+07:00"
+        CREATED_IP:
+          type: string
+          maxLength: 45
+        UPDATED_BY:
+          type: string
+          format: uuid
+        UPDATED_AT:
+          type: string
+          format: date-time
+        UPDATED_IP:
+          type: string
+          maxLength: 45
+        CHECKER_ID:
+          type: string
+          format: uuid
+          description: "User who performed Checker action"
+        CHECKER_ACTION_AT:
+          type: string
+          format: date-time
+        CHECKER_COMMENT:
+          type: string
+          maxLength: 500
+        APPROVER_ID:
+          type: string
+          format: uuid
+          description: "User who performed Approver action"
+        APPROVER_ACTION_AT:
+          type: string
+          format: date-time
+        APPROVER_COMMENT:
+          type: string
+          maxLength: 500
+        # Soft delete info
+        DELETE_REASON:
+          type: string
+          maxLength: 500
+        DELETED_BY:
+          type: string
+          format: uuid
+        DELETED_AT:
+          type: string
+          format: date-time
+        # Attachments summary
+        ATTACHMENT_COUNT:
+          type: integer
+          description: Number of active (non-deleted) attachments
+          example: 2
+
+    # ── Pay Order List Item (summary for list endpoint) ─────────────────
+    PayOrderListItem:
+      type: object
+      required:
+        - ID
+        - VERSION
+        - STATUS
+        - REF_NO
+        - CHANNEL
+        - PAYMENT_DATE
+        - AMOUNT
+        - CURRENCY_CODE
+        - DESCRIPTION
+        - KBNN_ID
+        - CREATED_BY
+        - CREATED_AT
+      properties:
+        ID:
+          type: string
+          format: uuid
+        VERSION:
+          type: integer
+          example: 1
+        STATUS:
+          $ref: "#/components/schemas/StatusEnum"
+        REF_NO:
+          type: string
+          example: "07001-202605-000001"
+        CHANNEL:
+          $ref: "#/components/schemas/ChannelEnum"
+        ORDER_TYPE:
+          type: string
+        SENDER:
+          type: string
+        RECEIVER:
+          type: string
+        PAYMENT_DATE:
+          type: string
+          format: date
+        AMOUNT:
+          type: number
+          format: double
+          example: 50000000.00
+        CURRENCY_CODE:
+          type: string
+          example: "VND"
+        DESCRIPTION:
+          type: string
+          example: "Thanh toan hop dong dich vu tu van"
+        KBNN_ID:
+          type: string
+          example: "07001"
+        CREATED_BY:
+          type: string
+          format: uuid
+        CREATED_AT:
+          type: string
+          format: date-time
+        UPDATED_AT:
+          type: string
+          format: date-time
+        CHECKER_ID:
+          type: string
+          format: uuid
+        APPROVER_ID:
+          type: string
+          format: uuid
+        SENDER_NAME:
+          type: string
+        RECEIVER_NAME:
+          type: string
+        ATTACHMENT_COUNT:
+          type: integer
+
+    # ── Pay Order List Response ─────────────────────────────────────────
+    PayOrderListResponse:
+      type: object
+      required:
+        - CONTENT
+        - PAGE
+      properties:
+        CONTENT:
+          type: array
+          items:
+            $ref: "#/components/schemas/PayOrderListItem"
+        PAGE:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    # ── Export Request ──────────────────────────────────────────────────
+    ExportRequest:
+      type: object
+      required:
+        - FORMAT
+      properties:
+        FORMAT:
+          $ref: "#/components/schemas/ExportFormatEnum"
+        FILTERS:
+          type: object
+          description: Same filter criteria as the list endpoint
+          properties:
+            STATUS:
+              type: array
+              items:
+                $ref: "#/components/schemas/StatusEnum"
+            CHANNEL:
+              $ref: "#/components/schemas/ChannelEnum"
+            PAYMENT_DATE_FROM:
+              type: string
+              format: date
+            PAYMENT_DATE_TO:
+              type: string
+              format: date
+            AMOUNT_FROM:
+              type: number
+              format: double
+            AMOUNT_TO:
+              type: number
+              format: double
+            REF_NO:
+              type: string
+            CREATED_BY:
+              type: string
+              format: uuid
+            KBNN_ID:
+              type: string
+        COLUMNS:
+          type: array
+          items:
+            type: string
+          description: Columns to include in export. Defaults to all if omitted.
+          example:
+            - REF_NO
+            - CHANNEL
+            - AMOUNT
+            - STATUS
+            - PAYMENT_DATE
+            - CREATED_BY
+            - CREATED_AT
+
+    # ── Attachment Schemas ──────────────────────────────────────────────
+    UploadAttachmentRequest:
+      type: object
+      required:
+        - FILE
+        - DOC_TYPE
+      properties:
+        FILE:
+          type: string
+          format: binary
+          description: "Binary file. Max 10 MB per file."
+        DOC_TYPE:
+          $ref: "#/components/schemas/DocTypeEnum"
+        NOTE:
+          type: string
+          maxLength: 250
+          description: Optional note for the attachment
+
+    AttachmentResponse:
+      type: object
+      required:
+        - ID
+        - ORDER_ID
+        - FILE_NAME
+        - DOC_TYPE
+        - FILE_PATH
+        - FILE_SIZE
+        - CONTENT_TYPE
+        - FILE_HASH
+        - UPLOADED_BY
+        - UPLOADED_AT
+      properties:
+        ID:
+          type: string
+          format: uuid
+          example: "660e8400-e29b-41d4-a716-446655440099"
+        ORDER_ID:
+          type: string
+          format: uuid
+        FILE_NAME:
+          type: string
+          maxLength: 255
+          example: "chung-tu-goc.pdf"
+        DOC_TYPE:
+          $ref: "#/components/schemas/DocTypeEnum"
+        NOTE:
+          type: string
+          maxLength: 250
+        FILE_PATH:
+          type: string
+          maxLength: 500
+          description: "Object storage path /ltt/{orderId}/{attachmentId}.{ext}"
+          example: "/ltt/550e.../660e....pdf"
+        FILE_SIZE:
+          type: integer
+          format: int64
+          description: "File size in bytes"
+          example: 1048576
+        CONTENT_TYPE:
+          type: string
+          maxLength: 100
+          description: MIME type
+          example: "application/pdf"
+        FILE_HASH:
+          type: string
+          maxLength: 64
+          description: "SHA-256 hash for integrity and deduplication"
+          example: "a1b2c3d4e5f6..."
+        UPLOADED_BY:
+          type: string
+          format: uuid
+        UPLOADED_AT:
+          type: string
+          format: date-time
+        IS_DELETED:
+          type: boolean
+          description: "Soft delete flag. Always false in upload response."
+          example: false
+
+    AttachmentListResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/AttachmentResponse"
+
+    # ── Audit Log Schemas ───────────────────────────────────────────────
+    AuditLogEntry:
+      type: object
+      required:
+        - ID
+        - ENTITY_TYPE
+        - ENTITY_ID
+        - ACTION
+        - PERFORMED_BY
+        - PERFORMED_AT
+        - HASH
+      properties:
+        ID:
+          type: integer
+          format: int64
+          description: Auto-generated sequence ID
+          example: 1001
+        ENTITY_TYPE:
+          type: string
+          maxLength: 50
+          description: "Entity type: PAY_ORDER, PAY_ORDER_LINE, PAY_ORDER_ATTACHMENT"
+          example: "PAY_ORDER"
+        ENTITY_ID:
+          type: string
+          format: uuid
+          description: Entity UUID
+        ACTION:
+          type: string
+          maxLength: 30
+          description: "Action: CREATE, UPDATE, DELETE, SUBMIT, APPROVE, REJECT, RETURN, ATTACH_UPLOAD, ..."
+          example: "UPDATE"
+        PERFORMED_BY:
+          type: string
+          format: uuid
+          description: User who performed the action
+        PERFORMED_AT:
+          type: string
+          format: date-time
+        IP_ADDRESS:
+          type: string
+          maxLength: 45
+        USER_AGENT:
+          type: string
+          maxLength: 500
+        TRACE_ID:
+          type: string
+          maxLength: 64
+          description: Correlation X-Request-Id
+        OLD_VALUE:
+          type: string
+          description: "JSON snapshot before change (null for CREATE)"
+        NEW_VALUE:
+          type: string
+          description: "JSON snapshot after change (null for DELETE)"
+        VERSION_BEFORE:
+          type: integer
+        VERSION_AFTER:
+          type: integer
+        PREV_HASH:
+          type: string
+          maxLength: 64
+          description: "SHA-256 of previous entry (same entity_id)"
+        HASH:
+          type: string
+          maxLength: 64
+          description: "SHA-256 of current entry"
+        GENERATED_BY:
+          type: string
+          maxLength: 20
+          description: "'HUMAN' or 'AI_AGENT'"
+          example: "HUMAN"
+
+    AuditLogListResponse:
+      type: object
+      required:
+        - CONTENT
+        - PAGE
+      properties:
+        CONTENT:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLogEntry"
+        PAGE:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    # ── Approval Status Schemas ─────────────────────────────────────────
+    ApprovalStep:
+      type: object
+      required:
+        - STEP_NO
+        - ACTION
+        - TO_STATUS
+        - PERFORMED_BY
+        - PERFORMED_ROLE
+        - PERFORMED_AT
+      properties:
+        STEP_NO:
+          type: integer
+          description: Sequential step number
+          example: 1
+        ACTION:
+          $ref: "#/components/schemas/ApprovalActionEnum"
+        FROM_STATUS:
+          $ref: "#/components/schemas/StatusEnum"
+        TO_STATUS:
+          $ref: "#/components/schemas/StatusEnum"
+        PERFORMED_BY:
+          type: string
+          format: uuid
+          description: User who performed this step
+        PERFORMED_ROLE:
+          $ref: "#/components/schemas/PerformedRoleEnum"
+        PERFORMED_AT:
+          type: string
+          format: date-time
+        PERFORMED_IP:
+          type: string
+          maxLength: 45
+        REASON:
+          type: string
+          maxLength: 500
+          description: Reason (for return/reject steps)
+        VERSION_BEFORE:
+          type: integer
+        VERSION_AFTER:
+          type: integer
+
+    ApprovalStatusResponse:
+      type: object
+      required:
+        - ORDER_ID
+        - CURRENT_STATUS
+        - STEPS
+      properties:
+        ORDER_ID:
+          type: string
+          format: uuid
+        CURRENT_STATUS:
+          $ref: "#/components/schemas/StatusEnum"
+        STEPS:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApprovalStep"
+          description: Ordered list of all workflow steps performed on this order
+
+    # ── CCID Validation Schemas ─────────────────────────────────────────
+    ValidateCCIDRequest:
+      type: object
+      required:
+        - LINES
+      properties:
+        LINES:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - GL_SEGMENT2
+              - GL_SEGMENT3
+            properties:
+              GL_SEGMENT1:
+                type: string
+                maxLength: 2
+                default: "01"
+              GL_SEGMENT2:
+                type: string
+                maxLength: 4
+              GL_SEGMENT3:
+                type: string
+                maxLength: 7
+              GL_SEGMENT4:
+                type: string
+                maxLength: 1
+              GL_SEGMENT5:
+                type: string
+                maxLength: 3
+                default: "000"
+              GL_SEGMENT6:
+                type: string
+                maxLength: 3
+                default: "000"
+              GL_SEGMENT7:
+                type: string
+                maxLength: 4
+                default: "0000"
+              GL_SEGMENT8:
+                type: string
+                maxLength: 5
+                default: "00000"
+              GL_SEGMENT9:
+                type: string
+                maxLength: 5
+                default: "00000"
+              GL_SEGMENT10:
+                type: string
+                maxLength: 2
+                default: "00"
+              GL_SEGMENT11:
+                type: string
+                maxLength: 4
+                default: "0000"
+              GL_SEGMENT12:
+                type: string
+                maxLength: 3
+                default: "000"
+          description: COA segment combinations to validate
+
+    ValidateCCIDLineResult:
+      type: object
+      properties:
+        LINE_INDEX:
+          type: integer
+          description: 0-based index of the line in the request
+          example: 0
+        CCID_KEY:
+          type: string
+          description: Computed composite key
+        VALID:
+          type: boolean
+          description: Whether this COA combination is valid
+          example: true
+        ERRORS:
+          type: array
+          items:
+            type: object
+            properties:
+              SEGMENT:
+                type: string
+                description: Which segment has an error
+                example: "GL_SEGMENT5"
+              MESSAGE:
+                type: string
+                description: Error description
+                example: "Chuong khong ton tai trong DMHT_COA_MATRIX"
+          description: List of validation errors for this line
+
+    ValidateCCIDResponse:
+      type: object
+      required:
+        - VALID
+        - RESULTS
+      properties:
+        VALID:
+          type: boolean
+          description: True if all lines are valid
+          example: true
+        RESULTS:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidateCCIDLineResult"
+
+    # ── Lookup Schemas ──────────────────────────────────────────────────
+    LookupItem:
+      type: object
+      required:
+        - CODE
+        - NAME
+      properties:
+        CODE:
+          type: string
+          description: Unique code value
+          example: "07001"
+        NAME:
+          type: string
+          description: Display name
+          example: "KBNN TP Ho Chi Minh"
+        PARENT_CODE:
+          type: string
+          description: Parent code for hierarchical data
+        EXTRA:
+          type: object
+          description: Additional type-specific attributes
+          additionalProperties: true
+
+    LookupResponse:
+      type: object
+      required:
+        - CONTENT
+        - PAGE
+      properties:
+        CONTENT:
+          type: array
+          items:
+            $ref: "#/components/schemas/LookupItem"
+        PAGE:
+          $ref: "#/components/schemas/PaginationMeta"
