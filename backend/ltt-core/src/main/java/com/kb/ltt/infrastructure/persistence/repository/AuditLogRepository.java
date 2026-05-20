@@ -16,4 +16,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLogEntity, Long> 
 
     /** Latest entry for a given entity — used to fetch prevHash for next entry. */
     Optional<AuditLogEntity> findTopByEntityIdOrderByPerformedAtDesc(String entityId);
+
+    /** Count all audit entries for a given entity — used for pagination in AuditLogQueryUseCase. */
+    long countByEntityId(String entityId);
 }
