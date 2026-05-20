@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useAppNavigate } from "../hooks/useAppNavigate";
 import type {
   OrderStatus,
   PayOrderLineRequest,
@@ -105,7 +106,7 @@ function getAvailableActions(status: OrderStatus): {
 
 function PayOutManualViewInner() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const nav = useAppNavigate();
 
   const { data: order, loading, error, refetch } = useOrder(id || null);
   const attachmentsHook = useAttachments(id || null);
@@ -167,11 +168,11 @@ function PayOutManualViewInner() {
     if (!id) return;
     try {
       const result = await workflowHook.execute({ action: "copy", id });
-      navigate(`/${result.ID}`);
+      nav.toView(result.ID);
     } catch (err) {
       console.error("Copy failed:", err);
     }
-  }, [id, workflowHook, navigate]);
+  }, [id, workflowHook, nav]);
 
   const openReasonModal = useCallback(
     (action: "return" | "reject" | "delete") => {
@@ -198,7 +199,7 @@ function PayOutManualViewInner() {
         }
         setReasonModalOpen(false);
         if (reasonModalAction === "delete") {
-          navigate("/");
+          nav.toHome();
         } else {
           refetch();
         }
@@ -208,16 +209,16 @@ function PayOutManualViewInner() {
         setReasonModalLoading(false);
       }
     },
-    [id, reasonModalAction, deleteHook, workflowHook, navigate, refetch],
+    [id, reasonModalAction, deleteHook, workflowHook, nav, refetch],
   );
 
   const handleEdit = useCallback(() => {
-    if (id) navigate(`/${id}/edit`);
-  }, [id, navigate]);
+    if (id) nav.toEdit(id);
+  }, [id, nav]);
 
   const handleBack = useCallback(() => {
-    navigate("/");
-  }, [navigate]);
+    nav.toHome();
+  }, [nav]);
 
   // Convert order to form data for read-only tabs
   const formData = useMemo((): Partial<CreateOrderRequest> => {
@@ -520,7 +521,7 @@ function PayOutManualViewInner() {
               order.STATUS === "PENDING_APPROVER") && (
               <button
                 type="button"
-                onClick={() => id && navigate(`/${id}/approve`)}
+                onClick={() => id && nav.toApprove(id)}
                 className="flex h-8 items-center gap-1 rounded bg-[#137333] px-4 text-[12.5px] font-semibold text-white transition-colors hover:brightness-[0.92]"
               >
                 Phê duyệt chi tiết

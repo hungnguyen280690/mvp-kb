@@ -71,6 +71,7 @@ export function ReceiverTab({
             type="text"
             value={data.RECEIVER_NAME || ""}
             onChange={handleChange("RECEIVER_NAME")}
+            maxLength={200}
             className={inputCls}
             readOnly={readOnly}
             placeholder="Nhập tên người hưởng…"
@@ -87,6 +88,7 @@ export function ReceiverTab({
             type="text"
             value={data.RECEIVER_ADDRESS || ""}
             onChange={handleChange("RECEIVER_ADDRESS")}
+            maxLength={500}
             className={inputCls}
             readOnly={readOnly}
             placeholder="Nhập địa chỉ…"
@@ -103,6 +105,7 @@ export function ReceiverTab({
               type="text"
               value={data.RECEIVER_GL_SEGMENT2 || ""}
               onChange={handleChange("RECEIVER_GL_SEGMENT2")}
+              maxLength={20}
               className={inputCls}
               readOnly={readOnly}
               placeholder="Mã ĐVQHNS…"
@@ -143,6 +146,7 @@ export function ReceiverTab({
               type="text"
               value={data.RECEIVER_BANK_CODE || ""}
               onChange={handleChange("RECEIVER_BANK_CODE")}
+              maxLength={20}
               className={inputCls}
               readOnly={readOnly}
               placeholder="Mã ngân hàng…"
@@ -182,6 +186,7 @@ export function ReceiverTab({
             type="text"
             value={data.RECEIVER_ACCOUNT_NAME || ""}
             onChange={handleChange("RECEIVER_ACCOUNT_NAME")}
+            maxLength={200}
             className={inputCls}
             readOnly={readOnly}
             placeholder="Nhập tên tài khoản…"
@@ -198,6 +203,7 @@ export function ReceiverTab({
             type="text"
             value={data.RECEIVER_IDENTIFY_ID || ""}
             onChange={handleChange("RECEIVER_IDENTIFY_ID")}
+            maxLength={50}
             className={inputCls}
             readOnly={readOnly}
             placeholder="Nhập số giấy tờ…"
@@ -223,6 +229,7 @@ export function ReceiverTab({
             type="text"
             value={data.RECEIVER_ISSUED_PLACE || ""}
             onChange={handleChange("RECEIVER_ISSUED_PLACE")}
+            maxLength={200}
             className={inputCls}
             readOnly={readOnly}
             placeholder="Nhập nơi cấp…"

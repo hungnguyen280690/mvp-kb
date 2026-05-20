@@ -15,7 +15,6 @@ import java.time.OffsetDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class PayOrderApprovalEntity {
 
     @Id

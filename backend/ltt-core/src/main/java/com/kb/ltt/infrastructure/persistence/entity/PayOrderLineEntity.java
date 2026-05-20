@@ -16,7 +16,6 @@ import java.time.OffsetDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class PayOrderLineEntity {
 
     @Id
@@ -32,7 +31,6 @@ public class PayOrderLineEntity {
 
     // 12 COA segments
     @Column(name = "GL_SEGMENT1", length = 2)
-    @Builder.Default
     private String glSegment1 = "01";
 
     @Column(name = "GL_SEGMENT2", length = 4, nullable = false)
@@ -45,35 +43,27 @@ public class PayOrderLineEntity {
     private String glSegment4;
 
     @Column(name = "GL_SEGMENT5", length = 3)
-    @Builder.Default
     private String glSegment5 = "000";
 
     @Column(name = "GL_SEGMENT6", length = 3)
-    @Builder.Default
     private String glSegment6 = "000";
 
     @Column(name = "GL_SEGMENT7", length = 4)
-    @Builder.Default
     private String glSegment7 = "0000";
 
     @Column(name = "GL_SEGMENT8", length = 5)
-    @Builder.Default
     private String glSegment8 = "00000";
 
     @Column(name = "GL_SEGMENT9", length = 5)
-    @Builder.Default
     private String glSegment9 = "00000";
 
     @Column(name = "GL_SEGMENT10", length = 2)
-    @Builder.Default
     private String glSegment10 = "00";
 
     @Column(name = "GL_SEGMENT11", length = 4)
-    @Builder.Default
     private String glSegment11 = "0000";
 
     @Column(name = "GL_SEGMENT12", length = 3)
-    @Builder.Default
     private String glSegment12 = "000";
 
     @Column(name = "CCID_KEY", length = 50)

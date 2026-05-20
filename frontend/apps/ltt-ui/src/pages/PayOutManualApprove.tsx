@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useAppNavigate } from "../hooks/useAppNavigate";
 import {
   useOrder,
   useWorkflowAction,
@@ -55,7 +56,7 @@ const SEGMENT_KEYS = [
 
 function PayOutManualApproveInner() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const nav = useAppNavigate();
 
   const { data: order, loading, error } = useOrder(id || null);
   const approvalStatusHook = useApprovalStatus(id || null);
@@ -78,11 +79,11 @@ function PayOutManualApproveInner() {
     if (!id) return;
     try {
       await workflowHook.execute({ action: approveAction, id });
-      navigate(`/${id}`);
+      nav.toView(id);
     } catch (err) {
       console.error("Approve failed:", err);
     }
-  }, [id, approveAction, workflowHook, navigate]);
+  }, [id, approveAction, workflowHook, nav]);
 
   const openReasonModal = useCallback((action: "return" | "reject") => {
     setReasonAction(action);
@@ -96,20 +97,20 @@ function PayOutManualApproveInner() {
       try {
         await workflowHook.execute({ action: reasonAction, id, reason });
         setReasonModalOpen(false);
-        navigate(`/${id}`);
+        nav.toView(id);
       } catch (err) {
         console.error(`${reasonAction} failed:`, err);
       } finally {
         setReasonLoading(false);
       }
     },
-    [id, reasonAction, workflowHook, navigate],
+    [id, reasonAction, workflowHook, nav],
   );
 
   const handleBack = useCallback(() => {
-    if (id) navigate(`/${id}`);
-    else navigate("/");
-  }, [id, navigate]);
+    if (id) nav.toView(id);
+    else nav.toHome();
+  }, [id, nav]);
 
   if (loading) {
     return (
@@ -146,7 +147,7 @@ function PayOutManualApproveInner() {
       <nav className="mb-3 bg-white px-5 py-2 text-[12px]">
         <span
           className="cursor-pointer text-[#0b5394]"
-          onClick={() => navigate("/")}
+          onClick={() => nav.toHome()}
         >
           Lệnh thanh toán đi
         </span>

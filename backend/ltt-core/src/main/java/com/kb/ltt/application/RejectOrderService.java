@@ -2,27 +2,23 @@ package com.kb.ltt.application;
 
 import com.kb.ltt.domain.PayOrder;
 import com.kb.ltt.domain.enums.OrderStatus;
-import com.kb.ltt.domain.exception.*;
+import com.kb.ltt.domain.enums.PerformedRole;
+import com.kb.ltt.domain.exception.ResourceNotFoundException;
+import com.kb.ltt.port.in.PayOrderResponse;
 import com.kb.ltt.port.in.RejectOrderUseCase;
+import com.kb.ltt.port.in.ReturnRejectCommand;
 import com.kb.ltt.port.out.*;
-import com.kb.ltt.interfaces.rest.dto.PayOrderResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 
 /**
- * Reject order use case implementation.
- * By Checker or Approver. READY_FOR_APPROVAL/PENDING_APPROVER -> REJECTED.
- * Reason >= 10 chars required.
- *
- * BDD coverage:
- * - bdd-07-return-reject.md — Scenario 5: Checker rejects — happy path
- * - bdd-07-return-reject.md — Scenario 6: Approver rejects — happy path
- * - bdd-07-return-reject.md — Scenario 7: Reason too short — reject
- * - bdd-07-return-reject.md — Scenario 8: SoD violation — same user as Maker
+ * Reject order: READY_FOR_APPROVAL/PENDING_APPROVER -> REJECTED.
+ * BDD: bdd-04-scenario-02 (Checker reject), bdd-04-scenario-04 (Approver reject).
  */
 @Service
 @RequiredArgsConstructor
@@ -31,131 +27,41 @@ public class RejectOrderService implements RejectOrderUseCase {
 
     private final PayOrderRepository payOrderRepository;
     private final AuditLogRepository auditLogRepository;
-    private final IdempotencyStore idempotencyStore;
     private final NotificationSender notificationSender;
 
     @Override
     @Transactional
-    public PayOrderResponse reject(String orderId, Integer expectedVersion,
-                                    String performedBy, String reason,
-                                    String ipAddress, String idempotencyKey) {
-        // Idempotency check
-        if (idempotencyKey != null) {
-            var cached = idempotencyStore.findByKey(idempotencyKey);
-            if (cached != null) {
-                return (PayOrderResponse) cached;
-            }
-        }
-
-        // BDD: bdd-07-return-reject.md — Scenario 7: Reason too short
-        if (reason == null || reason.length() < 10) {
-            throw new BusinessRuleException("MSG-ERR-VALIDATION",
-                    "REASON phai co it nhat 10 ky tu (hien tai: " + (reason != null ? reason.length() : 0) + ").");
-        }
-        if (reason.length() > 500) {
-            throw new BusinessRuleException("MSG-ERR-VALIDATION",
-                    "REASON khong duoc qua 500 ky tu.");
-        }
-
-        PayOrder order = payOrderRepository.findById(orderId)
+    public PayOrderResponse reject(ReturnRejectCommand cmd) {
+        PayOrder order = payOrderRepository.findById(cmd.id())
                 .orElseThrow(() -> new ResourceNotFoundException("MSG-ERR-NOTFOUND",
-                        "Khong tim thay lenh thanh toan voi id=" + orderId));
+                        "Khong tim thay lenh thanh toan voi id=" + cmd.id()));
 
-        // Status check — only READY_FOR_APPROVAL or PENDING_APPROVER
-        if (order.getStatus() != OrderStatus.READY_FOR_APPROVAL
-                && order.getStatus() != OrderStatus.PENDING_APPROVER) {
-            throw new InvalidStateTransitionException("MSG-ERR-STATUS",
-                    "Chi co the reject lenh o trang thai READY_FOR_APPROVAL hoac PENDING_APPROVER. Hien tai: " + order.getStatus());
-        }
+        int versionBefore = (int) order.getVersion();
 
-        // BDD: bdd-07-return-reject.md — Scenario 8: SoD check
-        if (order.getCreatedBy().equals(performedBy)) {
-            throw new SoDViolationException("MSG-ERR-SOD",
-                    "Nguoi reject khong duoc cung nguoi voi Maker.");
-        }
+        // Determine role from current status
+        PerformedRole role = order.getStatus() == OrderStatus.READY_FOR_APPROVAL
+                ? PerformedRole.CHECKER
+                : PerformedRole.APPROVER;
 
-        // Optimistic lock check
-        if (expectedVersion != null && !order.getVersion().equals(expectedVersion)) {
-            throw new OptimisticLockException("MSG-ERR-LOCK",
-                    "Ban ghi da bi thay doi. Version hien tai=" + order.getVersion());
-        }
-
-        int versionBefore = order.getVersion();
-        OffsetDateTime now = OffsetDateTime.now();
-        String action;
-
-        // Determine if Checker or Approver is rejecting
-        if (order.getStatus() == OrderStatus.READY_FOR_APPROVAL) {
-            // Checker rejecting
-            order.setCheckerId(performedBy);
-            order.setCheckerActionAt(now);
-            order.setCheckerComment(reason);
-            action = "REJECT_BY_CHECKER";
-        } else {
-            // Approver rejecting (PENDING_APPROVER)
-            if (order.getCheckerId() != null && order.getCheckerId().equals(performedBy)) {
-                throw new SoDViolationException("MSG-ERR-SOD",
-                        "Approver khong duoc cung nguoi voi Checker khi reject.");
-            }
-            order.setApproverId(performedBy);
-            order.setApproverActionAt(now);
-            order.setApproverComment(reason);
-            action = "REJECT_BY_APPROVER";
-        }
-
-        // Transition to REJECTED (final state)
-        order.setStatus(OrderStatus.REJECTED);
-        order.setVersion(order.getVersion() + 1);
-        order.setUpdatedBy(performedBy);
-        order.setUpdatedAt(now);
-        order.setUpdatedIp(ipAddress);
+        // Delegate to domain — validates status, SoD, reason, optimistic lock
+        order.reject(cmd.userId(), role, cmd.userIp(), cmd.reason(), cmd.expectedVersion());
 
         PayOrder saved = payOrderRepository.save(order);
 
         // Audit log
-        auditLogRepository.save(AuditLogEntry.builder()
-                .entityType("PAY_ORDER")
-                .entityId(saved.getId())
-                .action(action)
-                .performedBy(performedBy)
-                .performedAt(now)
-                .ipAddress(ipAddress)
-                .versionBefore(versionBefore)
-                .versionAfter(saved.getVersion())
-                .build());
+        String action = role == PerformedRole.CHECKER ? "REJECT_BY_CHECKER" : "REJECT_BY_APPROVER";
+        auditLogRepository.save(new AuditLogRepository.AuditLogEntry(
+                "PAY_ORDER", saved.getId(), action, cmd.userId(),
+                OffsetDateTime.now(), cmd.userIp(), null, null,
+                null, null,
+                versionBefore, (int) saved.getVersion(),
+                null, null
+        ));
 
         // Notify maker
         notificationSender.send(order.getCreatedBy(), "ORDER_REJECTED",
-                java.util.Map.of("orderId", saved.getId(), "refNo", saved.getRefNo(), "reason", reason));
+                Map.of("orderId", saved.getId(), "refNo", saved.getRefNo(), "reason", cmd.reason()));
 
-        return toResponse(saved);
-    }
-
-    private PayOrderResponse toResponse(PayOrder order) {
-        return PayOrderResponse.builder()
-                .id(order.getId()).version(order.getVersion()).status(order.getStatus().name())
-                .refNo(order.getRefNo()).channel(order.getChannel()).orderType(order.getOrderType())
-                .lnhTransactionType(order.getLnhTransactionType()).sender(order.getSender())
-                .receiver(order.getReceiver()).paymentDate(order.getPaymentDate()).amount(order.getAmount())
-                .currencyCode(order.getCurrencyCode()).exchangeRate(order.getExchangeRate())
-                .originNum(order.getOriginNum()).transactionDate(order.getTransactionDate())
-                .expType(order.getExpType()).fnCode1(order.getFnCode1()).fnCode2(order.getFnCode2())
-                .fnAmount(order.getFnAmount()).description(order.getDescription())
-                .senderName(order.getSenderName()).senderAddress(order.getSenderAddress())
-                .senderGlSegment2(order.getSenderGlSegment2()).senderNum(order.getSenderNum())
-                .senderBankCode(order.getSenderBankCode()).senderIdentifyId(order.getSenderIdentifyId())
-                .senderIssuedDate(order.getSenderIssuedDate()).senderIssuedPlace(order.getSenderIssuedPlace())
-                .tpcpCode(order.getTpcpCode()).receiverName(order.getReceiverName())
-                .receiverAddress(order.getReceiverAddress()).receiverGlSegment2(order.getReceiverGlSegment2())
-                .receiverBankCode(order.getReceiverBankCode()).receiverAccountName(order.getReceiverAccountName())
-                .receiverIdentifyId(order.getReceiverIdentifyId()).receiverIssuedDate(order.getReceiverIssuedDate())
-                .receiverIssuedPlace(order.getReceiverIssuedPlace())
-                .kbnnId(order.getKbnnId()).createdBy(order.getCreatedBy()).createdAt(order.getCreatedAt())
-                .createdIp(order.getCreatedIp()).updatedBy(order.getUpdatedBy()).updatedAt(order.getUpdatedAt())
-                .updatedIp(order.getUpdatedIp()).checkerId(order.getCheckerId())
-                .checkerActionAt(order.getCheckerActionAt()).checkerComment(order.getCheckerComment())
-                .approverId(order.getApproverId()).approverActionAt(order.getApproverActionAt())
-                .approverComment(order.getApproverComment()).attachmentCount(0)
-                .build();
+        return PayOrderResponseMapper.toResponse(saved);
     }
 }

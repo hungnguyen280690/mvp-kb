@@ -19,7 +19,6 @@ public interface PayOrderMapper {
     @Mapping(target = "lines", ignore = true)
     @Mapping(target = "attachments", ignore = true)
     @Mapping(target = "approvals", ignore = true)
-    @Mapping(target = "order", ignore = true)
     PayOrderEntity toEntity(PayOrder domain);
 
     @Mapping(target = "order", ignore = true)
@@ -41,19 +40,19 @@ public interface PayOrderMapper {
     @Named("mapLines")
     default List<PayOrderLine> mapLines(List<PayOrderLineEntity> entities) {
         if (entities == null) return new java.util.ArrayList<>();
-        return entities.stream().map(this::toLineDomain).toList();
+        return new java.util.ArrayList<>(entities.stream().map(this::toLineDomain).toList());
     }
 
     @Named("mapAttachments")
     default List<PayOrderAttachment> mapAttachments(List<PayOrderAttachmentEntity> entities) {
         if (entities == null) return new java.util.ArrayList<>();
-        return entities.stream().map(this::toAttachmentDomain).toList();
+        return new java.util.ArrayList<>(entities.stream().map(this::toAttachmentDomain).toList());
     }
 
     @Named("mapApprovals")
     default List<PayOrderApproval> mapApprovals(List<PayOrderApprovalEntity> entities) {
         if (entities == null) return new java.util.ArrayList<>();
-        return entities.stream().map(this::toApprovalDomain).toList();
+        return new java.util.ArrayList<>(entities.stream().map(this::toApprovalDomain).toList());
     }
 
     PayOrderLine toLineDomain(PayOrderLineEntity entity);

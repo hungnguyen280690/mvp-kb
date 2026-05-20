@@ -69,6 +69,7 @@ export function SenderTab({
             type="text"
             value={data.SENDER_NAME || ""}
             onChange={handleChange("SENDER_NAME")}
+            maxLength={200}
             className={inputCls}
             readOnly={readOnly}
             placeholder="Nhập tên người chứng triệt…"
@@ -87,6 +88,7 @@ export function SenderTab({
             type="text"
             value={data.SENDER_ADDRESS || ""}
             onChange={handleChange("SENDER_ADDRESS")}
+            maxLength={500}
             className={inputCls}
             readOnly={readOnly}
             placeholder="Nhập địa chỉ…"
@@ -106,6 +108,7 @@ export function SenderTab({
               type="text"
               value={data.SENDER_GL_SEGMENT2 || ""}
               onChange={handleChange("SENDER_GL_SEGMENT2")}
+              maxLength={4}
               className={inputCls}
               readOnly={readOnly}
               placeholder="Mã ĐVQHNS…"
@@ -143,6 +146,7 @@ export function SenderTab({
             type="text"
             value={data.SENDER_NUM || ""}
             onChange={handleChange("SENDER_NUM")}
+            maxLength={20}
             className={inputCls}
             readOnly={readOnly}
             placeholder="Nhập số tài khoản…"
@@ -159,6 +163,7 @@ export function SenderTab({
               type="text"
               value={data.SENDER_BANK_CODE || ""}
               onChange={handleChange("SENDER_BANK_CODE")}
+              maxLength={20}
               className={inputCls}
               readOnly={readOnly}
               placeholder="Mã ngân hàng…"
@@ -196,6 +201,7 @@ export function SenderTab({
             type="text"
             value={data.SENDER_IDENTIFY_ID || ""}
             onChange={handleChange("SENDER_IDENTIFY_ID")}
+            maxLength={50}
             className={inputCls}
             readOnly={readOnly}
             placeholder="Nhập số giấy tờ…"
@@ -221,6 +227,7 @@ export function SenderTab({
             type="text"
             value={data.SENDER_ISSUED_PLACE || ""}
             onChange={handleChange("SENDER_ISSUED_PLACE")}
+            maxLength={200}
             className={inputCls}
             readOnly={readOnly}
             placeholder="Nhập nơi cấp…"
@@ -234,6 +241,7 @@ export function SenderTab({
             type="text"
             value={data.TPCP_CODE || ""}
             onChange={handleChange("TPCP_CODE")}
+            maxLength={20}
             className={inputCls}
             readOnly={readOnly}
             placeholder="Nhập mã TPCP…"

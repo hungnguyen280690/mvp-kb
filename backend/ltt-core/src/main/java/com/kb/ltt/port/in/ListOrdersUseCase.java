@@ -1,45 +1,41 @@
 package com.kb.ltt.port.in;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kb.ltt.domain.enums.OrderStatus;
 
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Use case: Danh sach lenh thanh toan (loc + sort + phan trang).
- */
 public interface ListOrdersUseCase {
 
     PageResponse list(ListQuery query);
 
-    /**
-     * Query parameters cho listing.
-     */
     record ListQuery(
             List<OrderStatus> statuses,
             String channel,
             String orderType,
             String kbnnId,
             String createdBy,
-            String keyword,          // Search trong refNo, description, senderName, receiverName
+            String keyword,
             LocalDate paymentDateFrom,
             LocalDate paymentDateTo,
             LocalDate createdDateFrom,
             LocalDate createdDateTo,
-            String sortBy,            // Default: createdAt
-            String sortDirection,     // ASC/DESC, default: DESC
-            int page,                 // 0-based
-            int size                  // Default: 20, max: 100
-    ) {}
-
-    /**
-     * Phan trang response.
-     */
-    record PageResponse(
-            List<PayOrderResponse> content,
-            long totalElements,
-            int totalPages,
+            String sortBy,
+            String sortDirection,
             int page,
             int size
+    ) {}
+
+    record PaginationMeta(
+            @JsonProperty("TOTAL_ELEMENTS") long totalElements,
+            @JsonProperty("TOTAL_PAGES") int totalPages,
+            @JsonProperty("NUMBER") int number,
+            @JsonProperty("SIZE") int size
+    ) {}
+
+    record PageResponse(
+            @JsonProperty("CONTENT") List<PayOrderResponse> content,
+            @JsonProperty("PAGE") PaginationMeta page
     ) {}
 }

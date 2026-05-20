@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { OptimisticLockError } from "../api/error";
 
 // ---------------------------------------------------------------------------
@@ -19,7 +19,6 @@ export function useOptimisticLock() {
 
   const setEtag = useCallback((id: string, etag: string) => {
     etagStore.set(id, etag);
-    forceUpdate((n) => n + 1);
   }, []);
 
   const getEtag = useCallback((id: string): string | undefined => {
@@ -59,14 +58,17 @@ export function useOptimisticLock() {
     [],
   );
 
-  return {
-    setEtag,
-    getEtag,
-    getIfMatchHeader,
-    removeEtag,
-    clearAll,
-    handleConflict,
-  };
+  return useMemo(
+    () => ({
+      setEtag,
+      getEtag,
+      getIfMatchHeader,
+      removeEtag,
+      clearAll,
+      handleConflict,
+    }),
+    [setEtag, getEtag, getIfMatchHeader, removeEtag, clearAll, handleConflict],
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -13,7 +13,7 @@ function AppRoutes() {
 }
 
 // ---------------------------------------------------------------------------
-// Bootstrap — mounts the ltt-ui micro-frontend
+// LttUI — standalone version with its own BrowserRouter
 // ---------------------------------------------------------------------------
 
 function LttUI() {
@@ -25,7 +25,15 @@ function LttUI() {
 }
 
 // ---------------------------------------------------------------------------
-// Mount to DOM
+// LttUIEmbedded — for embedding inside a host router (no BrowserRouter)
+// ---------------------------------------------------------------------------
+
+export function LttUIEmbedded() {
+  return <AppRoutes />;
+}
+
+// ---------------------------------------------------------------------------
+// Mount to DOM (standalone mode)
 // ---------------------------------------------------------------------------
 
 const rootEl =

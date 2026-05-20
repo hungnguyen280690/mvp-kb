@@ -15,7 +15,6 @@ import java.time.OffsetDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class PayOrderAttachmentEntity {
 
     @Id
@@ -54,7 +53,6 @@ public class PayOrderAttachmentEntity {
     private OffsetDateTime uploadedAt;
 
     @Column(name = "IS_DELETED", nullable = false)
-    @Builder.Default
     private Integer isDeleted = 0;
 
     @Column(name = "DELETED_BY", length = 36)

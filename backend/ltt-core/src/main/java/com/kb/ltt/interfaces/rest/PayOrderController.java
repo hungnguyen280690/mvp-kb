@@ -110,6 +110,7 @@ public class PayOrderController {
                 request.getReceiverIdentifyId(),
                 request.getReceiverIssuedDate(),
                 request.getReceiverIssuedPlace(),
+                mapCreateLines(request.getLines()),
                 kbnnId,
                 userId,
                 userIp,
@@ -508,7 +509,7 @@ public class PayOrderController {
         if (sort != null && !sort.isEmpty()) {
             String firstSort = sort.get(0);
             String[] parts = firstSort.split(",", 2);
-            sortBy = parts[0];
+            sortBy = snakeToCamel(parts[0]);
             sortDirection = parts.length > 1 ? parts[1] : "DESC";
         }
 
@@ -861,9 +862,31 @@ public class PayOrderController {
         return Enum.valueOf(enumClass, value.trim());
     }
 
+    private List<CreateOrderUseCase.LineItem> mapCreateLines(List<CreateOrderRequest.LineRequest> lines) {
+        if (lines == null) return null;
+        return lines.stream()
+                .map(l -> new CreateOrderUseCase.LineItem(
+                        l.getGlSegment1(), l.getGlSegment2(), l.getGlSegment3(),
+                        l.getGlSegment4(), l.getGlSegment5(), l.getGlSegment6(),
+                        l.getGlSegment7(), l.getGlSegment8(), l.getGlSegment9(),
+                        l.getGlSegment10(), l.getGlSegment11(), l.getGlSegment12(),
+                        l.getLineDescription(), l.getLineAmount()))
+                .collect(Collectors.toList());
+    }
+
     /**
      * Build an ExportQuery from the ExportRequest DTO.
      */
+    private String snakeToCamel(String snake) {
+        if (snake == null || !snake.contains("_")) return snake != null ? Character.toLowerCase(snake.charAt(0)) + snake.substring(1) : null;
+        String[] parts = snake.toLowerCase().split("_");
+        StringBuilder sb = new StringBuilder(parts[0]);
+        for (int i = 1; i < parts.length; i++) {
+            sb.append(Character.toUpperCase(parts[i].charAt(0))).append(parts[i].substring(1));
+        }
+        return sb.toString();
+    }
+
     private ExportOrdersUseCase.ExportQuery buildExportQuery(ExportRequest request) {
         List<OrderStatus> statusEnums = null;
         if (request.getFilters() != null && request.getFilters().getStatus() != null) {

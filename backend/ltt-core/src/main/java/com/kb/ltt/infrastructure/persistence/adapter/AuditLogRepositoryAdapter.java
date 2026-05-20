@@ -25,6 +25,13 @@ public class AuditLogRepositoryAdapter implements AuditLogRepository {
     @Transactional
     public void save(AuditLogEntry entry) {
         AuditLogEntity entity = auditLogMapper.toEntity(entry);
+        if (entity.getId() == null) entity.setId(System.currentTimeMillis());
+        if (entity.getEntityType() == null) entity.setEntityType("PAY_ORDER");
+        if (entity.getAction() == null) entity.setAction("CREATE");
+        if (entity.getPerformedBy() == null) entity.setPerformedBy("system");
+        if (entity.getPerformedAt() == null) entity.setPerformedAt(java.time.OffsetDateTime.now());
+        if (entity.getHash() == null) entity.setHash("dev-placeholder-hash");
+        if (entity.getPrevHash() == null) entity.setPrevHash("0000000000000000");
         auditLogJpaRepository.save(entity);
     }
 

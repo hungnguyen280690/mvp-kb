@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "../hooks/useAppNavigate";
 import type {
   CreateOrderRequest,
   PayOrderLineRequest,
@@ -51,33 +51,86 @@ function initialFormData(): Partial<CreateOrderRequest> {
 // Validation
 // ---------------------------------------------------------------------------
 
+const FIELD_MAX_LENGTHS: Record<string, number> = {
+  ORDER_TYPE: 30,
+  SENDER: 20,
+  RECEIVER: 20,
+  CURRENCY_CODE: 3,
+  ORIGIN_NUM: 50,
+  DESCRIPTION: 500,
+  SENDER_NAME: 200,
+  SENDER_ADDRESS: 500,
+  SENDER_GL_SEGMENT2: 4,
+  SENDER_NUM: 20,
+  SENDER_BANK_CODE: 20,
+  SENDER_IDENTIFY_ID: 50,
+  SENDER_ISSUED_PLACE: 200,
+  TPCP_CODE: 20,
+  RECEIVER_NAME: 200,
+  RECEIVER_ADDRESS: 500,
+  RECEIVER_GL_SEGMENT2: 20,
+  RECEIVER_BANK_CODE: 20,
+  RECEIVER_ACCOUNT_NAME: 200,
+  RECEIVER_IDENTIFY_ID: 50,
+  RECEIVER_ISSUED_PLACE: 200,
+  FN_CODE1: 3,
+  FN_CODE2: 3,
+};
+
 function validate(data: Partial<CreateOrderRequest>): Record<string, string> {
   const errors: Record<string, string> = {};
 
-  if (!data.CHANNEL) errors.CHANNEL = "Kênh là bắt buộc";
+  if (!data.CHANNEL) errors.CHANNEL = "Kenh la bat buoc";
   if (data.CHANNEL === "LNH" && !data.LNH_TRANSACTION_TYPE)
     errors.LNH_TRANSACTION_TYPE =
-      "Loại giao dịch LNH là bắt buộc khi chọn kênh LNH";
-  if (!data.SENDER) errors.SENDER = "Nguời chứng triệt là bắt buộc";
-  if (!data.RECEIVER) errors.RECEIVER = "Nguời hưởng là bắt buộc";
-  if (!data.PAYMENT_DATE) errors.PAYMENT_DATE = "Ngày thanh toán là bắt buộc";
-  if (!data.AMOUNT || data.AMOUNT <= 0) errors.AMOUNT = "Số tiền phải luôn > 0";
-  if (!data.DESCRIPTION) errors.DESCRIPTION = "Mô tả là bắt buộc";
+      "Loai giao dich LNH la bat buoc khi chon kenh LNH";
+  if (!data.SENDER) errors.SENDER = "Nguoi chung triet la bat buoc";
+  else if (data.SENDER.length > 20) errors.SENDER = "Toi da 20 ky tu";
+  if (!data.RECEIVER) errors.RECEIVER = "Nguoi huong la bat buoc";
+  else if (data.RECEIVER.length > 20) errors.RECEIVER = "Toi da 20 ky tu";
+  if (!data.PAYMENT_DATE) errors.PAYMENT_DATE = "Ngay thanh toan la bat buoc";
+  if (!data.AMOUNT || data.AMOUNT <= 0) errors.AMOUNT = "So tien phai luon > 0";
+  if (!data.DESCRIPTION) errors.DESCRIPTION = "Mo ta la bat buoc";
+  else if (data.DESCRIPTION.length > 500)
+    errors.DESCRIPTION = "Toi da 500 ky tu";
   if (!data.SENDER_NAME)
-    errors.SENDER_NAME = "Tên người chứng triệt là bắt buộc";
+    errors.SENDER_NAME = "Ten nguoi chung triet la bat buoc";
+  else if (data.SENDER_NAME.length > 200)
+    errors.SENDER_NAME = "Toi da 200 ky tu";
   if (!data.SENDER_ADDRESS)
-    errors.SENDER_ADDRESS = "Địa chỉ người chứng triệt là bắt buộc";
+    errors.SENDER_ADDRESS = "Dia chi nguoi chung triet la bat buoc";
+  else if (data.SENDER_ADDRESS.length > 500)
+    errors.SENDER_ADDRESS = "Toi da 500 ky tu";
   if (!data.SENDER_GL_SEGMENT2)
-    errors.SENDER_GL_SEGMENT2 = "GL Segment 2 (Nguời chứng triệt) là bắt buộc";
+    errors.SENDER_GL_SEGMENT2 = "GL Segment 2 la bat buoc";
+  else if (data.SENDER_GL_SEGMENT2.length > 4)
+    errors.SENDER_GL_SEGMENT2 = "Toi da 4 ky tu";
   if (!data.SENDER_BANK_CODE)
-    errors.SENDER_BANK_CODE = "Mã ngân hàng (Nguời chứng triệt) là bắt buộc";
-  if (!data.RECEIVER_NAME) errors.RECEIVER_NAME = "Tên người hưởng là bắt buộc";
+    errors.SENDER_BANK_CODE = "Ma ngan hang la bat buoc";
+  else if (data.SENDER_BANK_CODE.length > 20)
+    errors.SENDER_BANK_CODE = "Toi da 20 ky tu";
+  if (!data.RECEIVER_NAME) errors.RECEIVER_NAME = "Ten nguoi huong la bat buoc";
+  else if (data.RECEIVER_NAME.length > 200)
+    errors.RECEIVER_NAME = "Toi da 200 ky tu";
   if (!data.RECEIVER_GL_SEGMENT2)
-    errors.RECEIVER_GL_SEGMENT2 = "GL Segment 2 (Nguời hưởng) là bắt buộc";
+    errors.RECEIVER_GL_SEGMENT2 = "GL Segment 2 la bat buoc";
+  else if (data.RECEIVER_GL_SEGMENT2.length > 20)
+    errors.RECEIVER_GL_SEGMENT2 = "Toi da 20 ky tu";
   if (!data.RECEIVER_BANK_CODE)
-    errors.RECEIVER_BANK_CODE = "Mã ngân hàng (Nguời hưởng) là bắt buộc";
+    errors.RECEIVER_BANK_CODE = "Ma ngan hang la bat buoc";
+  else if (data.RECEIVER_BANK_CODE.length > 20)
+    errors.RECEIVER_BANK_CODE = "Toi da 20 ky tu";
   if (!data.RECEIVER_ACCOUNT_NAME)
-    errors.RECEIVER_ACCOUNT_NAME = "Tên tài khoản là bắt buộc";
+    errors.RECEIVER_ACCOUNT_NAME = "Ten tai khoan la bat buoc";
+  else if (data.RECEIVER_ACCOUNT_NAME.length > 200)
+    errors.RECEIVER_ACCOUNT_NAME = "Toi da 200 ky tu";
+  if (!data.LINES || data.LINES.length === 0)
+    errors.LINES = "Can it nhat 1 dong COA";
+  else {
+    const lineTotal = data.LINES.reduce((s, l) => s + (l.LINE_AMOUNT || 0), 0);
+    if (Math.abs((data.AMOUNT || 0) - lineTotal) > 0.01)
+      errors.AMOUNT = `So tien (${data.AMOUNT}) phai bang tong dong COA (${lineTotal})`;
+  }
 
   return errors;
 }
@@ -87,7 +140,7 @@ function validate(data: Partial<CreateOrderRequest>): Record<string, string> {
 // ---------------------------------------------------------------------------
 
 function PayOutManualCreateInner() {
-  const navigate = useNavigate();
+  const nav = useAppNavigate();
   const createHook = useCreateOrder();
 
   const [formData, setFormData] =
@@ -158,11 +211,11 @@ function PayOutManualCreateInner() {
     try {
       const payload = buildPayload(true);
       const result = await createHook.create(payload);
-      navigate(`/${result.ID}`);
+      nav.toView(result.ID);
     } catch (err) {
       console.error("Create failed:", err);
     }
-  }, [buildPayload, createHook, navigate]);
+  }, [buildPayload, createHook, nav]);
 
   const handleSubmit = useCallback(async () => {
     const validationErrors = validate(formData);
@@ -175,17 +228,17 @@ function PayOutManualCreateInner() {
     try {
       const payload = buildPayload(false);
       const result = await createHook.create(payload);
-      navigate(`/${result.ID}`);
+      nav.toView(result.ID);
     } catch (err) {
       console.error("Create failed:", err);
     } finally {
       setSubmitting(false);
     }
-  }, [formData, buildPayload, createHook, navigate]);
+  }, [formData, buildPayload, createHook, nav]);
 
   const handleCancel = useCallback(() => {
-    navigate("/");
-  }, [navigate]);
+    nav.toHome();
+  }, [nav]);
 
   const isLoading = createHook.loading || submitting;
 
@@ -195,7 +248,7 @@ function PayOutManualCreateInner() {
       <nav className="mb-3 bg-white px-5 py-2 text-[12px]">
         <span
           className="cursor-pointer text-[#0b5394]"
-          onClick={() => navigate("/")}
+          onClick={() => nav.toHome()}
         >
           Lệnh thanh toán đi
         </span>

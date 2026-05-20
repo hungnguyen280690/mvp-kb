@@ -4,6 +4,7 @@ import com.kb.ltt.domain.enums.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Use case: Tao moi lenh thanh toan (DRAFT).
@@ -52,10 +53,29 @@ public interface CreateOrderUseCase {
             String receiverIdentifyId,
             LocalDate receiverIssuedDate,
             String receiverIssuedPlace,
+            // Lines
+            List<LineItem> lines,
             // Context
             String kbnnId,
             String userId,
             String userIp,
             String idempotencyKey
+    ) {}
+
+    record LineItem(
+            String glSegment1,
+            String glSegment2,
+            String glSegment3,
+            String glSegment4,
+            String glSegment5,
+            String glSegment6,
+            String glSegment7,
+            String glSegment8,
+            String glSegment9,
+            String glSegment10,
+            String glSegment11,
+            String glSegment12,
+            String lineDescription,
+            BigDecimal lineAmount
     ) {}
 }

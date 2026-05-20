@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useAppNavigate } from "../hooks/useAppNavigate";
 import type {
   UpdateOrderRequest,
   PayOrderLineRequest,
@@ -94,7 +95,7 @@ function validate(data: Partial<UpdateOrderRequest>): Record<string, string> {
 
 function PayOutManualEditInner() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const nav = useAppNavigate();
 
   const {
     data: order,
@@ -167,11 +168,11 @@ function PayOutManualEditInner() {
     setErrors({});
     try {
       await updateHook.update(id, formData as UpdateOrderRequest);
-      navigate(`/${id}`);
+      nav.toView(id);
     } catch (err) {
       console.error("Update failed:", err);
     }
-  }, [id, formData, updateHook, navigate]);
+  }, [id, formData, updateHook, nav]);
 
   const handleSubmit = useCallback(async () => {
     if (!id) return;
@@ -183,16 +184,16 @@ function PayOutManualEditInner() {
     try {
       await updateHook.update(id, formData as UpdateOrderRequest);
       await workflowHook.execute({ action: "submit", id });
-      navigate(`/${id}`);
+      nav.toView(id);
     } catch (err) {
       console.error("Submit failed:", err);
     }
-  }, [id, formData, updateHook, workflowHook, navigate]);
+  }, [id, formData, updateHook, workflowHook, nav]);
 
   const handleCancel = useCallback(() => {
-    if (id) navigate(`/${id}`);
-    else navigate("/");
-  }, [id, navigate]);
+    if (id) nav.toView(id);
+    else nav.toHome();
+  }, [id, nav]);
 
   if (orderLoading) {
     return (
@@ -249,14 +250,14 @@ function PayOutManualEditInner() {
       <nav className="mb-3 bg-white px-5 py-2 text-[12px]">
         <span
           className="cursor-pointer text-[#0b5394]"
-          onClick={() => navigate("/")}
+          onClick={() => nav.toHome()}
         >
           Lệnh thanh toán đi
         </span>
         <span className="mx-1.5 text-[#bbb]">&rsaquo;</span>
         <span
           className="cursor-pointer text-[#0b5394]"
-          onClick={() => id && navigate(`/${id}`)}
+          onClick={() => id && nav.toView(id)}
         >
           {order?.REF_NO || id}
         </span>

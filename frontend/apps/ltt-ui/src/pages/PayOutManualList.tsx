@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAppNavigate } from "../hooks/useAppNavigate";
 import type {
   OrderStatus,
   OrderChannel,
@@ -71,7 +71,7 @@ function getSortParam(sort: SortState): string {
 // ---------------------------------------------------------------------------
 
 function PayOutManualListInner() {
-  const navigate = useNavigate();
+  const nav = useAppNavigate();
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -163,12 +163,12 @@ function PayOutManualListInner() {
     async (id: string) => {
       try {
         const result = await workflowHook.execute({ action: "copy", id });
-        navigate(`/${result.ID}`);
+        nav.toView(result.ID);
       } catch (err) {
         console.error("Copy failed:", err);
       }
     },
-    [workflowHook, navigate],
+    [workflowHook, nav],
   );
 
   const handleExport = useCallback(
@@ -412,7 +412,7 @@ function PayOutManualListInner() {
             </button>
             <button
               type="button"
-              onClick={() => navigate("/create")}
+              onClick={() => nav.toCreate()}
               className="flex h-8 items-center gap-1 rounded bg-[#137333] px-3.5 text-[12.5px] font-semibold text-white transition-colors hover:brightness-[0.92]"
             >
               <svg
@@ -512,7 +512,7 @@ function PayOutManualListInner() {
                   <tr
                     key={item.ID}
                     className="cursor-pointer border-b border-[#d7dbe0] hover:bg-[#eef5fd]"
-                    onClick={() => navigate(`/${item.ID}`)}
+                    onClick={() => nav.toView(item.ID)}
                   >
                     <td className="px-2.5 py-2 text-center text-[#5f6368]">
                       {page * pageSize + idx + 1}
@@ -552,7 +552,7 @@ function PayOutManualListInner() {
                         {/* View */}
                         <button
                           type="button"
-                          onClick={() => navigate(`/${item.ID}`)}
+                          onClick={() => nav.toView(item.ID)}
                           className="flex h-[26px] w-[26px] items-center justify-center rounded border border-[#d7dbe0] text-[#0b5394] transition-colors hover:bg-[#e7f0f9]"
                           title="Xem chi tiết"
                           aria-label={`Xem chi tiết ${item.REF_NO}`}
@@ -581,7 +581,7 @@ function PayOutManualListInner() {
                           item.STATUS === "RETURNED_TO_MAKER") && (
                           <button
                             type="button"
-                            onClick={() => navigate(`/${item.ID}/edit`)}
+                            onClick={() => nav.toEdit(item.ID)}
                             className="flex h-[26px] w-[26px] items-center justify-center rounded border border-[#d7dbe0] text-[#0b5394] transition-colors hover:bg-[#e7f0f9]"
                             title="Chỉnh sửa"
                             aria-label={`Chỉnh sửa ${item.REF_NO}`}

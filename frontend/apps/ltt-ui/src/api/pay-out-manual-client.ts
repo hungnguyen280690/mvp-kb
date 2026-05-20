@@ -24,7 +24,7 @@ import type {
 // API Client
 // ---------------------------------------------------------------------------
 
-const RESOURCE = "/api/pay-out-manual";
+const RESOURCE = "/pay-out-manual";
 
 class PayOutManualClient {
   // -----------------------------------------------------------------------
