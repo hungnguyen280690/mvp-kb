@@ -186,6 +186,211 @@
 
 ---
 
+---
+
+> **Stage 4 — QA Agent (2026-05-20 → 2026-05-21)**  
+> Scope mở rộng: tích hợp ltt-ui vào nginx, viết Playwright E2E 18 TC, bổ sung backend unit test cho bff-service / audit-service.
+
+---
+
+### E-15 · `[AUTO]` · INFRA — Docker build lỗi `unzip: not found`
+
+**Thời điểm**: Build Docker image cho ltt-core (và 3 service còn lại)  
+**Lỗi**: `unzip: not found` khi Maven wrapper giải nén  
+**Nguyên nhân**: AI gen Dockerfile từ template không thêm `apt-get install -y unzip`. Base image `eclipse-temurin:21-jre-jammy` không có sẵn `unzip`.  
+**Fix tại thời điểm**: Thêm `RUN apt-get update && apt-get install -y unzip` vào cả 4 Dockerfile.  
+**Tác động**: Tất cả 4 backend service không build được cho đến khi fix.
+
+---
+
+### E-16 · `[AUTO]` · BE — `no main manifest attribute` khi chạy jar
+
+**Thời điểm**: Docker container start sau khi build thành công  
+**Lỗi**: `java -jar app.jar` → `no main manifest attribute, in app.jar`  
+**Nguyên nhân**: AI viết pom.xml nhưng quên thêm `spring-boot-maven-plugin`. Không có plugin này, Maven package tạo jar thường (không có `MANIFEST.MF` với `Main-Class`).  
+**Fix tại thời điểm**: Bổ sung `<build><plugins><plugin>spring-boot-maven-plugin</plugin></plugins></build>` vào 4 pom.xml (bff-service, audit-service, integration-gateway cũng thiếu).  
+**Tác động**: Toàn bộ stack không khởi động được sau deploy Docker.
+
+---
+
+### E-17 · `[MISS]` · INFRA — nginx proxy tới BFF nhưng BFF chưa có routes
+
+**Thời điểm**: Playwright TC-E2E cần gọi API qua `http://localhost:3000/api/`  
+**Lỗi**: API trả 404 cho mọi request dù Docker stack đang chạy  
+**Nguyên nhân**: nginx.conf ban đầu proxy `/api/ → kb-bff:8080`. BFF service chỉ là stub chưa implement route nào. AI không kiểm tra BFF có thực sự handle request hay không trước khi viết nginx config.  
+**Fix tại thời điểm**: Đổi nginx proxy thẳng tới `kb-ltt-core:8081` (bypass BFF).  
+**Tác động**: Toàn bộ FE không gọi được API qua nginx. Design issue tồn đọng — BFF cần implement forwarding logic ở sprint sau.
+
+---
+
+### E-18 · `[AUTO]` · BE — X-Dev-* bypass không hoạt động trong Docker
+
+**Thời điểm**: Playwright gửi request qua nginx với header `X-Dev-User-Id` nhưng nhận 403  
+**Lỗi**: HTTP 403 Unauthorized từ ltt-core trong Docker  
+**Nguyên nhân**: `JwtAuthFilter.isDevProfile()` chỉ accept profile chứa `dev`, `test`. Docker dùng `SPRING_PROFILES_ACTIVE: docker` → không khớp. AI viết `isDevProfile()` không tính đến môi trường Docker E2E.  
+**Fix tại thời điểm**: Thêm `e2e` vào danh sách profile bypass. Tạo `application-e2e.yml`. Cập nhật docker-compose: `SPRING_PROFILES_ACTIVE: docker,e2e`.  
+**Tác động**: Mọi E2E test qua browser đều bị block 403 cho đến khi fix.
+
+---
+
+### E-19 · `[AUTO]` · FE — ltt-ui asset 404, trang trắng sau nginx deploy
+
+**Thời điểm**: Truy cập `http://localhost:3000/ltt/` sau khi Docker build thành công  
+**Lỗi**: Trang trắng, devtools thấy `GET /assets/index-xxx.js 404`  
+**Nguyên nhân**: Vite `base` option không được đặt ở top-level của `defineConfig`. Khi build, asset paths dùng `/assets/...` thay vì `/ltt/assets/...`. nginx serve ltt-ui tại `/ltt/` nhưng assets được request từ `/assets/`.  
+**Fix tại thời điểm**: Di chuyển `base: "/ltt/"` lên top-level trong `vite.config.ts` (không phải trong `build: {}`).  
+**Tác động**: ltt-ui không render được gì cho đến khi fix.
+
+---
+
+### E-20 · `[AUTO]` · BE — CTRL-12 delete trả 500 vì thiếu body bắt buộc trong test
+
+**Thời điểm**: Chạy `PayOutManualControllerTest` — test case xóa lệnh  
+**Lỗi**: HTTP 500 thay vì 200/204  
+**Nguyên nhân**: `DeletePayOrderUseCase` yêu cầu `deleteReason` ≥ 10 ký tự và `confirmed: true`. Test ban đầu gửi body không có 2 trường này. AI không đọc UseCase để biết validation rule.  
+**Fix tại thời điểm**: Cập nhật test body: `{"deleteReason":"Xoa vi ly do kiem tra","confirmed":true}`.  
+**Tác động**: Unit test sai behavior, có thể che giấu bug thực trong production.
+
+---
+
+### E-21 · `[AUTO]` · BE — CTRL-13 audit-log assertion sai cấu trúc response
+
+**Thời điểm**: Chạy unit test GET `/{id}/audit-log`  
+**Lỗi**: `$.` assertion fail — response là `PagedResponse` với field `content`, không phải mảng trực tiếp  
+**Nguyên nhân**: AI viết assertion `jsonPath("$.").isArray()` nhưng endpoint trả `{"content":[...],"totalElements":N,...}`. Không đọc `AuditLogQueryUseCase` return type.  
+**Fix tại thời điểm**: Đổi thành `jsonPath("$.content").isArray()`.  
+**Tác động**: Nhỏ — test fail nhưng production logic đúng.
+
+---
+
+### E-22 · `[AUTO]` · BE — audit-service test thiếu H2 dependency
+
+**Thời điểm**: Chạy `./mvnw test -pl audit-service`  
+**Lỗi**: `ClassNotFoundException: org.h2.Driver`  
+**Nguyên nhân**: AI tạo `application-test.yml` với datasource H2 cho audit-service test nhưng không thêm H2 vào `pom.xml` với scope `test`.  
+**Fix tại thời điểm**: Thêm `<dependency>com.h2database/h2/test</dependency>` vào audit-service pom.xml.  
+**Tác động**: Nhỏ.
+
+---
+
+### E-23 · `[AUTO]` · E2E — ORA-12899 GL_SEGMENT overflow trong DRAFT_PAYLOAD
+
+**Thời điểm**: Chạy `createDraftViaApi()` trong Playwright — POST `/api/pay-out-manual`  
+**Lỗi**: `ORA-12899: value too large for column GL_SEGMENT10 (actual: 3, maximum: 2)`. Tương tự với GL_SEGMENT4 (max: 1).  
+**Nguyên nhân**: AI viết `DRAFT_PAYLOAD` với `ccidSegment10: "S10"` (3 ký tự, max 2) và `ccidSegment4: "S4"` (2 ký tự, max 1). Không đọc `@Column(length=X)` trong `PayOrderLineEntity` trước khi tạo test data.  
+**Fix tại thời điểm**: Đổi thành `ccidSegment4: "4"`, `ccidSegment10: "10"` — tuân thủ đúng giới hạn cột.  
+**Tác động**: `createDraftViaApi()` trả về 500 → `body.id = undefined` → tất cả 12 workflow test nhận 404 và timeout theo hiệu ứng domino.
+
+---
+
+### E-24 · `[AUTO]` · E2E — API helper không có error handling, lỗi im lặng
+
+**Thời điểm**: Tất cả test dùng `createDraftViaApi`, `submitViaApi`, `checkApproveViaApi`  
+**Lỗi**: Các test fail với `"Cannot navigate to /ltt/pay-out-manual/undefined"` hoặc `HTTP 404` thay vì thấy lỗi gốc  
+**Nguyên nhân**: AI viết helper không check `res.ok()`. Khi API trả 500, `res.json()` parse thành `{traceId:..., code:"MSG-ERR-INTERNAL"}` → `body.id = undefined`. Không có exception nào được throw → test tiếp tục với `orderId = undefined`.  
+**Fix tại thời điểm**: Thêm `if (!res.ok()) throw new Error(...)` vào tất cả API helpers.  
+**Tác động**: 12/18 Playwright test fail, tất cả đều do E-23 cascade qua E-24. Debug mất nhiều thời gian vì lỗi thực không hiển thị.
+
+---
+
+### E-25 · `[AUTO]` · E2E — Locator dùng enum value thay vì label tiếng Việt
+
+**Thời điểm**: TC-E2E-07 đến TC-E2E-15 — kiểm tra trạng thái sau workflow action  
+**Lỗi**: Timeout vì locator `page.locator("text=DRAFT, text=Nháp")` không tìm thấy element  
+**Nguyên nhân**: AI viết locator dựa trên enum value ("DRAFT") nhưng `StatusBadge` component chỉ render label tiếng Việt ("Nháp"). Không đọc `StatusBadge.tsx` trước khi viết selector.  
+**Fix tại thời điểm**: Đổi toàn bộ sang `page.getByText("Nháp").first()`, `page.getByText("Chờ KT").first()`, v.v. Dùng `page.locator("span").filter({ hasText: /^Trả lại$/ })` để tránh nhầm với button cùng tên.  
+**Tác động**: Tất cả workflow test không kiểm tra được trạng thái thực.
+
+---
+
+### E-26 · `[AUTO]` · E2E — Sai label button "Kiểm duyệt" và confirm dialog
+
+**Thời điểm**: TC-E2E-08 — CHECKER click CheckApprove  
+**Lỗi**: `getByRole("button", { name: /Kiểm tra|Check|KT/i })` không tìm thấy button  
+**Nguyên nhân**: Action button trong `PayOutManualDetailPage` dùng label "Kiểm duyệt" (không phải "Kiểm tra"). Confirm dialog dùng `confirmLabel="Kiểm tra"`. AI đoán tên button mà không đọc component source.  
+**Fix tại thời điểm**: Sửa action button pattern thành `{ name: "Kiểm duyệt" }`. Scope confirm buttons vào `[role="dialog"]` với tên chính xác: "Nộp duyệt", "Kiểm tra", "Phê duyệt", "Trả lại".  
+**Tác động**: TC-E2E-08, 09, 10, 11 đều fail ở bước click action button.
+
+---
+
+### E-27 · `[AUTO]` · E2E — DeleteDialog yêu cầu reason + checkbox, AI bỏ qua
+
+**Thời điểm**: TC-E2E-13 và TC-E2E-15 — test xóa lệnh qua UI  
+**Lỗi**: Click "Xóa" trong dialog không làm gì — button disabled  
+**Nguyên nhân**: `DeleteDialog` có 2 điều kiện trước khi enable nút Xóa: (1) textarea reason ≥ 10 ký tự, (2) checkbox "Tôi xác nhận muốn xóa lệnh này" được check. AI viết test click trực tiếp vào confirm button mà không fill form trước.  
+**Fix tại thời điểm**: Bổ sung: `dialog.locator("textarea").fill(...)` → click checkbox label → click "Xóa".  
+**Tác động**: TC-E2E-13, 15 timeout vì nút không được enable.
+
+---
+
+### E-28 · `[AUTO]` · E2E — Soft delete trả 200 DELETED, test expect 404
+
+**Thời điểm**: TC-E2E-13 — kiểm tra order sau khi xóa  
+**Lỗi**: `expect([404, 410]).toContain(res.status())` fail — thực tế nhận HTTP 200  
+**Nguyên nhân**: AI giả định "xóa = không tìm thấy = 404". Nhưng `DeletePayOrderUseCase` implement soft delete: order vẫn tồn tại trong DB với `status = "DELETED"`, GET vẫn trả 200.  
+**Fix tại thời điểm**: Đổi assertion thành `expect(body.status).toBe("DELETED")`.  
+**Tác động**: Hiểu sai behavior của soft delete. Cần document rõ trong API spec.
+
+---
+
+### E-29 · `[AUTO]` · E2E — TC-E2E-14 thiếu body + nhầm HTTP code cho delete bị từ chối
+
+**Thời điểm**: TC-E2E-14 — xóa order đã SUBMITTED  
+**Lỗi**: Nhận HTTP 404 (`orderId = undefined` do E-24), sau khi fix lại nhận HTTP 409 nhưng test expect `[422, 400, 403]`  
+**Nguyên nhân 1**: Hệ quả của E-24 (orderId undefined).  
+**Nguyên nhân 2**: Test gửi DELETE không có body. `@RequestBody` required → Spring trả 400. Sau khi thêm body hợp lệ, `InvalidStatusTransitionException` → 409 CONFLICT nhưng test không có 409 trong danh sách.  
+**Fix tại thời điểm**: Thêm body `{deleteReason:..., confirmed:true}`. Cập nhật expected: `[409, 422, 400, 403]`.  
+**Tác động**: Nhỏ sau khi fix E-23/E-24.
+
+---
+
+### E-30 · `[AUTO]` · E2E — TC-E2E-02 filter label collision
+
+**Thời điểm**: TC-E2E-02 — kiểm tra kết quả filter DRAFT  
+**Lỗi**: `page.getByText("Từ chối").toHaveCount(0)` fail — luôn tìm thấy 1 element  
+**Nguyên nhân**: `StatusCheckboxGroup` trong filter panel render label "Từ chối" dưới dạng text node trong `<label>`. `getByText("Từ chối")` khớp cả label filter panel chứ không chỉ badge trong bảng dữ liệu.  
+**Fix tại thời điểm**: Scope selector: `page.locator("table span").filter({ hasText: /^Từ chối$/ }).toHaveCount(0)`.  
+**Tác động**: Test luôn fail dù filter hoạt động đúng.
+
+---
+
+### E-31 · `[AUTO]` · E2E — `p[style*='cc0000']` không khớp vì browser đổi hex → rgb
+
+**Thời điểm**: TC-E2E-06 — kiểm tra error validation sau submit form rỗng  
+**Lỗi**: `locator('p[style*="cc0000"]').first()` không tìm thấy element  
+**Nguyên nhân**: React set inline style `color: "#cc0000"`. Chromium lưu vào DOM attribute dưới dạng `color: rgb(204, 0, 0)`. CSS attribute selector `[style*='cc0000']` match theo raw attribute value — không thấy `cc0000` trong string `rgb(204, 0, 0)`.  
+**Fix tại thời điểm**: Dùng text content thay vì style: `page.getByText(/bắt buộc/i).first()` vì tất cả Zod validation message đều chứa "bắt buộc".  
+**Tác động**: Test skip/fail. Lỗi này tinh vi và khó debug vì inspector không hiển thị computed style trong attribute selector.
+
+---
+
+## Tổng kết theo loại
+
+| Loại                               | Số lỗi | Lỗi nặng nhất                                       |
+| ---------------------------------- | ------ | --------------------------------------------------- |
+| `[AUTO]` — AI tự gen sai           | 14     | E-23+E-24 (cascade 12 test fail), E-19 (blank page) |
+| `[MISS]` — Hiểu nhầm spec/yêu cầu  | 3      | E-09 (fake sign-off), E-10 (VDBAS UI), E-17 (BFF)  |
+| `[ENV]` — Môi trường/tooling       | 2      | E-12 (Playwright), E-11 (screenshot)                |
+
+---
+
+## Ghi chú để phân tích khắc phục (TODO)
+
+- [ ] Pattern check: **Đọc schema SQL + DTO trước khi viết bất kỳ test data hay form schema nào**
+- [ ] Pattern check: **Đọc router config (basename) trước khi viết navigate/Link**
+- [ ] Pattern check: **Đọc design spec (VDBAS*.md, *.html) trước khi viết bất kỳ dòng UI nào**
+- [ ] Pattern check: **Không tạo sign-off cho đến khi E2E test thực sự pass**
+- [ ] Pattern check: **Luôn check `res.ok()` trong API helper, throw rõ ràng khi lỗi**
+- [ ] Pattern check: **Đọc component source trước khi viết locator (StatusBadge, ConfirmDialog, DeleteDialog)**
+- [ ] Pattern check: **Không dùng CSS attribute selector cho inline color — browser convert hex→rgb**
+- [ ] Design issue: **FE draft schema vs BE NOT NULL — cần align hoặc BE cần nullable trên draft**
+- [ ] Design issue: **`navigate(-1)` trong detail page — cần "Quay lại danh sách" explicit**
+- [ ] Design issue: **BFF service stub chưa implement routes — hiện tại nginx bypass thẳng ltt-core**
+- [ ] Infra issue: **Playwright trên Ubuntu 26.04 — đã giải quyết bằng Docker-based Playwright**
+
+---
+
 ## Audit Log
 
 - **2026-05-20** | **Fullstack Dev Agent** | FT-001 | Tạo file audit-errors-log.md ghi nhận 14 lỗi phát sinh trong Stage 3.
+- **2026-05-21** | **QA Agent** | FT-001 | Bổ sung E-15 đến E-31 (17 lỗi) phát sinh trong Stage 4: Docker infra setup, backend unit test, Playwright E2E 18 TC. Final result: 18/18 pass.
