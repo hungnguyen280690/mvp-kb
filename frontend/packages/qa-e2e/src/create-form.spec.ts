@@ -18,15 +18,11 @@ test.describe("TC-E2E: Create Form", () => {
     await page.goto("/ltt/pay-out-manual/new");
     await expect(page.locator("input, select, textarea").first()).toBeVisible({ timeout: 10000 });
 
-    // Click "Nộp duyệt & Lưu" to trigger full validation
-    const submitBtn = page.getByRole("button", { name: /Nộp duyệt|Submit/i }).first();
-    if (await submitBtn.count() > 0) {
-      await submitBtn.click();
-      // Error messages are <p> with inline color:#cc0000
-      const errorMsg = page.locator("p[style*='cc0000']");
-      await expect(errorMsg.first()).toBeVisible({ timeout: 3000 });
-    } else {
-      test.skip(true, "Không tìm thấy nút Nộp duyệt");
-    }
+    // "Lưu & Nộp" triggers full Zod validation — errors say "bắt buộc"
+    const submitBtn = page.getByRole("button", { name: /Lưu.*Nộp|Nộp.*duyệt|Submit/i }).first();
+    await expect(submitBtn).toBeVisible({ timeout: 5000 });
+    await submitBtn.click();
+    // Zod error messages contain "bắt buộc" (e.g. "Nội dung bắt buộc")
+    await expect(page.getByText(/bắt buộc/i).first()).toBeVisible({ timeout: 3000 });
   });
 });

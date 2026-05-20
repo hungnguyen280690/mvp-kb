@@ -16,23 +16,14 @@ test.describe("TC-E2E: List Page", () => {
 
   test("TC-E2E-02: filter theo status DRAFT", async ({ page }) => {
     await page.goto(LIST_URL);
-    // Tìm checkbox Nháp (DRAFT)
-    const draftCheckbox = page.getByRole("checkbox", { name: /Nháp|DRAFT/i });
-    if (await draftCheckbox.count() > 0) {
-      await draftCheckbox.check();
-      // Click tìm kiếm nếu có nút
-      const searchBtn = page.getByRole("button", { name: /Tìm kiếm|Search|Lọc/i });
-      if (await searchBtn.count() > 0) {
-        await searchBtn.click();
-      }
-      await page.waitForTimeout(1000);
-      // URL hoặc bảng phản ánh filter
-      const statusBadges = page.locator("text=Nháp");
-      const rejectedBadges = page.locator("text=Từ chối");
-      await expect(rejectedBadges).toHaveCount(0);
-    } else {
-      test.skip(true, "Không tìm thấy checkbox status filter");
-    }
+    // Wait for filter panel to render
+    const draftCheckbox = page.getByRole("checkbox", { name: "Nháp" });
+    await expect(draftCheckbox).toBeVisible({ timeout: 8000 });
+    await draftCheckbox.check();
+    await page.getByRole("button", { name: "Tìm kiếm" }).click();
+    await page.waitForTimeout(1000);
+    // "Từ chối" status badge (span) must not appear in table rows
+    await expect(page.locator("table span").filter({ hasText: /^Từ chối$/ })).toHaveCount(0);
   });
 
   test("TC-E2E-03: nút Tạo mới navigate đến form", async ({ page }) => {
