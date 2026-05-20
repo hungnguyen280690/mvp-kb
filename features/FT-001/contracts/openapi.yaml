@@ -1,0 +1,2105 @@
+openapi: "3.1.0"
+
+info:
+  title: PAY.OUT.MANUAL API — Lệnh Thanh Toán Đi Thủ Công
+  version: "1.0.0"
+  description: |
+    API Contract cho tính năng FT-001 — PAY.OUT.MANUAL (Lệnh Thanh Toán Đi Thủ Công).
+    Bao phủ 100% BDD use cases từ bdd-01 đến bdd-07.
+
+    **Kiến trúc**: `ltt-ui` → `bff-service` → `ltt-service` (Oracle 19c)
+
+    **Security**: JWT Bearer (RS256), RBAC theo roles trong claim `roles[]`.
+
+    **Idempotency**: Header `X-Idempotency-Key` (UUID v4) bắt buộc cho mọi POST/PUT/DELETE mutating.
+
+    **Optimistic Lock**: Header `If-Match: "<version>"` bắt buộc cho PUT/DELETE/workflow actions.
+
+    **Audit**: Mọi mutating action đều sinh entry `LTT_AUDIT_LOG` (SHA-256 hash-chain, ADR-0003).
+
+    **Tham chiếu ADR**: ADR-0001 (Outbox), ADR-0003 (Audit), ADR-0004 (Optimistic Lock),
+    ADR-0005 (Idempotency), ADR-0006 (COA Validation).
+  contact:
+    name: SA Agent — MVP Kho Bạc
+  license:
+    name: Internal — VDBAS
+  x-feature-id: FT-001
+  x-created: "2026-05-19"
+  x-author: SA Agent
+
+servers:
+  - url: /api
+    description: BFF Service (Backend-for-Frontend)
+
+tags:
+  - name: PayOutManual
+    description: Quản lý Lệnh Thanh Toán Đi Thủ Công (CRUD + Workflow)
+  - name: Attachments
+    description: Quản lý File đính kèm
+  - name: AuditApproval
+    description: Lịch sử thao tác & Trạng thái phê duyệt
+  - name: Lookup
+    description: Tra cứu danh mục (LOV)
+
+# ============================================================
+# Security Schemes
+# ============================================================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT RS256 issued by VDBAS SSO. Claims bắt buộc:
+        - `sub`: userId (UUID)
+        - `roles[]`: danh sách role (PAY_OUT_MAKER, PAY_OUT_CHECKER, PAY_OUT_APPROVER, PAY_OUT_VIEWER, PAY_OUT_SUPERVISOR)
+        - `kbnnId`: mã KBNN đơn vị
+
+  # ============================================================
+  # Parameters tái sử dụng
+  # ============================================================
+  parameters:
+    PathId:
+      name: id
+      in: path
+      required: true
+      description: UUID của Lệnh thanh toán (F-ID)
+      schema:
+        type: string
+        format: uuid
+        example: "550e8400-e29b-41d4-a716-446655440000"
+
+    PathAttachId:
+      name: attachId
+      in: path
+      required: true
+      description: UUID của file đính kèm
+      schema:
+        type: string
+        format: uuid
+
+    HeaderIdempotencyKey:
+      name: X-Idempotency-Key
+      in: header
+      required: true
+      description: UUID v4 do client sinh mỗi lần nhấn nút. Dùng cho idempotency 24h (ADR-0005).
+      schema:
+        type: string
+        format: uuid
+        example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+    HeaderIfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: |
+        Giá trị `version` của record lấy từ GET. Dùng cho optimistic lock (ADR-0004).
+        Format: `"<version>"` (số nguyên trong cặp nháy kép).
+      schema:
+        type: string
+        example: '"3"'
+
+    HeaderRequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      description: Trace ID dùng cho correlation log và audit.
+      schema:
+        type: string
+        format: uuid
+
+    QueryPage:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Số trang (0-indexed)
+
+    QuerySize:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 20
+      description: Số bản ghi mỗi trang
+
+    QuerySort:
+      name: sort
+      in: query
+      required: false
+      schema:
+        type: string
+        example: "createdAt,desc"
+      description: "Chuỗi sort: `<field>,<asc|desc>`. Nhiều trường: `sort=createdAt,desc&sort=refNo,asc`"
+
+  # ============================================================
+  # Schemas
+  # ============================================================
+  schemas:
+    # ---------- Enums ----------
+    PayOrderStatus:
+      type: string
+      enum:
+        - DRAFT
+        - READY_FOR_APPROVAL
+        - PENDING_APPROVER
+        - APPROVED
+        - RETURNED_TO_MAKER
+        - REJECTED
+        - DELETED
+      description: |
+        Trạng thái workflow (7 trạng thái MVP):
+        - DRAFT: Lệnh mới tạo / bị trả lại đang sửa
+        - READY_FOR_APPROVAL: Đã Submit, chờ Checker
+        - PENDING_APPROVER: Checker duyệt cấp 1, chờ Approver
+        - APPROVED: Approver duyệt cuối — Final state MVP
+        - RETURNED_TO_MAKER: Bị trả lại, Maker có thể sửa
+        - REJECTED: Bị từ chối — Final state
+        - DELETED: Soft-delete bởi Maker gốc
+
+    ChannelCode:
+      type: string
+      enum: [LNH, TTSP, LIEN_KHO_BAC]
+      description: |
+        Kênh thanh toán:
+        - LNH: Liên ngân hàng
+        - TTSP: Thanh toán song phương
+        - LIEN_KHO_BAC: Liên Kho Bạc
+
+    LnhTransactionType:
+      type: string
+      enum: [LTT01, LTT02, LTT03, LTT04]
+      nullable: true
+      description: Loại giao dịch LNH (conditional, bắt buộc khi channel=LNH)
+
+    ExpenseType:
+      type: string
+      enum: [EXP01, EXP02, EXP03, EXP04, EXP05]
+      nullable: true
+      description: Loại chi — conditional
+
+    # ---------- Line item ----------
+    PayOrderLineRequest:
+      type: object
+      required:
+        - lineNum
+        - lineAmount
+        - ccidSegment1
+        - ccidSegment2
+        - ccidSegment3
+        - ccidSegment4
+        - ccidSegment5
+        - ccidSegment6
+        - ccidSegment7
+        - ccidSegment8
+        - ccidSegment9
+        - ccidSegment10
+        - ccidSegment11
+        - ccidSegment12
+      properties:
+        lineNum:
+          type: integer
+          minimum: 1
+          description: Số thứ tự dòng
+        lineAmount:
+          type: number
+          format: double
+          exclusiveMinimum: 0
+          description: Số tiền dòng chi tiết (VAL-06, > 0)
+        lineDescription:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Diễn giải dòng chi tiết
+        ccidSegment1:
+          type: string
+          maxLength: 10
+          description: COA Segment 1
+        ccidSegment2:
+          type: string
+          maxLength: 10
+          description: COA Segment 2 (Tài khoản tự nhiên)
+        ccidSegment3:
+          type: string
+          maxLength: 10
+          description: COA Segment 3
+        ccidSegment4:
+          type: string
+          maxLength: 10
+          description: COA Segment 4
+        ccidSegment5:
+          type: string
+          maxLength: 10
+          description: COA Segment 5
+        ccidSegment6:
+          type: string
+          maxLength: 10
+          description: COA Segment 6
+        ccidSegment7:
+          type: string
+          maxLength: 10
+          description: COA Segment 7
+        ccidSegment8:
+          type: string
+          maxLength: 10
+          description: COA Segment 8
+        ccidSegment9:
+          type: string
+          maxLength: 10
+          description: COA Segment 9
+        ccidSegment10:
+          type: string
+          maxLength: 10
+          description: COA Segment 10
+        ccidSegment11:
+          type: string
+          maxLength: 10
+          description: COA Segment 11
+        ccidSegment12:
+          type: string
+          maxLength: 10
+          description: COA Segment 12
+
+    PayOrderLineResponse:
+      allOf:
+        - $ref: "#/components/schemas/PayOrderLineRequest"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              description: UUID của dòng chi tiết
+            ccidValid:
+              type: boolean
+              description: Kết quả validate CCID
+
+    # ---------- Main Request Body ----------
+    PayOrderRequest:
+      type: object
+      required:
+        - channel
+        - sender
+        - receiver
+        - paymentDate
+        - currencyCode
+        - description
+        - senderName
+        - senderAddress
+        - senderGlSegment2
+        - senderBankCode
+        - receiverName
+        - receiverGlSegment2
+        - receiverBankCode
+        - receiverAccountName
+        - lines
+      properties:
+        # Tab: Thông tin chung
+        channel:
+          $ref: "#/components/schemas/ChannelCode"
+        orderType:
+          type: string
+          maxLength: 30
+          nullable: true
+          description: Loại lệnh — conditional (bắt buộc khi channel != LIEN_KHO_BAC)
+        lnhTransactionType:
+          $ref: "#/components/schemas/LnhTransactionType"
+        sender:
+          type: string
+          maxLength: 20
+          description: Mã NH/KB chuyển (LOV.01)
+        receiver:
+          type: string
+          maxLength: 20
+          description: Mã NH/KB nhận (LOV.01)
+        paymentDate:
+          type: string
+          format: date
+          description: |
+            Ngày thanh toán (editable, INC-G-13).
+            Phải nằm trong kỳ kế toán có status=OPEN (VAL-08).
+          example: "2026-05-19"
+        currencyCode:
+          type: string
+          minLength: 3
+          maxLength: 3
+          default: VND
+          description: Mã ngoại tệ (LOV.04)
+          example: VND
+        exchangeRate:
+          type: number
+          format: double
+          exclusiveMinimum: 0
+          nullable: true
+          description: Tỷ giá — bắt buộc khi currencyCode != VND (INC-G-09, nhập tay)
+        originNum:
+          type: string
+          maxLength: 50
+          nullable: true
+          description: Số chứng từ gốc — bắt buộc khi channel=TTSP
+        transactionDate:
+          type: string
+          format: date
+          nullable: true
+          description: Ngày chứng từ gốc — bắt buộc khi channel=TTSP
+        expType:
+          $ref: "#/components/schemas/ExpenseType"
+        fnCode1:
+          type: string
+          maxLength: 3
+          nullable: true
+          description: Mã ngoại tệ trích nợ — conditional
+        fnCode2:
+          type: string
+          maxLength: 3
+          nullable: true
+          description: Mã ngoại tệ thanh toán — conditional
+        fnAmount:
+          type: number
+          format: double
+          nullable: true
+          description: Số tiền ngoại tệ thanh toán — conditional
+        description:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Nội dung thanh toán (VAL-04)
+
+        # Tab: Người chuyển
+        senderName:
+          type: string
+          maxLength: 200
+          description: Tên người/tổ chức chuyển
+        senderAddress:
+          type: string
+          maxLength: 500
+          description: Địa chỉ người chuyển
+        senderGlSegment2:
+          type: string
+          maxLength: 4
+          description: TK tự nhiên người chuyển (LOV.07.2)
+        senderNum:
+          type: string
+          maxLength: 20
+          nullable: true
+          description: Mã khách hàng
+        senderBankCode:
+          type: string
+          maxLength: 20
+          description: Mã NH/KB người chuyển mở tài khoản (LOV.02)
+        senderIdentifyId:
+          type: string
+          maxLength: 50
+          nullable: true
+          description: "CMND/CCCD/Hộ chiếu/Mã DN — PII field (masked nếu thiếu quyền VIEW_PII)"
+        senderIssuedDate:
+          type: string
+          format: date
+          nullable: true
+          description: Ngày cấp — bắt buộc khi senderIdentifyId có giá trị
+        senderIssuedPlace:
+          type: string
+          maxLength: 200
+          nullable: true
+          description: Nơi cấp — bắt buộc khi senderIdentifyId có giá trị
+        tpcpCode:
+          type: string
+          maxLength: 20
+          nullable: true
+          description: Mã TPCP — bắt buộc khi orderType=Lệnh trái phiếu chính phủ
+
+        # Tab: Người nhận
+        receiverName:
+          type: string
+          maxLength: 200
+          description: Tên người/tổ chức nhận — PII
+        receiverAddress:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Địa chỉ người nhận — PII
+        receiverGlSegment2:
+          type: string
+          maxLength: 20
+          description: Số tài khoản người nhận
+        receiverBankCode:
+          type: string
+          maxLength: 20
+          description: Mã NH/KB người nhận mở tài khoản (LOV.02)
+        receiverAccountName:
+          type: string
+          maxLength: 200
+          description: Tên tài khoản người nhận
+        receiverIdentifyId:
+          type: string
+          maxLength: 50
+          nullable: true
+          description: "CMND/CCCD/Hộ chiếu người nhận — PII"
+        receiverIssuedDate:
+          type: string
+          format: date
+          nullable: true
+        receiverIssuedPlace:
+          type: string
+          maxLength: 200
+          nullable: true
+
+        # Lines
+        lines:
+          type: array
+          minItems: 1
+          description: "Danh sách dòng chi tiết khoản mục COA (VAL-05: ≥1 dòng)"
+          items:
+            $ref: "#/components/schemas/PayOrderLineRequest"
+
+    # ---------- Main Response ----------
+    PayOrderResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: F-ID — UUID khoá chính
+        version:
+          type: integer
+          description: F-VER — Optimistic lock version (cũng là ETag)
+        status:
+          $ref: "#/components/schemas/PayOrderStatus"
+        refNo:
+          type: string
+          maxLength: 20
+          description: "Mã chứng từ tự sinh: <KBNN>-YYYYMM-<seq6> (INC-G-02)"
+          example: "HN001-202605-000001"
+        channel:
+          $ref: "#/components/schemas/ChannelCode"
+        orderType:
+          type: string
+          nullable: true
+        lnhTransactionType:
+          $ref: "#/components/schemas/LnhTransactionType"
+        sender:
+          type: string
+        receiver:
+          type: string
+        paymentDate:
+          type: string
+          format: date
+        amount:
+          type: number
+          format: double
+          description: Tổng tiền = SUM(lines[].lineAmount) — server tính (VAL-07)
+        currencyCode:
+          type: string
+        exchangeRate:
+          type: number
+          nullable: true
+        originNum:
+          type: string
+          nullable: true
+        transactionDate:
+          type: string
+          format: date
+          nullable: true
+        expType:
+          type: string
+          nullable: true
+        fnCode1:
+          type: string
+          nullable: true
+        fnCode2:
+          type: string
+          nullable: true
+        fnAmount:
+          type: number
+          nullable: true
+        description:
+          type: string
+        senderName:
+          type: string
+        senderAddress:
+          type: string
+        senderGlSegment2:
+          type: string
+        senderNum:
+          type: string
+          nullable: true
+        senderBankCode:
+          type: string
+        senderIdentifyId:
+          type: string
+          nullable: true
+          description: "PII — masked nếu caller thiếu quyền PAY.OUT.MANUAL.VIEW_PII"
+        senderIssuedDate:
+          type: string
+          format: date
+          nullable: true
+        senderIssuedPlace:
+          type: string
+          nullable: true
+        tpcpCode:
+          type: string
+          nullable: true
+        receiverName:
+          type: string
+        receiverAddress:
+          type: string
+          nullable: true
+        receiverGlSegment2:
+          type: string
+        receiverBankCode:
+          type: string
+        receiverAccountName:
+          type: string
+        receiverIdentifyId:
+          type: string
+          nullable: true
+          description: "PII — masked nếu caller thiếu quyền PAY.OUT.MANUAL.VIEW_PII"
+        receiverIssuedDate:
+          type: string
+          format: date
+          nullable: true
+        receiverIssuedPlace:
+          type: string
+          nullable: true
+        kbnnId:
+          type: string
+          description: Mã KBNN chủ quản bản ghi
+        createdBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedBy:
+          type: string
+          format: uuid
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        checkerId:
+          type: string
+          format: uuid
+          nullable: true
+        checkerActionAt:
+          type: string
+          format: date-time
+          nullable: true
+        checkerComment:
+          type: string
+          nullable: true
+        approverId:
+          type: string
+          format: uuid
+          nullable: true
+        approverActionAt:
+          type: string
+          format: date-time
+          nullable: true
+        approverComment:
+          type: string
+          nullable: true
+        deleteReason:
+          type: string
+          nullable: true
+        deletedBy:
+          type: string
+          format: uuid
+          nullable: true
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/PayOrderLineResponse"
+        attachmentCount:
+          type: integer
+          description: Số file đính kèm hiện có
+
+    # ---------- List response ----------
+    PayOrderSummary:
+      type: object
+      description: Bản ghi tóm tắt dùng trong danh sách
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+        status:
+          $ref: "#/components/schemas/PayOrderStatus"
+        refNo:
+          type: string
+        channel:
+          $ref: "#/components/schemas/ChannelCode"
+        paymentDate:
+          type: string
+          format: date
+        amount:
+          type: number
+          format: double
+        currencyCode:
+          type: string
+        receiverName:
+          type: string
+        description:
+          type: string
+        createdBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        kbnnId:
+          type: string
+        attachmentCount:
+          type: integer
+
+    PagedPayOrderResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/PayOrderSummary"
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        page:
+          type: integer
+        size:
+          type: integer
+        sort:
+          type: string
+
+    # ---------- Workflow action requests ----------
+    SubmitRequest:
+      type: object
+      description: Body cho hành động Submit (có thể để trống hoặc truyền comment)
+      properties:
+        comment:
+          type: string
+          maxLength: 500
+          nullable: true
+
+    WorkflowReasonRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 500
+          description: Lý do trả lại / từ chối — bắt buộc ≥ 10 ký tự (VAL-13)
+
+    ApproveRequest:
+      type: object
+      description: Body cho hành động phê duyệt cuối (Approver)
+      properties:
+        comment:
+          type: string
+          maxLength: 500
+          nullable: true
+
+    DeleteRequest:
+      type: object
+      required:
+        - deleteReason
+        - confirmed
+      properties:
+        deleteReason:
+          type: string
+          minLength: 10
+          maxLength: 500
+          description: Lý do xoá ≥ 10 ký tự (BIZ-006, VAL-16)
+        confirmed:
+          type: boolean
+          description: Phải là `true` — tránh xoá nhầm khi không có hộp thoại xác nhận FE
+
+    # ---------- Attachment ----------
+    AttachmentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+          description: Tên file gốc
+        contentType:
+          type: string
+          description: MIME type (application/pdf, image/jpeg, ...)
+        fileSizeBytes:
+          type: integer
+          format: int64
+          description: Kích thước file tính bằng bytes
+        sha256:
+          type: string
+          description: SHA-256 hash nội dung file (chống giả mạo/trùng)
+        uploadedBy:
+          type: string
+          format: uuid
+        uploadedAt:
+          type: string
+          format: date-time
+        isDeleted:
+          type: boolean
+          default: false
+
+    # ---------- Audit Log ----------
+    AuditLogEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        entityType:
+          type: string
+          example: PAY_ORDER
+        entityId:
+          type: string
+          format: uuid
+        action:
+          type: string
+          enum:
+            - CREATE
+            - UPDATE
+            - DELETE
+            - SUBMIT
+            - CHECK_APPROVE
+            - APPROVE
+            - RETURN
+            - REJECT
+            - COPY
+            - ATTACHMENT_UPLOAD
+            - ATTACHMENT_DELETE
+            - SECURITY_VIOLATION
+          description: Loại hành động
+        performedBy:
+          type: string
+          format: uuid
+        performedAt:
+          type: string
+          format: date-time
+        ipAddress:
+          type: string
+        versionBefore:
+          type: integer
+          nullable: true
+        versionAfter:
+          type: integer
+          nullable: true
+        payload:
+          type: object
+          description: "JSON diff: {field: {oldValue, newValue}}"
+          additionalProperties: true
+
+    PagedAuditLogResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLogEntry"
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        page:
+          type: integer
+        size:
+          type: integer
+
+    # ---------- Approval Status ----------
+    ApprovalStep:
+      type: object
+      properties:
+        step:
+          type: string
+          enum: [MAKER, CHECKER, APPROVER]
+        userId:
+          type: string
+          format: uuid
+          nullable: true
+        userName:
+          type: string
+          nullable: true
+        actionAt:
+          type: string
+          format: date-time
+          nullable: true
+        action:
+          type: string
+          nullable: true
+          description: "Hành động: SUBMITTED, CHECK_APPROVED, APPROVED, RETURNED, REJECTED"
+        comment:
+          type: string
+          nullable: true
+        isCompleted:
+          type: boolean
+
+    ApprovalStatusResponse:
+      type: object
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/PayOrderStatus"
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApprovalStep"
+        currentStep:
+          type: string
+          enum: [MAKER, CHECKER, APPROVER]
+          nullable: true
+
+    # ---------- CCID Validate ----------
+    CcidValidateRequest:
+      type: object
+      required:
+        - segments
+      properties:
+        segments:
+          type: array
+          minItems: 12
+          maxItems: 12
+          items:
+            type: string
+          description: 12 segments COA theo thứ tự (S1→S12)
+        lineNum:
+          type: integer
+          nullable: true
+          description: Số dòng chi tiết (để server trả lỗi đúng context)
+
+    CcidValidateResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              message:
+                type: string
+              field:
+                type: string
+                nullable: true
+
+    # ---------- Export ----------
+    ExportRequest:
+      type: object
+      required:
+        - format
+      properties:
+        format:
+          type: string
+          enum: [EXCEL, PDF, CSV]
+          description: Định dạng xuất
+        filter:
+          $ref: "#/components/schemas/PayOrderFilterParams"
+        includeDeleted:
+          type: boolean
+          default: false
+          description: Bao gồm bản ghi DELETED (chỉ role cấp cao)
+
+    PayOrderFilterParams:
+      type: object
+      description: Bộ lọc dùng cho LIST và EXPORT
+      properties:
+        status:
+          type: array
+          items:
+            $ref: "#/components/schemas/PayOrderStatus"
+          nullable: true
+        channel:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChannelCode"
+          nullable: true
+        refNo:
+          type: string
+          nullable: true
+        receiverName:
+          type: string
+          nullable: true
+        paymentDateFrom:
+          type: string
+          format: date
+          nullable: true
+        paymentDateTo:
+          type: string
+          format: date
+          nullable: true
+        amountFrom:
+          type: number
+          nullable: true
+        amountTo:
+          type: number
+          nullable: true
+        createdBy:
+          type: string
+          format: uuid
+          nullable: true
+        kbnnId:
+          type: string
+          nullable: true
+
+    # ---------- Lookup ----------
+    LookupItem:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Mã danh mục
+        name:
+          type: string
+          description: Tên hiển thị
+        extra:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Thông tin bổ sung tuỳ loại danh mục
+
+    # ---------- Common Error ----------
+    ErrorResponse:
+      type: object
+      required:
+        - traceId
+        - timestamp
+        - code
+        - message
+      properties:
+        traceId:
+          type: string
+          description: "Request ID từ header X-Request-Id hoặc server gen"
+          example: "req_abc123xyz"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-05-19T09:00:00+07:00"
+        code:
+          type: string
+          description: "Mã lỗi từ danh mục §A9 spec (29 codes)"
+          example: "MSG-ERR-LOCK"
+        message:
+          type: string
+          description: Mô tả lỗi thân thiện người dùng (tiếng Việt)
+          example: "Bản ghi đã bị thay đổi từ phiên khác. Vui lòng tải lại."
+        details:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                nullable: true
+              message:
+                type: string
+              yourVersion:
+                type: integer
+                nullable: true
+              currentVersion:
+                type: integer
+                nullable: true
+
+  # ============================================================
+  # Responses tái sử dụng
+  # ============================================================
+  responses:
+    Unauthorized:
+      description: "401 — Token không hợp lệ hoặc đã hết hạn"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            traceId: "req_unauth"
+            timestamp: "2026-05-19T10:00:00+07:00"
+            code: "MSG-ERR-AUTH"
+            message: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+
+    Forbidden:
+      description: "403 — Không có quyền thực hiện hành động này"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            traceId: "req_forbidden"
+            timestamp: "2026-05-19T10:00:00+07:00"
+            code: "MSG-ERR-PERMISSION"
+            message: "Bạn không có quyền thực hiện thao tác này."
+
+    NotFound:
+      description: "404 — Không tìm thấy bản ghi"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            traceId: "req_notfound"
+            timestamp: "2026-05-19T10:00:00+07:00"
+            code: "MSG-ERR-NOT-FOUND"
+            message: "Lệnh thanh toán không tồn tại hoặc đã bị xoá."
+
+    Conflict:
+      description: "409 — Xung đột trạng thái hoặc optimistic lock"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            optimistic_lock:
+              summary: Optimistic lock mismatch
+              value:
+                traceId: "req_conflict"
+                timestamp: "2026-05-19T10:00:00+07:00"
+                code: "MSG-ERR-LOCK"
+                message: "Bản ghi đã bị thay đổi từ phiên khác. Vui lòng tải lại."
+                details:
+                  - field: "version"
+                    yourVersion: 3
+                    currentVersion: 5
+            invalid_status:
+              summary: Transition trạng thái không hợp lệ
+              value:
+                traceId: "req_status"
+                timestamp: "2026-05-19T10:00:00+07:00"
+                code: "MSG-ERR-STATUS"
+                message: "Thao tác không hợp lệ với trạng thái hiện tại của lệnh."
+
+    UnprocessableEntity:
+      description: "422 — Dữ liệu đầu vào không hợp lệ"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    IdempotencyConflict:
+      description: "422 — Idempotency key đã dùng cho request khác"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            traceId: "req_idemp"
+            timestamp: "2026-05-19T10:00:00+07:00"
+            code: "MSG-ERR-IDEMPOTENCY"
+            message: "Idempotency key đã được sử dụng cho một request khác."
+
+# ============================================================
+# Security toàn cục
+# ============================================================
+security:
+  - BearerAuth: []
+
+# ============================================================
+# Paths
+# ============================================================
+paths:
+  # ----------------------------------------------------------
+  # 1. Tạo mới lệnh thanh toán
+  # ----------------------------------------------------------
+  /pay-out-manual:
+    post:
+      tags: [PayOutManual]
+      operationId: createPayOutManual
+      summary: "[CREATE] Tạo lệnh thanh toán đi mới (DRAFT)"
+      description: |
+        Maker tạo lệnh thanh toán mới. Server tự sinh `REF_NO` theo pattern `<KBNN>-YYYYMM-<seq6>`.
+        Record được lưu ở trạng thái `DRAFT`, `version=1`.
+
+        **BDD**: bdd-01 (TC.1.01, TC.1.11)
+        **Required permission**: `PAY.OUT.MANUAL.CREATE`
+        **Idempotency**: Bắt buộc header `X-Idempotency-Key` (ADR-0005)
+      parameters:
+        - $ref: "#/components/parameters/HeaderIdempotencyKey"
+        - $ref: "#/components/parameters/HeaderRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayOrderRequest"
+      responses:
+        "201":
+          description: Tạo thành công — DRAFT
+          headers:
+            ETag:
+              description: 'Giá trị version hiện tại — dùng cho If-Match sau này. VD: "1"'
+              schema:
+                type: string
+            Location:
+              description: URL của bản ghi mới tạo
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayOrderResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+    # ----------------------------------------------------------
+    # 11. Danh sách lệnh thanh toán
+    # ----------------------------------------------------------
+    get:
+      tags: [PayOutManual]
+      operationId: listPayOutManual
+      summary: "[LIST] Danh sách lệnh thanh toán (filter + sort + paginate)"
+      description: |
+        Lấy danh sách lệnh thanh toán theo bộ lọc. Mặc định ẩn trạng thái `DELETED`.
+        Viewer và các role khác chỉ thấy bản ghi thuộc `kbnnId` của mình (tenant isolation).
+
+        **BDD**: bdd-04 (TC.4.01 → TC.4.07)
+        **Required permission**: `PAY.OUT.MANUAL.READ`
+      parameters:
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QuerySize"
+        - $ref: "#/components/parameters/QuerySort"
+        - $ref: "#/components/parameters/HeaderRequestId"
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/PayOrderStatus"
+          style: form
+          explode: true
+          description: Lọc theo trạng thái (multi-select)
+        - name: channel
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/ChannelCode"
+          style: form
+          explode: true
+        - name: refNo
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: receiverName
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Tìm kiếm gần đúng (LIKE %%)
+        - name: paymentDateFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: paymentDateTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: amountFrom
+          in: query
+          required: false
+          schema:
+            type: number
+        - name: amountTo
+          in: query
+          required: false
+          schema:
+            type: number
+        - name: createdBy
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: includeDeleted
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: "Hiển thị bản ghi DELETED (chỉ APPROVER/VIEWER/SUPERVISOR)"
+      responses:
+        "200":
+          description: Danh sách thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedPayOrderResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ----------------------------------------------------------
+  # 12. Export
+  # ----------------------------------------------------------
+  /pay-out-manual/export:
+    post:
+      tags: [PayOutManual]
+      operationId: exportPayOutManual
+      summary: "[EXPORT] Xuất danh sách lệnh thanh toán (Excel/PDF/CSV)"
+      description: |
+        Xuất dữ liệu đồng bộ. Giới hạn ≤ 50,000 bản ghi (MVP — không async).
+        Trả về binary file attachment.
+
+        **BDD**: bdd-06 (TC.6.01 → TC.6.05)
+        **Required permission**: `PAY.OUT.MANUAL.EXPORT`
+        **Idempotency**: Bắt buộc (ngăn double-export gây tải DB)
+      parameters:
+        - $ref: "#/components/parameters/HeaderIdempotencyKey"
+        - $ref: "#/components/parameters/HeaderRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExportRequest"
+      responses:
+        "200":
+          description: File xuất thành công
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: 'attachment; filename="pay-out-manual-20260519.xlsx"'
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: Dataset vượt giới hạn 50k bản ghi
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                traceId: "req_export"
+                timestamp: "2026-05-19T10:00:00+07:00"
+                code: "MSG-ERR-EXPORT-LIMIT"
+                message: "Số bản ghi vượt quá giới hạn cho phép (50,000). Vui lòng thu hẹp bộ lọc."
+
+  # ----------------------------------------------------------
+  # 20. Lookup danh mục
+  # ----------------------------------------------------------
+  /pay-out-manual/lookup/{type}:
+    get:
+      tags: [Lookup]
+      operationId: lookupPayOutManual
+      summary: "[LOOKUP] Tra cứu danh mục (popup LOV)"
+      description: |
+        Tra cứu danh mục dùng cho popup LOV.
+        Các loại hỗ trợ: `BANK`, `USER`, `DVQHNS`, `CURRENCY`, `COA_SEGMENT`.
+
+        **Required permission**: `PAY.OUT.MANUAL.READ`
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              [
+                BANK,
+                USER,
+                DVQHNS,
+                CURRENCY,
+                COA_SEGMENT,
+                EXPENSE_TYPE,
+                ORDER_TYPE,
+              ]
+          description: Loại danh mục cần tra cứu
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Từ khoá tìm kiếm (tìm gần đúng)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - $ref: "#/components/parameters/HeaderRequestId"
+      responses:
+        "200":
+          description: Kết quả tra cứu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/LookupItem"
+                  totalElements:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ----------------------------------------------------------
+  # 2 & 3 & 4. Chi tiết / Sửa / Xoá
+  # ----------------------------------------------------------
+  /pay-out-manual/{id}:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+      - $ref: "#/components/parameters/HeaderRequestId"
+
+    get:
+      tags: [PayOutManual]
+      operationId: getPayOutManual
+      summary: "[DETAIL] Xem chi tiết lệnh thanh toán"
+      description: |
+        Lấy toàn bộ thông tin lệnh gồm 4 tab + lines + attachmentCount.
+        Response header `ETag` = version hiện tại (dùng cho If-Match).
+
+        **BDD**: bdd-02 (xem chi tiết)
+        **Required permission**: `PAY.OUT.MANUAL.READ`
+      responses:
+        "200":
+          description: Chi tiết lệnh thanh toán
+          headers:
+            ETag:
+              description: 'Version hiện tại. VD: "3"'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayOrderResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      tags: [PayOutManual]
+      operationId: updatePayOutManual
+      summary: "[EDIT] Sửa lệnh thanh toán (DRAFT / RETURNED_TO_MAKER)"
+      description: |
+        Cập nhật lệnh thanh toán. Chỉ cho phép khi status = `DRAFT` hoặc `RETURNED_TO_MAKER`.
+        Chỉ Maker gốc (`createdBy`) mới được sửa.
+        Yêu cầu `If-Match` header khớp với version hiện tại (ADR-0004).
+
+        **BDD**: bdd-02 (TC.2.01 → TC.2.10)
+        **Required permission**: `PAY.OUT.MANUAL.UPDATE`
+      parameters:
+        - $ref: "#/components/parameters/HeaderIdempotencyKey"
+        - $ref: "#/components/parameters/HeaderIfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayOrderRequest"
+      responses:
+        "200":
+          description: Cập nhật thành công
+          headers:
+            ETag:
+              description: 'Version mới sau update. VD: "4"'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayOrderResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+    delete:
+      tags: [PayOutManual]
+      operationId: deletePayOutManual
+      summary: "[DELETE] Soft-delete lệnh thanh toán"
+      description: |
+        Soft-delete — đổi status sang `DELETED`, không xoá vật lý.
+        Chỉ cho phép khi status = `DRAFT` hoặc `RETURNED_TO_MAKER`.
+        Chỉ Maker gốc mới được xoá.
+        Body phải có `deleteReason` (≥10 ký tự) và `confirmed=true`.
+
+        **BDD**: bdd-05 (TC.5.01 → TC.5.07)
+        **Required permission**: `PAY.OUT.MANUAL.DELETE`
+      parameters:
+        - $ref: "#/components/parameters/HeaderIdempotencyKey"
+        - $ref: "#/components/parameters/HeaderIfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteRequest"
+      responses:
+        "200":
+          description: Soft-delete thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    example: DELETED
+                  message:
+                    type: string
+                    example: "MSG-OK-DELETE: Đã xoá lệnh thanh toán thành công."
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  # ----------------------------------------------------------
+  # 5. Submit
+  # ----------------------------------------------------------
+  /pay-out-manual/{id}/submit:
+    post:
+      tags: [PayOutManual]
+      operationId: submitPayOutManual
+      summary: "[SUBMIT] Gửi lệnh kiểm soát (DRAFT → READY_FOR_APPROVAL)"
+      description: |
+        Maker gửi lệnh để Checker kiểm soát. Server thực hiện toàn bộ VAL-01..VAL-19.
+        Kích hoạt notification in-app + email tới Checker (BIZ-009).
+
+        **BDD**: bdd-01 (TC.1.12), bdd-02 (TC.2.08)
+        **Required permission**: `PAY.OUT.MANUAL.SUBMIT`
+        **State transition**: `DRAFT` | `RETURNED_TO_MAKER` → `READY_FOR_APPROVAL`
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+        - $ref: "#/components/parameters/HeaderIdempotencyKey"
+        - $ref: "#/components/parameters/HeaderIfMatch"
+        - $ref: "#/components/parameters/HeaderRequestId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitRequest"
+      responses:
+        "200":
+          description: Submit thành công — READY_FOR_APPROVAL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    example: READY_FOR_APPROVAL
+                  version:
+                    type: integer
+                  message:
+                    type: string
+                    example: "MSG-OK-SUBMIT: Đã gửi giao dịch để kiểm soát/phê duyệt."
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  # ----------------------------------------------------------
+  # 6. Check-Approve (Checker duyệt cấp 1)
+  # ----------------------------------------------------------
+  /pay-out-manual/{id}/check-approve:
+    post:
+      tags: [PayOutManual]
+      operationId: checkApprovePayOutManual
+      summary: "[CHECK] Checker phê duyệt cấp 1 (READY_FOR_APPROVAL → PENDING_APPROVER)"
+      description: |
+        Checker phê duyệt cấp 1. Kiểm tra SoD: `checkerId ≠ createdBy`.
+        Sau khi approve, gửi notification tới Approver.
+
+        **BDD**: bdd-03 (TC.3.01, TC.3.02)
+        **Required permission**: `PAY.OUT.MANUAL.CHECK`
+        **State transition**: `READY_FOR_APPROVAL` → `PENDING_APPROVER`
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+        - $ref: "#/components/parameters/HeaderIdempotencyKey"
+        - $ref: "#/components/parameters/HeaderIfMatch"
+        - $ref: "#/components/parameters/HeaderRequestId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveRequest"
+      responses:
+        "200":
+          description: Check approve thành công — PENDING_APPROVER
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    example: PENDING_APPROVER
+                  version:
+                    type: integer
+                  message:
+                    type: string
+                    example: "MSG-OK-CHECK: Đã kiểm soát và chuyển lên phê duyệt."
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  # ----------------------------------------------------------
+  # 7. Approve (Approver duyệt cuối)
+  # ----------------------------------------------------------
+  /pay-out-manual/{id}/approve:
+    post:
+      tags: [PayOutManual]
+      operationId: approvePayOutManual
+      summary: "[APPROVE] Approver phê duyệt cuối (PENDING_APPROVER → APPROVED)"
+      description: |
+        Approver phê duyệt cuối. SoD: `approverId ≠ createdBy AND approverId ≠ checkerId`.
+        `APPROVED` là final state trong MVP (không tích hợp GL).
+
+        **BDD**: bdd-03 (TC.3.03, TC.3.04)
+        **Required permission**: `PAY.OUT.MANUAL.APPROVE`
+        **State transition**: `PENDING_APPROVER` → `APPROVED`
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+        - $ref: "#/components/parameters/HeaderIdempotencyKey"
+        - $ref: "#/components/parameters/HeaderIfMatch"
+        - $ref: "#/components/parameters/HeaderRequestId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveRequest"
+      responses:
+        "200":
+          description: Phê duyệt thành công — APPROVED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    example: APPROVED
+                  version:
+                    type: integer
+                  message:
+                    type: string
+                    example: "MSG-OK-APPROVE: Lệnh thanh toán đã được phê duyệt thành công."
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  # ----------------------------------------------------------
+  # 8. Return (trả lại Maker)
+  # ----------------------------------------------------------
+  /pay-out-manual/{id}/return:
+    post:
+      tags: [PayOutManual]
+      operationId: returnPayOutManual
+      summary: "[RETURN] Trả lại Maker (READY/PENDING → RETURNED_TO_MAKER)"
+      description: |
+        Checker hoặc Approver trả lại Maker để chỉnh sửa. Lý do bắt buộc ≥ 10 ký tự.
+        Notification gửi tới Maker sau khi trả.
+
+        **BDD**: bdd-03 (TC.3.05, TC.3.07)
+        **Required permission**: `PAY.OUT.MANUAL.RETURN`
+        **State transition**: `READY_FOR_APPROVAL` | `PENDING_APPROVER` → `RETURNED_TO_MAKER`
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+        - $ref: "#/components/parameters/HeaderIdempotencyKey"
+        - $ref: "#/components/parameters/HeaderIfMatch"
+        - $ref: "#/components/parameters/HeaderRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowReasonRequest"
+      responses:
+        "200":
+          description: Trả lại thành công — RETURNED_TO_MAKER
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    example: RETURNED_TO_MAKER
+                  version:
+                    type: integer
+                  message:
+                    type: string
+                    example: "MSG-OK-RETURN: Đã trả lại lệnh cho người lập."
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  # ----------------------------------------------------------
+  # 9. Reject (từ chối)
+  # ----------------------------------------------------------
+  /pay-out-manual/{id}/reject:
+    post:
+      tags: [PayOutManual]
+      operationId: rejectPayOutManual
+      summary: "[REJECT] Từ chối lệnh (READY/PENDING → REJECTED)"
+      description: |
+        Checker hoặc Approver từ chối lệnh. Lý do bắt buộc ≥ 10 ký tự.
+        `REJECTED` là final state — không thể phục hồi.
+
+        **BDD**: bdd-03 (TC.3.06, TC.3.08)
+        **Required permission**: `PAY.OUT.MANUAL.REJECT`
+        **State transition**: `READY_FOR_APPROVAL` | `PENDING_APPROVER` → `REJECTED`
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+        - $ref: "#/components/parameters/HeaderIdempotencyKey"
+        - $ref: "#/components/parameters/HeaderIfMatch"
+        - $ref: "#/components/parameters/HeaderRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowReasonRequest"
+      responses:
+        "200":
+          description: Từ chối thành công — REJECTED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    example: REJECTED
+                  version:
+                    type: integer
+                  message:
+                    type: string
+                    example: "MSG-OK-REJECT: Lệnh thanh toán đã bị từ chối."
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  # ----------------------------------------------------------
+  # 10. Copy
+  # ----------------------------------------------------------
+  /pay-out-manual/{id}/copy:
+    post:
+      tags: [PayOutManual]
+      operationId: copyPayOutManual
+      summary: "[COPY] Tạo lệnh mới từ lệnh sẵn có (Clone → DRAFT)"
+      description: |
+        Maker clone một lệnh hiện có. Server tạo bản ghi mới với:
+        - `status = DRAFT`, `version = 1`
+        - Tự sinh `REF_NO` mới
+        - Các trường thông tin được copy nguyên, riêng `createdBy` = user hiện tại
+
+        **BDD**: bdd-07 (TC.7.01 → TC.7.04)
+        **Required permission**: `PAY.OUT.MANUAL.CREATE`
+        **Idempotency**: Bắt buộc (tránh double-copy)
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+        - $ref: "#/components/parameters/HeaderIdempotencyKey"
+        - $ref: "#/components/parameters/HeaderRequestId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paymentDate:
+                  type: string
+                  format: date
+                  nullable: true
+                  description: Ngày thanh toán cho bản copy (mặc định là ngày hiện tại)
+      responses:
+        "201":
+          description: Copy thành công — trả về lệnh DRAFT mới
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayOrderResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ----------------------------------------------------------
+  # 19. Validate CCID
+  # ----------------------------------------------------------
+  /pay-out-manual/{id}/validate-ccid:
+    post:
+      tags: [PayOutManual]
+      operationId: validateCcid
+      summary: "[CCID] Validate tổ hợp COA segments (debounce 300ms)"
+      description: |
+        Real-time validate CCID. FE debounce 300ms gọi endpoint này khi user thay đổi segment COA.
+        Server check L1 Caffeine cache → DB `DMHT_COA_MATRIX` nếu cache miss (ADR-0006).
+
+        **Required permission**: `PAY.OUT.MANUAL.CREATE`
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+        - $ref: "#/components/parameters/HeaderRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CcidValidateRequest"
+      responses:
+        "200":
+          description: Kết quả validate CCID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CcidValidateResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ----------------------------------------------------------
+  # 13 & 14. Attachments: Upload & List
+  # ----------------------------------------------------------
+  /pay-out-manual/{id}/attachments:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+      - $ref: "#/components/parameters/HeaderRequestId"
+
+    post:
+      tags: [Attachments]
+      operationId: uploadAttachment
+      summary: "[ATTACH] Upload file đính kèm"
+      description: |
+        Maker upload file đính kèm. Chỉ cho phép khi status = `DRAFT` | `RETURNED_TO_MAKER`.
+        Giới hạn: ≤ 10MB/file, ≤ 50MB tổng/bản ghi. Định dạng: pdf, jpg, png, docx, xlsx.
+        Server validate MIME type + magic bytes (VAL-09 partial).
+
+        **Required permission**: `PAY.OUT.MANUAL.UPDATE`
+        **Idempotency**: Bắt buộc
+      parameters:
+        - $ref: "#/components/parameters/HeaderIdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File cần upload
+                description:
+                  type: string
+                  maxLength: 200
+                  nullable: true
+                  description: Mô tả file (tuỳ chọn)
+      responses:
+        "201":
+          description: Upload thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttachmentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          description: File không hợp lệ (quá dung lượng / sai định dạng)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    get:
+      tags: [Attachments]
+      operationId: listAttachments
+      summary: "[ATTACH] Danh sách file đính kèm"
+      description: |
+        Lấy danh sách file đính kèm của lệnh (không bao gồm file đã soft-delete mặc định).
+
+        **Required permission**: `PAY.OUT.MANUAL.READ`
+      responses:
+        "200":
+          description: Danh sách file
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttachmentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ----------------------------------------------------------
+  # 15 & 16. Attachment detail: Download & Delete
+  # ----------------------------------------------------------
+  /pay-out-manual/{id}/attachments/{attachId}:
+    parameters:
+      - $ref: "#/components/parameters/PathId"
+      - $ref: "#/components/parameters/PathAttachId"
+      - $ref: "#/components/parameters/HeaderRequestId"
+
+    get:
+      tags: [Attachments]
+      operationId: downloadAttachment
+      summary: "[ATTACH] Download file đính kèm"
+      description: |
+        Tải về file đính kèm. Server trả binary với `Content-Disposition: attachment`.
+
+        **Required permission**: `PAY.OUT.MANUAL.READ`
+      responses:
+        "200":
+          description: File binary
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: 'attachment; filename="chung-tu-20260519.pdf"'
+            Content-Type:
+              schema:
+                type: string
+                example: "application/pdf"
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [Attachments]
+      operationId: deleteAttachment
+      summary: "[ATTACH] Xoá file đính kèm (soft)"
+      description: |
+        Soft-delete file đính kèm. Chỉ cho phép khi lệnh ở trạng thái `DRAFT` | `RETURNED_TO_MAKER`.
+        Chỉ Maker gốc mới được xoá.
+
+        **Required permission**: `PAY.OUT.MANUAL.UPDATE`
+        **Idempotency**: Bắt buộc
+      parameters:
+        - $ref: "#/components/parameters/HeaderIdempotencyKey"
+      responses:
+        "200":
+          description: Xoá thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  message:
+                    type: string
+                    example: "MSG-OK-DELETE: Đã xoá file đính kèm thành công."
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  # ----------------------------------------------------------
+  # 17. Audit Log
+  # ----------------------------------------------------------
+  /pay-out-manual/{id}/audit-log:
+    get:
+      tags: [AuditApproval]
+      operationId: getAuditLog
+      summary: "[AUDIT] Lịch sử thao tác (hash-chain audit)"
+      description: |
+        Lấy toàn bộ lịch sử thao tác của lệnh từ `LTT_AUDIT_LOG`.
+        Trả về theo thứ tự thời gian tăng dần. Phân trang hỗ trợ để tránh payload lớn.
+
+        **Required permission**: `PAY.OUT.MANUAL.READ`
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QuerySize"
+        - $ref: "#/components/parameters/HeaderRequestId"
+      responses:
+        "200":
+          description: Lịch sử thao tác
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedAuditLogResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ----------------------------------------------------------
+  # 18. Approval Status (Workflow stepper)
+  # ----------------------------------------------------------
+  /pay-out-manual/{id}/approval-status:
+    get:
+      tags: [AuditApproval]
+      operationId: getApprovalStatus
+      summary: "[WORKFLOW] Trạng thái phê duyệt (stepper Maker → Checker → Approver)"
+      description: |
+        Lấy thông tin workflow stepper: 3 bước Maker → Checker → Approver,
+        với trạng thái, người thực hiện và thời gian của từng bước.
+        Dùng cho component Timeline/Stepper ở tab Lịch sử phê duyệt.
+
+        **Required permission**: `PAY.OUT.MANUAL.READ`
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+        - $ref: "#/components/parameters/HeaderRequestId"
+      responses:
+        "200":
+          description: Trạng thái phê duyệt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalStatusResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"

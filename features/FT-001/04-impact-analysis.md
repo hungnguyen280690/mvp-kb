@@ -103,12 +103,71 @@ _Mục tiêu: Xác định tác động đến quy trình nghiệp vụ và ngư
 
 _Mục tiêu: Xác định tác động đến kiến trúc, API và CSDL._
 
-**Chờ SA Agent (Stage 2) bổ sung sau khi BA hoàn thành G1.**
+### 2.1. Dịch vụ (Services) bị ảnh hưởng
 
-- **Dịch vụ (Services) bị ảnh hưởng:** _(SA sẽ điền)_
-- **API bị ảnh hưởng:** _(SA sẽ điền)_
-- **Cấu trúc dữ liệu (Database):** _(SA sẽ điền)_
-- **Bảo mật (Security):** _(SA sẽ điền)_
+| Service                | Loại tác động    | Mô tả                                                                                                                                   |
+| ---------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **`bff-service`**      | MỚI (tính năng)  | Thêm 20 REST endpoints mới dưới path `/api/pay-out-manual/**`. Cần: validate JWT, map DTO, aggregate attachment/audit/approval history. |
+| **`ltt-service`**      | MỚI (tính năng)  | Thêm domain module `PayOrder` (State Machine, SoD guard, CCID validator, REF_NO generator). Thêm infrastructure JPA + Oracle 19c.       |
+| `audit-service`        | REUSE / TÍCH HỢP | Receive event từ `ltt-service` qua outbox pattern (ADR-0001). MVP có thể chạy embedded trong `ltt-service`.                             |
+| `master-data-service`  | REUSE (readonly) | Cung cấp lookup LOV.01..07 qua REST `/lookup/{type}`. Không cần thay đổi.                                                               |
+| `notification-service` | REUSE (readonly) | Nhận POST `/notifications/inapp` từ `ltt-service` sau mỗi workflow transition. Email: stub log trong MVP.                               |
+
+> `integration-gateway` và `gl-pusher` **Out of scope MVP** — sẽ sử dụng ở Phase 2.
+
+### 2.2. API Endpoints mới
+
+Tổng cộng **20 endpoints** được thêm vào `bff-service`. Chi tiết đầy đủ tại `features/FT-001/contracts/openapi.yaml`.
+
+| #   | Method | Path                                              | Vai trò RBAC bắt buộc         |
+| --- | ------ | ------------------------------------------------- | ----------------------------- |
+| 1   | POST   | `/api/pay-out-manual`                             | MAKER                         |
+| 2   | GET    | `/api/pay-out-manual/{id}`                        | MAKER/CHECKER/APPROVER/VIEWER |
+| 3   | PUT    | `/api/pay-out-manual/{id}`                        | MAKER (Maker gốc)             |
+| 4   | DELETE | `/api/pay-out-manual/{id}`                        | MAKER (Maker gốc)             |
+| 5   | POST   | `/api/pay-out-manual/{id}/submit`                 | MAKER                         |
+| 6   | POST   | `/api/pay-out-manual/{id}/check-approve`          | CHECKER                       |
+| 7   | POST   | `/api/pay-out-manual/{id}/approve`                | APPROVER                      |
+| 8   | POST   | `/api/pay-out-manual/{id}/return`                 | CHECKER/APPROVER              |
+| 9   | POST   | `/api/pay-out-manual/{id}/reject`                 | CHECKER/APPROVER              |
+| 10  | POST   | `/api/pay-out-manual/{id}/copy`                   | MAKER                         |
+| 11  | GET    | `/api/pay-out-manual`                             | MAKER/CHECKER/APPROVER/VIEWER |
+| 12  | POST   | `/api/pay-out-manual/export`                      | MAKER/CHECKER/APPROVER/VIEWER |
+| 13  | POST   | `/api/pay-out-manual/{id}/attachments`            | MAKER (trên DRAFT/RETURNED)   |
+| 14  | GET    | `/api/pay-out-manual/{id}/attachments`            | Mọi role                      |
+| 15  | GET    | `/api/pay-out-manual/{id}/attachments/{attachId}` | Mọi role                      |
+| 16  | DELETE | `/api/pay-out-manual/{id}/attachments/{attachId}` | MAKER (trên DRAFT/RETURNED)   |
+| 17  | GET    | `/api/pay-out-manual/{id}/audit-log`              | Mọi role                      |
+| 18  | GET    | `/api/pay-out-manual/{id}/approval-status`        | Mọi role                      |
+| 19  | POST   | `/api/pay-out-manual/{id}/validate-ccid`          | MAKER                         |
+| 20  | GET    | `/api/pay-out-manual/lookup/{type}`               | Mọi role                      |
+
+### 2.3. Bảng DB mới (Oracle 19c)
+
+| Bảng                       | Loại        | Mô tả                                                                     |
+| -------------------------- | ----------- | ------------------------------------------------------------------------- |
+| `LTT_PAY_ORDER`            | MỚI         | Bảng header lệnh thanh toán. 7 trạng thái. Optimistic lock + soft-delete. |
+| `LTT_PAY_ORDER_LINE`       | MỚI         | Chi tiết khoản mục COA (12 segments). 1-N với LTT_PAY_ORDER.              |
+| `LTT_PAY_ORDER_ATTACHMENT` | MỚI         | File đính kèm (metadata). 1-N với LTT_PAY_ORDER.                          |
+| `LTT_PAY_ORDER_APPROVAL`   | MỚI         | Lịch sử workflow (append-only). 1-N với LTT_PAY_ORDER.                    |
+| `LTT_AUDIT_LOG`            | MỚI / REUSE | Audit hash-chain SHA-256 (ADR-0003). Dùng chung cho toàn bộ entity LTT.   |
+| `LTT_IDEMPOTENCY_STORE`    | MỚI / REUSE | Lưu Idempotency-Key + response (ADR-0005). TTL 24h.                       |
+| `LTT_REF_NO_SEQUENCE`      | MỚI         | Bảng phụ trợ sinh REF_NO atomic per (kbnn_id, year_month).                |
+
+> Không có bảng nào hiện tại bị thay đổi schema trong MVP này.
+
+### 2.4. Security Impact
+
+| Khía cạnh               | Mô tả                                                                                                                                                                           | Mức độ rủi ro  |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| **RBAC mới**            | Thêm 5 permission role mới: `PAY_OUT_MAKER`, `PAY_OUT_CHECKER`, `PAY_OUT_APPROVER`, `PAY_OUT_VIEWER`, `PAY_OUT_SUPERVISOR`. Cần cấu hình trong hệ thống RBAC/SSO trước go-live. | **Cao**        |
+| **SoD enforcement**     | 3-layer: JWT role check → Application guard `(createdBy ≠ checkerId ≠ approverId)` → DB CHECK constraint. Vi phạm ghi SECURITY_VIOLATION vào audit log.                         | **Cao**        |
+| **PII masking**         | Các trường `senderIdentifyId`, `receiverIdentifyId`, `receiverName` cần masking cho user thiếu quyền `PAY.OUT.MANUAL.VIEW_PII`.                                                 | **Trung bình** |
+| **Audit chain**         | Mọi thao tác mutating đều sinh entry `LTT_AUDIT_LOG` với SHA-256 hash-chain. DB trigger chặn UPDATE/DELETE trên bảng này (ADR-0003).                                            | **Cao**        |
+| **Idempotency**         | `X-Idempotency-Key` bắt buộc cho POST/PUT/DELETE. TTL 24h trong `LTT_IDEMPOTENCY_STORE`. Ngăn double-submit do retry tự động.                                                   | **Trung bình** |
+| **Optimistic lock**     | `If-Match` header bắt buộc cho PUT/DELETE/workflow actions. Mismatch trả 409 với `currentVersion`. Ngăn lost-update (ADR-0004).                                                 | **Trung bình** |
+| **Attachment security** | Validate MIME type + magic bytes. Giới hạn 10MB/file, 50MB/bản ghi. SHA-256 checksum chống giả mạo. AV scan out-of-scope MVP.                                                   | **Trung bình** |
+| **Export PII**          | Export có thể chứa dữ liệu PII. Permission riêng `PAY.OUT.MANUAL.EXPORT_PII` cho phép export đầy đủ. Dataset cap 50k records.                                                   | **Trung bình** |
 
 ---
 
@@ -140,3 +199,4 @@ _Mục tiêu: Xác định phạm vi kiểm thử hồi quy dựa trên các tá
 ## Lịch sử Sửa đổi
 
 - **2026-05-19** | **BA Agent** | FT-001 | Khởi tạo file, hoàn thành Section 1 — Business Impact (quy trình, vai trò, báo cáo, rủi ro, phụ thuộc).
+- **2026-05-20** | **SA Agent** | FT-001 | Hoàn thành Section 2 — System Impact (Services, API endpoints, DB tables mới, Security impact).
