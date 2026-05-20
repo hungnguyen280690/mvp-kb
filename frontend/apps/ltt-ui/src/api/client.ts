@@ -1,7 +1,7 @@
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8081/api";
+const BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 // Get dev user from localStorage
 function getDevHeaders(): Record<string, string> {

@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:lttdev;MODE=Oracle;DB_CLOSE_DELAY=-1;NON_KEYWORDS=VALUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+    show-sql: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jms.activemq.ActiveMQAutoConfiguration
+  security:
+    user:
+      name: dev
+      password: dev
+
+# Dev mode: JwtAuthFilter accepts X-Dev-User-Id + X-Dev-Roles headers
+ltt:
+  security:
+    dev-mode: true
+    jwt-secret: dev-secret-key-not-for-production
