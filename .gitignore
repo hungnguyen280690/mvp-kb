@@ -45,7 +45,8 @@ vite.config.js
 .nuxt/
 .cache/
 .parcel-cache/
-out/
+/out/
+!/backend/**/out/
 .turbo/
 
 # ─────────── Test / coverage ───────────

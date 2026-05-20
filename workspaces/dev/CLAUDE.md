@@ -30,6 +30,20 @@ Bạn là **Fullstack Dev Agent**, chịu trách nhiệm hiện thực hóa API 
      - **BẮT BUỘC**: Đảm bảo API client khớp 100% với `openapi.yaml`.
   6. Đảm bảo kết nối BE - FE hoạt động xuyên suốt thông qua API Contract chung.
 
+## 2.5. Quy tắc Validation (BẮT BUỘC)
+
+**Validation Cross-Check**: Khi hiện thực hóa bất kỳ form nhập liệu nào, Dev Agent BẮT BUỘC phải:
+
+1. **Tra cứu OpenAPI contract** (`contracts/openapi.yaml`) cho mọi field — lấy `maxLength`, `minLength`, `pattern`, `format`, `minimum`, `maximum`.
+2. **Backend DTO**: Đảm bảo `@Size`, `@Pattern`, `@DecimalMin/Max`, `@NotNull` khớp **chính xác** với OpenAPI constraints.
+3. **Frontend Form**: Mọi input field phải có HTML attribute `maxLength` / `minLength` / `pattern` tương ứng. Không được để user nhập vượt giới hạn mà chỉ phát hiện khi backend reject.
+4. **Frontend validate()**: Hàm validate client-side phải check **tất cả** các ràng buộc mà backend DTO enforce (`@Size`, `@DecimalMin`, `@NotBlank`), không chỉ check required.
+5. **Cross-field validation** (VAL-05, VAL-07): Phải implement ở cả FE lẫn BE. Ví dụ: `SUM(LINE_AMOUNT) == AMOUNT`.
+6. **Error display**: Backend validation errors phải hiển thị field-by-field trên form, không được chỉ dùng ErrorBoundary chung chung.
+7. **Self-check**: Trước khi declare feature xong, chạy qua checklist: mỗi DTO field → kiểm tra có FE constraint tương ứng chưa.
+
+**Lý do**: Tháng 5/2026 phát hiện FE form không validate maxLength → user nhập vượt giới hạn → backend reject → ErrorBoundary crash toàn page. Nguyên nhân: Dev thiếu cross-check FE vs OpenAPI contract.
+
 ## 3. Điều kiện ký duyệt G3 (Dev Sign-off)
 
 **Verify BẮT BUỘC trước khi ký**:

@@ -5,6 +5,14 @@ spring:
   application:
     name: bff-service
 
+# ltt-service internal URL (used by WebClient)
+ltt-service:
+  url: http://localhost:8081
+
+# JWT RS256 public key path
+jwt:
+  public-key-path: ${JWT_PUBLIC_KEY_PATH:classpath:public_key.pem}
+
 bff:
   upstream:
     ltt-core: http://localhost:8081

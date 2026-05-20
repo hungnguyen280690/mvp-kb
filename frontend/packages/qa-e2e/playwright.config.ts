@@ -1,42 +1,109 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * See https://playwright.dev/docs/test-configuration.
+ * Playwright configuration for @kb/qa-e2e — FT-001 PAY.OUT.MANUAL E2E tests.
+ *
+ * Project structure:
+ *   - setup: Authenticates test users (MAKER, CHECKER, APPROVER, VIEWER)
+ *   - create-order: BDD-01 tests (MAKER role)
+ *   - edit-order: BDD-02 tests (MAKER role)
+ *   - approve-order: BDD-03 tests (MAKER, CHECKER, APPROVER roles)
+ *   - list-order: BDD-04 tests (VIEWER role)
+ *   - delete-order: BDD-05 tests (MAKER role)
+ *   - copy-order: BDD-07 tests (MAKER role)
+ *
+ * All test suites depend on the "setup" project for authentication.
  */
 export default defineConfig({
   testDir: "./src",
-  /* Run tests in files in parallel */
   fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: "html",
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: process.env.BASE_URL || "http://localhost:5173",
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
 
-  /* Configure projects for major browsers */
   projects: [
+    // ========================================================================
+    // Setup: Authenticate test users and store auth state
+    // ========================================================================
     {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
+    },
+
+    // ========================================================================
+    // Test suites — each depends on "setup"
+    // ========================================================================
+
+    // BDD-01: Create order tests (MAKER role)
+    {
+      name: "create-order",
+      testMatch: /create-order\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: ".auth/maker01.json",
+      },
+    },
+
+    // BDD-02: Edit order tests (MAKER role)
+    {
+      name: "edit-order",
+      testMatch: /edit-order\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: ".auth/maker01.json",
+      },
+    },
+
+    // BDD-03: Approval workflow tests (CHECKER role primary)
+    {
+      name: "approve-order",
+      testMatch: /approve-order\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: ".auth/maker01.json",
+      },
+    },
+
+    // BDD-04: List/filter/search tests (VIEWER role)
+    {
+      name: "list-order",
+      testMatch: /list-order\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: ".auth/viewer01.json",
+      },
+    },
+
+    // BDD-05: Delete order tests (MAKER role)
+    {
+      name: "delete-order",
+      testMatch: /delete-order\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: ".auth/maker01.json",
+      },
+    },
+
+    // BDD-07: Copy order tests (MAKER role)
+    {
+      name: "copy-order",
+      testMatch: /copy-order\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: ".auth/maker01.json",
+      },
     },
   ],
-
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'pnpm --filter @kb/shell dev',
-  //   url: 'http://localhost:5173',
-  //   reuseExistingServer: !process.env.CI,
-  // },
 });
