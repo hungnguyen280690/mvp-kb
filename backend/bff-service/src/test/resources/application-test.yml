@@ -1,0 +1,15 @@
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jms.activemq.ActiveMQAutoConfiguration
+
+bff:
+  upstream:
+    ltt-core: http://localhost:9999
+    audit-service: http://localhost:9998
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

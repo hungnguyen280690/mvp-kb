@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 
 export default defineConfig({
+  base: "/ltt/",
   plugins: [react()],
   resolve: {
     alias: {
@@ -22,10 +23,6 @@ export default defineConfig({
     },
   },
   build: {
-    lib: {
-      entry: "./src/bootstrap.tsx",
-      formats: ["es"],
-      fileName: () => "ltt-ui.js",
-    },
+    outDir: "dist",
   },
 });

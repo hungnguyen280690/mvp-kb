@@ -1,5 +1,10 @@
 package com.kb.ltt.infrastructure.web;
 
+import com.kb.ltt.application.usecase.PayOrderTestHelper;
+import com.kb.ltt.infrastructure.persistence.entity.PayOrderEntity;
+import com.kb.ltt.infrastructure.persistence.entity.PayOrderLineEntity;
+import com.kb.ltt.infrastructure.persistence.repository.PayOrderLineRepository;
+import com.kb.ltt.infrastructure.persistence.repository.PayOrderRepository;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,9 +35,17 @@ class PayOutManualControllerTest {
     @Autowired
     MockMvc mockMvc;
 
-    private static final String MAKER_USER_ID = "user-001";
-    private static final String MAKER_ROLE    = "PAY_OUT_MAKER";
-    private static final String KBNN_ID       = "HN001";
+    @Autowired
+    PayOrderRepository payOrderRepository;
+
+    @Autowired
+    PayOrderLineRepository payOrderLineRepository;
+
+    private static final String MAKER_USER_ID   = "user-001";
+    private static final String CHECKER_USER_ID = "user-checker-002";
+    private static final String MAKER_ROLE      = "PAY_OUT_MAKER";
+    private static final String CHECKER_ROLE    = "PAY_OUT_CHECKER";
+    private static final String KBNN_ID         = "HN001";
 
     @BeforeAll
     static void enableDevBypass() {
@@ -159,5 +172,98 @@ class PayOutManualControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.valid").value(false))
                 .andExpect(jsonPath("$.errors").isArray());
+    }
+
+    // ── CTRL-10: Submit DRAFT entity ─────────────────────────────────────────
+
+    @Test
+    @DisplayName("CTRL-10: POST /{id}/submit on DRAFT entity returns 200 with READY_FOR_APPROVAL")
+    void submitDraftEntity_returns200() throws Exception {
+        PayOrderEntity entity = PayOrderTestHelper.buildDraftEntity(KBNN_ID, MAKER_USER_ID);
+        PayOrderLineEntity line = PayOrderTestHelper.buildLine(entity.getId());
+        entity.getLines().add(line);
+        payOrderRepository.save(entity);
+        payOrderLineRepository.save(line);
+
+        mockMvc.perform(post("/api/pay-out-manual/" + entity.getId() + "/submit")
+                        .header("X-Dev-User-Id", MAKER_USER_ID)
+                        .header("X-Dev-Roles", MAKER_ROLE)
+                        .header("X-Dev-Kbnn-Id", KBNN_ID)
+                        .header("X-Idempotency-Key", java.util.UUID.randomUUID().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"comment\":\"test submit\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("READY_FOR_APPROVAL"));
+    }
+
+    // ── CTRL-11: SoD — Maker cannot check-approve own order ──────────────────
+
+    @Test
+    @DisplayName("CTRL-11: POST /{id}/check-approve by same user who created returns 403 (SoD)")
+    void checkApproveByMaker_returns403() throws Exception {
+        PayOrderEntity entity = PayOrderTestHelper.buildEntityWithStatus(KBNN_ID, MAKER_USER_ID, "READY_FOR_APPROVAL");
+        PayOrderLineEntity line = PayOrderTestHelper.buildLine(entity.getId());
+        entity.getLines().add(line);
+        payOrderRepository.save(entity);
+        payOrderLineRepository.save(line);
+
+        mockMvc.perform(post("/api/pay-out-manual/" + entity.getId() + "/check-approve")
+                        .header("X-Dev-User-Id", MAKER_USER_ID)
+                        .header("X-Dev-Roles", MAKER_ROLE)
+                        .header("X-Dev-Kbnn-Id", KBNN_ID)
+                        .header("X-Idempotency-Key", java.util.UUID.randomUUID().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"comment\":\"self check\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    // ── CTRL-12: Delete DRAFT entity ─────────────────────────────────────────
+
+    @Test
+    @DisplayName("CTRL-12: DELETE /{id} on own DRAFT entity returns 2xx")
+    void deleteDraftEntity_returns2xx() throws Exception {
+        PayOrderEntity entity = PayOrderTestHelper.buildDraftEntity(KBNN_ID, MAKER_USER_ID);
+        payOrderRepository.save(entity);
+
+        mockMvc.perform(delete("/api/pay-out-manual/" + entity.getId())
+                        .header("X-Dev-User-Id", MAKER_USER_ID)
+                        .header("X-Dev-Roles", MAKER_ROLE)
+                        .header("X-Dev-Kbnn-Id", KBNN_ID)
+                        .header("X-Idempotency-Key", java.util.UUID.randomUUID().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"deleteReason\":\"Xoa vi ly do kiem tra\",\"confirmed\":true}"))
+                .andExpect(status().is2xxSuccessful());
+    }
+
+    // ── CTRL-13: Get audit-log ────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("CTRL-13: GET /{id}/audit-log returns 200 with array")
+    void getAuditLog_returns200() throws Exception {
+        PayOrderEntity entity = PayOrderTestHelper.buildDraftEntity(KBNN_ID, MAKER_USER_ID);
+        payOrderRepository.save(entity);
+
+        mockMvc.perform(get("/api/pay-out-manual/" + entity.getId() + "/audit-log")
+                        .header("X-Dev-User-Id", MAKER_USER_ID)
+                        .header("X-Dev-Roles", MAKER_ROLE)
+                        .header("X-Dev-Kbnn-Id", KBNN_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    // ── CTRL-14: Get approval-status ─────────────────────────────────────────
+
+    @Test
+    @DisplayName("CTRL-14: GET /{id}/approval-status returns 200")
+    void getApprovalStatus_returns200() throws Exception {
+        PayOrderEntity entity = PayOrderTestHelper.buildDraftEntity(KBNN_ID, MAKER_USER_ID);
+        payOrderRepository.save(entity);
+
+        mockMvc.perform(get("/api/pay-out-manual/" + entity.getId() + "/approval-status")
+                        .header("X-Dev-User-Id", MAKER_USER_ID)
+                        .header("X-Dev-Roles", MAKER_ROLE)
+                        .header("X-Dev-Kbnn-Id", KBNN_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.steps").isArray());
     }
 }

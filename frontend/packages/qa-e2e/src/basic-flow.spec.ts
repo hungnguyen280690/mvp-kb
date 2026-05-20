@@ -1,24 +1,23 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("MARBO Basic Flow", () => {
-  test("should load the homepage", async ({ page }) => {
-    // Go to the base URL defined in playwright.config.ts
+test.describe("VDBAS Basic Flow", () => {
+  test("should load the shell homepage", async ({ page }) => {
     await page.goto("/");
-
-    // Check if the page title is correct (or any element that should be present)
-    // Adjust this to match your actual UI content
-    await expect(page).toHaveTitle(/MARBO/i);
-
-    // Check if the root element exists
+    await expect(page).toHaveTitle(/VDBAS/i);
     const root = page.locator("#root");
     await expect(root).toBeVisible();
   });
 
-  test("should show login screen if not authenticated", async ({ page }) => {
-    await page.goto("/");
+  test("should load the LTT module at /ltt/", async ({ page }) => {
+    await page.goto("/ltt/");
+    await expect(page).toHaveTitle(/Lệnh Thanh Toán|VDBAS/i);
+    const root = page.locator("#root");
+    await expect(root).toBeVisible();
+  });
 
-    // Example: check for a login button or heading
-    // const loginHeading = page.getByRole('heading', { name: /Đăng nhập/i });
-    // await expect(loginHeading).toBeVisible();
+  test("should redirect /ltt/ to pay-out-manual list", async ({ page }) => {
+    await page.goto("/ltt/");
+    await page.waitForURL(/pay-out-manual/, { timeout: 5000 });
+    expect(page.url()).toContain("pay-out-manual");
   });
 });

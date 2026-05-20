@@ -8,6 +8,8 @@ RUN pnpm install --frozen-lockfile || pnpm install
 RUN pnpm build
 
 FROM nginx:alpine
-COPY --from=build /build/apps/shell/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /build/apps/shell/dist /usr/share/nginx/html/shell
+COPY --from=build /build/apps/ltt-ui/dist  /usr/share/nginx/html/ltt
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

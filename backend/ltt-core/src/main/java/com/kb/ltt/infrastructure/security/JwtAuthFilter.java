@@ -166,8 +166,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private boolean isDevProfile() {
         String active = System.getProperty("spring.profiles.active", "");
-        if (active.contains("dev") || active.contains("test")) return true;
+        if (active.contains("dev") || active.contains("test") || active.contains("e2e")) return true;
         active = System.getenv("SPRING_PROFILES_ACTIVE");
-        return active != null && (active.contains("dev") || active.contains("test"));
+        return active != null && (active.contains("dev") || active.contains("test") || active.contains("e2e"));
     }
 }

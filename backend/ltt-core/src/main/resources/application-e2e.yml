@@ -1,0 +1,5 @@
+# E2E profile: enables X-Dev-* header bypass for Playwright tests
+# Does NOT override datasource (Oracle stays active from docker env vars)
+ltt:
+  security:
+    dev-mode: true

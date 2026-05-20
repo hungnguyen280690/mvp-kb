@@ -1,4 +1,5 @@
 FROM eclipse-temurin:21-jdk AS build
+RUN apt-get update && apt-get install -y unzip && rm -rf /var/lib/apt/lists/*
 WORKDIR /build
 COPY . .
 RUN ./mvnw -pl audit-service -am package -DskipTests

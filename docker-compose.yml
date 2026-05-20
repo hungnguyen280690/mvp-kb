@@ -63,7 +63,7 @@ services:
     ports:
       - "8081:8081"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: docker,e2e
       SPRING_DATASOURCE_URL: jdbc:oracle:thin:@//oracle:1521/FREEPDB1
       SPRING_DATASOURCE_USERNAME: kb
       SPRING_DATASOURCE_PASSWORD: kb
